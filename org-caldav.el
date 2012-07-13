@@ -157,7 +157,8 @@ in BUFFER."
 
 (defun org-caldav-events-url ()
   "Return URL for events."
-;;  (concat org-caldav-url "/" org-caldav-calendar-id "/events/"))
+  (if (string-match "google\\.com" org-caldav-url)
+    (concat org-caldav-url "/" org-caldav-calendar-id "/events/"))
   (concat org-caldav-url "/" org-caldav-calendar-id "/"))
 
 (defun org-caldav-sync ()
