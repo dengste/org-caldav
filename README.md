@@ -31,9 +31,10 @@ In a nutshell:
       ID@group.calendar.google.com. Do *not* omit the domain.
 
 * Set `org-caldav-files' to the list of org files you would like to
-  sync. For everything else, you can use the org-icalendar-*
-  variables, since org-caldav uses that package to generate the
-  events.
+  sync. Do NOT add the below `org-caldav-inbox' to this list or you'll
+  get duplicates.  For everything else, you can use the
+  org-icalendar-* variables, since org-caldav uses that package to
+  generate the events.
 
 * Set `org-caldav-inbox' to an org filename where new entries from
   the calendar should be stored.
