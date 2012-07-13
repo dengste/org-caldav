@@ -25,7 +25,7 @@
 
 ;; Tested CalDAV servers: Owncloud, Google Calendar.
 ;;
-;; IMPORTANT: Do NOT simply put your main calendar in `org-caldav-calendar-id'! 
+;; IMPORTANT: Do NOT simply put your main calendar in `org-caldav-calendar-id'!
 ;;
 ;; Instead, create a new, dedicated calendar.  The code is still
 ;; pretty rough and might easily delete entries it should not delete.
@@ -44,7 +44,7 @@
 ;;    * Owncloud: https://OWNCLOUD-SERVER-URL/remote.php/caldav/calendars/USERID
 ;;    * Google: https://www.google.com/calendar/dav
 ;;
-;; - Set `org-caldav-calendar-id' to the calendar-id of your new calendar: 
+;; - Set `org-caldav-calendar-id' to the calendar-id of your new calendar:
 ;;    * OwnCloud: Simply the name of the calendar.
 ;;    * Google: Click on 'calendar settings' and the id will be shown
 ;;      next to "Calendar Address". It is of the form
@@ -354,7 +354,7 @@ Dates must be given in a format `org-read-date' can parse."
   (when time
     (insert " " time))
   (end-of-line))
-  
+
 ;; The following is taken from icalendar.el, written by Ulf Jasper.
 
 (defun org-caldav-convert-event ()
