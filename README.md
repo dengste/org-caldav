@@ -41,3 +41,27 @@ In a nutshell:
 
 Call org-caldav-sync to start the sync. The URL package will ask
 you for username/password for accessing the calendar.
+
+The syncing between org and the external calendar is not yet really
+finished. Here's what the code can currently do:
+
+* All items in org-caldav-files with active time stamps are synced to
+  the calendar.
+
+* If you change an item in one of those files in orgmode, this change
+  will also get synced to the external calendar (to be exact: this will
+  generate a new event and the old one will be deleted).
+
+- If you create a *new* event in the calendar through Android or any
+  other client (like browser), this event will land in the
+  'org-caldav-inbox' file as an org item.
+
+However:
+
+* If you *change* an item directly on the CalDAV server, this will *not*
+  get synced back to Org. What happens exactly depends on the server
+  (whether it renames the event or not). Just try it out. The item might
+  even get deleted after the next sync - you have been warned.
+
+* Likewise, if you *change* and item in 'org-caldav-inbox', this will
+  not get synced back to the calendar.
