@@ -5,7 +5,7 @@ Caldav sync for Emacs orgmode
 
 Tested CalDAV servers: Owncloud, Google Calendar.
 
-MPORTANT: Do NOT simply put your main calendar in `org-caldav-calendar-id'!
+*IMPORTANT*: Do NOT simply put your main calendar in `org-caldav-calendar-id'!
 
 Instead, create a new, dedicated calendar.  The code is still pretty
 rough and might easily delete entries it should not delete.
