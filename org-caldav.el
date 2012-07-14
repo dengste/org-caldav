@@ -113,11 +113,13 @@ they contain `org-caldav-id-string'). If ALL is non-nil, get all
 events."
   ;; The url-dav package throws an error on empty directories
   (condition-case nil
-      (mapcar
-       (lambda (x) (file-name-sans-extension (file-name-nondirectory x)))
-       (url-dav-directory-files
-	(org-caldav-events-url) t (concat (unless all org-caldav-id-string)
-					  "\\.ics$")))
+      (let ((events
+	     (mapcar
+	      (lambda (x) (file-name-sans-extension (file-name-nondirectory x)))
+	      (url-dav-directory-files
+	       (org-caldav-events-url) t (concat (unless all org-caldav-id-string)
+						 "\\.ics$")))))
+	(or events '(empty)))
     (error '(empty))))
 
 (defun org-caldav-get-event (uid)
@@ -158,8 +160,8 @@ in BUFFER."
 (defun org-caldav-events-url ()
   "Return URL for events."
   (if (string-match "google\\.com" org-caldav-url)
-    (concat org-caldav-url "/" org-caldav-calendar-id "/events/"))
-  (concat org-caldav-url "/" org-caldav-calendar-id "/"))
+      (concat org-caldav-url "/" org-caldav-calendar-id "/events/")
+    (concat org-caldav-url "/" org-caldav-calendar-id "/")))
 
 (defun org-caldav-sync ()
   (interactive)
@@ -253,7 +255,6 @@ Returns buffer containing the ICS file."
 (defun org-caldav-check-for-uid (uid)
   "Check if UID exists in current event list."
   (unless org-caldav-event-list
-    (org-caldav-debug-print "Updating the eventlist.")
     (org-caldav-event-list-update))
   (assoc uid org-caldav-event-list))
 
@@ -345,15 +346,22 @@ Dates must be given in a format `org-read-date' can parse."
     (insert "\n")))
 
 (defun org-caldav-insert-org-time-stamp (date &optional time)
-  "Insert org time stamp using DATE and TIME at point."
-  (insert "<" (org-read-date nil nil date) ">")
-  (backward-char 2)
-  (org-timestamp-change 0)
-  (backward-char 1)
-  (delete-char 6)
-  (when time
-    (insert " " time))
-  (end-of-line))
+  "Insert org time stamp using DATE and TIME at point.
+DATE is given as european date (DD MM YYYY)."
+  (let* ((stime (when time (mapcar 'string-to-number 
+				   (split-string time ":"))))
+	 (hours (if time (car stime) 0))
+	 (minutes (if time (nth 1 stime) 0))
+	 (sdate (mapcar 'string-to-number (split-string date)))
+	 (day (car sdate))
+	 (month (nth 1 sdate))
+	 (year (nth 2 sdate))
+	 (internaltime (encode-time 0 minutes hours day month year)))
+    (insert
+     (concat "<" (if time
+		     (format-time-string "%Y-%m-%d %a %H:%M" internaltime)
+		   (format-time-string "%Y-%m-%d %a" internaltime))
+	     ">"))))
 
 ;; The following is taken from icalendar.el, written by Ulf Jasper.
 
@@ -374,8 +382,6 @@ which can be fed into `org-caldav-insert-org-entry'."
 						     dtstart-zone))
 	 (start-d (icalendar--datetime-to-diary-date
 		   dtstart-dec))
-	 (start-euro (icalendar--datetime-to-european-date
-		      dtstart-dec "."))
 	 (start-t (icalendar--datetime-to-colontime dtstart-dec))
 	 (dtend (icalendar--get-event-property e 'DTEND))
 	 (dtend-zone (icalendar--find-time-zone
@@ -419,8 +425,11 @@ which can be fed into `org-caldav-insert-org-entry'."
 	(setq dtend-dec dtend-dec-d)
 	(setq dtend-1-dec dtend-1-dec-d)))
     (setq end-d (if dtend-dec
-		    (icalendar--datetime-to-european-date dtend-dec ".")
+		    (icalendar--datetime-to-diary-date dtend-dec)
 		  start-d))
+    (setq end-1-d (if dtend-1-dec
+		      (icalendar--datetime-to-diary-date dtend-1-dec)
+		    start-d))
     (setq end-t (if (and
 		     dtend-dec
 		     (not (string=
@@ -431,7 +440,7 @@ which can be fed into `org-caldav-insert-org-entry'."
 		    (icalendar--datetime-to-colontime dtend-dec)
 		  start-t))
     ;; Return result
-    (list start-euro start-t end-d end-t summary description)))
+    (list start-d start-t end-1-d end-t summary description)))
 
 (provide 'org-caldav)
 
