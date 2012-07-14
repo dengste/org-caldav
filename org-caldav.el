@@ -440,7 +440,10 @@ which can be fed into `org-caldav-insert-org-entry'."
 		    (icalendar--datetime-to-colontime dtend-dec)
 		  start-t))
     ;; Return result
-    (list start-d start-t end-1-d end-t summary description)))
+    (list start-d start-t
+	  (if end-t end-d end-1-d)
+	  end-t summary description)))
+
 
 (provide 'org-caldav)
 
