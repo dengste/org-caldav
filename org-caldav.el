@@ -106,21 +106,52 @@ entries.")
     (error "Could not query CalDAV URL %s." (org-caldav-events-url))))
   t)
 
-(defun org-caldav-get-event-list (&optional all)
+;; This is partly taken out of url-dav.el, written by Bill Perry.
+
+(defun org-caldav-get-icsfiles-from-properties (properties)
+  "Return all ics files from PROPERTIES."
+  (let (files)
+    (while properties
+      (let ((url (car (pop properties))))
+      (when (string-match "/$" url)
+	(setq url (substring url 0 -1)))
+      (when (string-match "\\.ics$" url)
+	(push url files))))
+    files))
+
+(defun org-caldav-get-event-list ()
   "Get list of events from calendar.
-By default, get only those events managed by org-caldav (meaning
-they contain `org-caldav-id-string'). If ALL is non-nil, get all
-events."
-  ;; The url-dav package throws an error on empty directories
-  (condition-case nil
-      (let ((events
-	     (mapcar
-	      (lambda (x) (file-name-sans-extension (file-name-nondirectory x)))
-	      (url-dav-directory-files
-	       (org-caldav-events-url) t (concat (unless all org-caldav-id-string)
-						 "\\.ics$")))))
-	(or events '(empty)))
-    (error '(empty))))
+Returns '(empty) if there are no events.
+Throws an error if connection fails."
+  ;; I'd really like to use `url-dav-directory-files' for this, but
+  ;; currently it is unable to differentiate between errors and empty
+  ;; directories.
+  (let ((output (url-dav-get-properties
+		 (org-caldav-events-url)
+		 '(DAV:resourcetype) 1)))
+    (cond
+     ((> (length output) 1)
+      ;; Everything looks OK - we got a list of "things".
+      ;; Get all ics files you can find in there.
+      (mapcar (lambda (file)
+		(file-name-sans-extension
+		 (file-name-nondirectory file)))
+	      (org-caldav-get-icsfiles-from-properties output)))
+     ((or (null output)
+	  (zerop (length output)))
+      ;; This is definitely an error.
+      (error "Error while getting eventlist from %s." (org-caldav-events-url)))
+     ((and (= (length output) 1)
+	   (stringp (car-safe (car output))))
+      (let ((status (plist-get (cdar output) 'DAV:status)))
+	(if (eq status 200)
+	    ;; This is an empty directory
+	    '(empty)
+	  (if status
+	      (error "Error while getting eventlist from %s. Got status code: %d."
+		     (org-caldav-events-url) status)
+	    (error "Error while getting eventlist from %s."
+		   (org-caldav-events-url)))))))))
 
 (defun org-caldav-get-event (uid)
   "Get event with UID from calendar.
