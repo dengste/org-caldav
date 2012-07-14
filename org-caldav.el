@@ -105,7 +105,7 @@ entries.")
   (org-caldav-debug-print (format "Check connection - doing a PROPFIND on %s."
 				  (org-caldav-events-url)))
   (let ((output (url-dav-request (org-caldav-events-url) "PROPFIND" nil nil 1)))
-  (unless (eq (plist-get (xml-tag-children (car output)) 'DAV:status) 200)
+  (unless (eq (plist-get (cdar output) 'DAV:status) 200)
     (org-caldav-debug-print "Got error status from PROPFIND: " output)
     (error "Could not query CalDAV URL %s." (org-caldav-events-url))))
   t)
