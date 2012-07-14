@@ -195,20 +195,25 @@ in BUFFER."
     (message "Finished sync.")))
 
 (defun org-caldav-insert-new-events ()
-  (with-current-buffer (find-file-noselect org-caldav-inbox)
-    (let ((caldav-uids (org-caldav-get-all-caldav-uids)))
-      (mapc
-       (lambda (uid)
-	 ;; We now only look at events which were not put there from us
-	 (unless (string-match (concat org-caldav-id-string "$") uid)
-	   (if (member uid caldav-uids)
-	       (org-caldav-debug-print (format "Event UID %s already exists in inbox." uid))
-	     (message "Adding new event %s to inbox." uid)
-	     (org-caldav-debug-print (format "Adding event UID %s to inbox." uid))
-	     (with-current-buffer (org-caldav-get-event uid)
-	       (apply 'org-caldav-insert-org-entry
-		      (append (org-caldav-convert-event) (list uid)))))))
-       (org-caldav-get-event-list t)))))
+  "Insert new events from calendar into `org-caldav-inbox'."
+  (let ((allevents (org-caldav-get-event-list t))
+	(caldav-uids (org-caldav-get-all-caldav-uids)))
+    (unless (eq (caar allevents) 'empty)
+      (with-current-buffer (find-file-noselect org-caldav-inbox)
+	(mapc
+	 (lambda (uid)
+	   ;; We now only look at events which were not put there from us
+	   (unless (string-match (concat org-caldav-id-string "$") uid)
+	     (if (member uid caldav-uids)
+		 (org-caldav-debug-print
+		  (format "Event UID %s already exists in inbox." uid))
+	       (message "Adding new event %s to inbox." uid)
+	       (org-caldav-debug-print
+		(format "Adding event UID %s to inbox." uid))
+	       (with-current-buffer (org-caldav-get-event uid)
+		 (apply 'org-caldav-insert-org-entry
+			(append (org-caldav-convert-event) (list uid)))))))
+	 allevents)))))
 
 (defun org-caldav-generate-ics ()
   "Generate ICS file from `org-caldav-files'.
