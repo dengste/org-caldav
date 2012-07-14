@@ -93,7 +93,11 @@ entries.")
 
 ;; Internal cache variables
 
-(defvar org-caldav-event-list nil)
+(defvar org-caldav-event-list nil
+  "Current event list.
+'nil' means it has to be updated.
+'empty if there are no events.")
+
 (defvar org-caldav-calendar-preamble nil)
 
 (defun org-caldav-check-connection ()
@@ -146,7 +150,7 @@ Throws an error if connection fails."
       (let ((status (plist-get (cdar output) 'DAV:status)))
 	(if (eq status 200)
 	    ;; This is an empty directory
-	    '(empty)
+	    'empty
 	  (if status
 	      (error "Error while getting eventlist from %s. Got status code: %d."
 		     (org-caldav-events-url) status)
@@ -194,43 +198,61 @@ in BUFFER."
       (concat org-caldav-url "/" org-caldav-calendar-id "/events/")
     (concat org-caldav-url "/" org-caldav-calendar-id "/")))
 
+(defun org-caldav-create-event-exist-cache ()
+  "Create internal cache for events and exist flags."
+  (let ((events (org-caldav-current-event-list)))
+    (if (eq events 'empty)
+	nil
+      (mapcar
+       'list
+       (org-caldav-filter
+	(org-caldav-current-event-list)
+	(lambda (x)
+	  (string-match (concat org-caldav-id-string "$") x)))))))
+
 (defun org-caldav-sync ()
+  "Sync Org with calendar."
   (interactive)
   (org-caldav-debug-print "Started sync.")
   (org-caldav-check-connection)
+  (message "Updating event list.")
   (setq org-caldav-event-list nil)
-  (message "Generating ICS file.")
-  (with-current-buffer (org-caldav-generate-ics)
-    (goto-char (point-min))
-    (setq org-caldav-calendar-preamble (org-caldav-get-preamble))
-    (while (org-caldav-narrow-next-event)
-      (message "Getting event list from calendar.")
-      (let* ((uid (org-caldav-rewrite-uid))
-	     (exists (org-caldav-check-for-uid uid))
-	     (event (buffer-string)))
+  (let ((events (org-caldav-create-event-exist-cache)))
+    (message "Generating ICS file.")
+    (with-current-buffer (org-caldav-generate-ics)
+      (goto-char (point-min))
+      (setq org-caldav-calendar-preamble (org-caldav-get-preamble))
+      (while (org-caldav-narrow-next-event)
+	(let* ((uid (org-caldav-rewrite-uid))
+	       (exists (assoc uid events))
+	       (event (buffer-string)))
 	(if exists
 	    (progn
-	      (org-caldav-debug-print (format "UID %s already exists in calendar." uid))
+	      (org-caldav-debug-print
+	       (format "UID %s already exists in calendar." uid))
 	      ;; Set flag that this event should be kept.
 	      (setcdr exists t))
 	  (with-temp-buffer
 	    (insert org-caldav-calendar-preamble event "END:VCALENDAR\n")
 	    (message "Putting event %s." uid)
 	    (org-caldav-put-event (current-buffer))))))
-    ;; Remove old entries which were apparently changed/deleted in the
-    ;; corresponding org file.
-    (message "Purging old events.")
-    (org-caldav-purge-old-events)
+      ;; Remove old entries which were apparently changed/deleted in the
+      ;; corresponding org file.
+      (message "Purging old events.")
+      (mapc
+       (lambda (x)
+	 (org-caldav-delete-event (car x)))
+       (org-caldav-filter events (lambda (x) (not (cdr x)))))
     ;; Sync new events to org file
     (org-caldav-insert-new-events)
-    (message "Finished sync.")))
+    (message "Finished sync."))))
 
 (defun org-caldav-insert-new-events ()
   "Insert new events from calendar into `org-caldav-inbox'."
-  (let ((allevents (org-caldav-get-event-list t))
-	(caldav-uids (org-caldav-get-all-caldav-uids)))
-    (unless (eq (caar allevents) 'empty)
-      (with-current-buffer (find-file-noselect org-caldav-inbox)
+  (with-current-buffer (find-file-noselect org-caldav-inbox)
+    (let ((allevents (org-caldav-current-event-list))
+	  (caldav-uids (org-caldav-get-all-caldav-uids)))
+      (unless (eq allevents 'empty)
 	(mapc
 	 (lambda (uid)
 	   ;; We now only look at events which were not put there from us
@@ -274,32 +296,13 @@ Returns buffer containing the ICS file."
 		      (progn (search-forward "BEGIN:VEVENT" nil t)
 			     (point-at-bol)))))
 
-(defun org-caldav-purge-old-events ()
-  "Remove events which do not exist in any org file."
-  (unless (eq (caar org-caldav-event-list) 'empty)
-    (org-caldav-debug-print "Removing old events from calendar. Current eventlist: "
-			    org-caldav-event-list)
-    (mapc
-     (lambda (uid)
-       ;; Check flag if entry did exists in any org file.
-       (unless (cdr uid)
-	 ;; Otherwise delete it from calendar.
-	 (message "Deleting event %s." (car uid))
-	 (org-caldav-delete-event (car uid))))
-     org-caldav-event-list)))
-
-(defun org-caldav-check-for-uid (uid)
-  "Check if UID exists in current event list."
+(defun org-caldav-current-event-list ()
+  "Returns the (maybe cached) event list.
+Gets event list from server if no cache is available."
   (unless org-caldav-event-list
-    (org-caldav-event-list-update))
-  (assoc uid org-caldav-event-list))
-
-(defun org-caldav-event-list-update ()
-  "Update the event list."
-  (let ((eventlist (org-caldav-get-event-list)))
-    (org-caldav-debug-print "Updated eventlist: " eventlist)
     (setq org-caldav-event-list
-	  (mapcar 'list eventlist))))
+	  (org-caldav-get-event-list)))
+  org-caldav-event-list)
 
 (defun org-caldav-narrow-next-event ()
   "Narrow next event in the current buffer.
@@ -356,6 +359,11 @@ Throw an error if there is no UID."
   (set-text-properties 0 (length str) nil str)
   str)
 
+(defun org-caldav-filter (events condp)
+  "Filter EVENTS according to CONDP."
+  (remq nil
+	(mapcar (lambda (x) (and (funcall condp x) x)) events)))
+
 (defun org-caldav-insert-org-entry (start-d start-t end-d end-t
 					    summary description uid)
   "Insert org block from given data into `org-caldav-inbox'.
@@ -384,7 +392,7 @@ Dates must be given in a format `org-read-date' can parse."
 (defun org-caldav-insert-org-time-stamp (date &optional time)
   "Insert org time stamp using DATE and TIME at point.
 DATE is given as european date (DD MM YYYY)."
-  (let* ((stime (when time (mapcar 'string-to-number 
+  (let* ((stime (when time (mapcar 'string-to-number
 				   (split-string time ":"))))
 	 (hours (if time (car stime) 0))
 	 (minutes (if time (nth 1 stime) 0))
