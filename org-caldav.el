@@ -248,6 +248,10 @@ from the org-caldav repository."))
        (org-caldav-filter events (lambda (x) (not (cdr x)))))
     ;; Sync new events to org file
     (org-caldav-insert-new-events)
+    (let ((filename (buffer-file-name)))
+      (set-buffer-modified-p nil)
+      (kill-buffer)
+      (delete-file filename))
     (message "Finished sync."))))
 
 (defun org-caldav-insert-new-events ()
