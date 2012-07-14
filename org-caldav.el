@@ -213,6 +213,9 @@ in BUFFER."
 (defun org-caldav-sync ()
   "Sync Org with calendar."
   (interactive)
+  (unless url-dav-patched-version
+    (error "You have to use the patched `url-dav' package \
+from the org-caldav repository."))
   (org-caldav-debug-print "Started sync.")
   (org-caldav-check-connection)
   (message "Updating event list.")

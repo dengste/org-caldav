@@ -27,6 +27,8 @@
 
 ;;; Code:
 
+(defvar url-dav-patched-version t)
+
 (eval-when-compile
   (require 'cl))
 
