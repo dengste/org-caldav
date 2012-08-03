@@ -213,8 +213,9 @@ in BUFFER."
 (defun org-caldav-sync ()
   "Sync Org with calendar."
   (interactive)
-  (unless url-dav-patched-version
-    (error "You have to use the patched `url-dav' package \
+  (unless (or (bound-and-true-p url-dav-patched-version)
+	      (url-dav-supported-p (org-caldav-events-url)))
+    (error "You have to either use Emacs from bzr, or the patched `url-dav' package \
 from the org-caldav repository."))
   (org-caldav-debug-print "Started sync.")
   (org-caldav-check-connection)
