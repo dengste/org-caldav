@@ -418,6 +418,13 @@ DATE is given as european date (DD MM YYYY)."
 ;; The following is taken from icalendar.el, written by Ulf Jasper.
 
 (defun org-caldav-convert-event ()
+  "Run org-caldav-convert-event-internal with the decoded entry"
+  (let ((decoded (decode-coding-region (point-min) (point-max) 'utf-8 t)))
+    (with-temp-buffer
+      (insert decoded)
+      (org-caldav-convert-event-internal))))
+
+(defun org-caldav-convert-event-internal ()
   "Convert icalendar event in current buffer.
 Returns a list '(start-d start-t end-d end-t summary description)'
 which can be fed into `org-caldav-insert-org-entry'."
