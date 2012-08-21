@@ -185,7 +185,7 @@ in BUFFER."
 	  (org-caldav-debug-print (format "Putting event UID %s." uid))
 	  (url-dav-save-resource
 	   (concat (org-caldav-events-url) uid ".ics")
-	   (current-buffer) "text/calendar; charset=UTF-8")))))
+	   (encode-coding-string (buffer-string) 'utf-8) "text/calendar; charset=UTF-8")))))
 
 (defun org-caldav-delete-event (uid)
   "Delete event UID from calendar."
