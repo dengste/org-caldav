@@ -261,7 +261,7 @@ Return list with elements (uid . etag)."
 (defun org-caldav-get-event (uid)
   "Get event with UID from calendar.
 Function returns a buffer containing the event, or nil if there's
-no event."
+no such event."
   (org-caldav-debug-print (format "Getting event UID %s." uid))
   (with-current-buffer
       (url-retrieve-synchronously
@@ -290,35 +290,6 @@ The filename will be derived from the UID."
 	 (concat (org-caldav-events-url) uid ".ics")
 	 (encode-coding-string (buffer-string) 'utf-8)
 	 "text/calendar; charset=UTF-8")))))
-
-;; Adapted from url-dav
-(defun org-caldav-save-object (url obj)
-  "Save OBJ as URL using WebDAV.
-URL must be a fully qualified URL.
-OBJ may be a buffer or a string.
-Return actual location from PUT request or nil."
-  (let ((buffer nil)
-	(result nil)
-	(url-request-extra-headers nil)
-	(url-request-method "PUT")
-	(url-request-data obj))
-    (push
-     (cons "Content-type" "text/calendar; charset=UTF-8")
-     url-request-extra-headers)
-    (push
-     (cons "If-None-Match" "*")
-     url-request-extra-headers)
-
-    ;; Do the save...
-    (setq buffer (url-retrieve-synchronously url))
-
-    (with-current-buffer buffer
-	(goto-char (point-min))
-	(when (and (looking-at "HTTP/1.1 201 Created")
-		   (re-search-forward "Location: \\(.*\\)\\s-*$" nil t))
-	  (prog1
-	      (match-string 1)
-	    (kill-buffer))))))
 
 (defun org-caldav-delete-event (uid)
   "Delete event UID from calendar."
