@@ -1,6 +1,11 @@
 ;; Test suite for org-caldav.el
 ;; Copyright, authorship, license: see org-caldav.el.
 
+;; Run it from the org-caldav directory like this:
+;; emacs -Q -L . --eval '(setq org-caldav-url "CALDAV-URL" org-caldav-calendar-id "CAL-ID")' -l org-caldav-testsuite.el -f ert
+
+;; This will completely wipe the named calendar!
+
 (require 'ert)
 (require 'org)
 (require 'org-caldav)
