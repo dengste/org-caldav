@@ -302,6 +302,26 @@ The filename will be derived from the UID."
   (org-caldav-debug-print (format "Deleting event UID %s.\n" uid))
   (url-dav-delete-file (concat (org-caldav-events-url) uid ".ics")))
 
+(defun org-caldav-start-from-scratch (prefix)
+  "Delete all events from Calendar and removes state file.
+Again: This deletes all events in your calendar.  So only do this
+if you're really sure.  This has to be called with a prefix, just
+so you don't do it by accident."
+  (interactive "P")
+  (if (not prefix)
+      (message "This function has to be called with a prefix.")
+    (unless (or org-caldav-empty-calendar
+		(not (y-or-n-p "This will delete EVERYTHING in your calendar. \
+Are you really sure? ")))
+      (dolist (cur (org-caldav-get-event-etag-list))
+	(message "Deleting %s" (car cur))
+	(org-caldav-delete-event (car cur)))
+      (setq org-caldav-empty-calendar t)
+      (when (file-exists-p
+	     (org-caldav-sync-state-filename org-caldav-calendar-id))
+	(delete-file (org-caldav-sync-state-filename org-caldav-calendar-id)))
+      (message "Done"))))
+
 (defun org-caldav-events-url ()
   "Return URL for events."
   (if (string-match "google\\.com" org-caldav-url)
