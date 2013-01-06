@@ -302,7 +302,7 @@ The filename will be derived from the UID."
   (org-caldav-debug-print (format "Deleting event UID %s.\n" uid))
   (url-dav-delete-file (concat (org-caldav-events-url) uid ".ics")))
 
-(defun org-caldav-start-from-scratch (prefix)
+(defun org-caldav-delete-everything (prefix)
   "Delete all events from Calendar and removes state file.
 Again: This deletes all events in your calendar.  So only do this
 if you're really sure.  This has to be called with a prefix, just
