@@ -108,6 +108,14 @@ ask = Ask for before deletion (default)
 never = Never delete Org entries
 always = Always delete")
 
+(defvar org-caldav-calendar-preamble
+  "BEGIN:VCALENDAR\nVERSION:2.0\nCALSCALE:GREGORIAN\n"
+  "Preamble used for iCalendar events.
+You usually should not have to touch this, but it might be
+necessary to add timezone information here in case your CalDAV
+server does not do that for you, or if you want to use a
+different timezone in your Org files.")
+
 (defvar org-caldav-debug t)
 (defvar org-caldav-debug-buffer "*org-caldav-debug*")
 
@@ -193,8 +201,6 @@ and  action = {org->cal, cal->org}.")
 	   (when (eq (car (last event)) status)
 	     event))
 	 org-caldav-event-list)))
-
-(defvar org-caldav-calendar-preamble nil)
 
 (defun org-caldav-check-connection ()
   "Check connection by doing a PROPFIND on CalDAV URL.
@@ -314,7 +320,6 @@ The filename will be derived from the UID."
   (org-caldav-debug-print "=== Updating EventDB from Org")
   (with-current-buffer buf
     (goto-char (point-min))
-    (setq org-caldav-calendar-preamble (org-caldav-get-preamble))
     (while (org-caldav-narrow-next-event)
       (let* ((uid (org-caldav-rewrite-uid-in-event))
 	     (md5 (org-caldav-generate-md5-for-org-entry uid))
@@ -421,7 +426,6 @@ from the org-caldav repository."))
   (with-current-buffer icsbuf
     (widen)
     (goto-char (point-min))
-    (setq org-caldav-calendar-preamble (org-caldav-get-preamble))
     (let ((events (append (org-caldav-filter-events 'new-in-org)
 			  (org-caldav-filter-events 'changed-in-org)))
 	  event-etags)
@@ -624,17 +628,6 @@ Returns buffer containing the ICS file."
   (if (re-search-forward "^UID:\\s-*\\(.+\\)\\s-*$" nil t)
       (match-string 1)
     (error "No UID could be found for current event.")))
-
-(defun org-caldav-get-preamble ()
-  "Snarf preample from current ics file and return it."
-  (save-excursion
-    (while (re-search-forward "^X-WR-.*\n" nil t)
-      (replace-match "")))
-  (save-excursion
-    (buffer-substring (progn (search-forward "BEGIN:VCALENDAR" nil t)
-			     (point-at-bol))
-		      (progn (search-forward "BEGIN:VEVENT" nil t)
-			     (point-at-bol)))))
 
 (defun org-caldav-current-event-etag-list ()
   "Returns the (maybe cached) event list.
