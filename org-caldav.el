@@ -493,7 +493,7 @@ This removes timestamps which weren't properly removed by
 org-icalendar."
   (save-excursion
     (goto-char (point-min))
-    (when (re-search-forward "^DESCRIPTION:.*?\\(\\s-*<[^>]+>\\s-*\\\\n?\\).*$" nil t)
+    (when (re-search-forward "^DESCRIPTION:.*?\\(\\s-*<[^>]+?>\\)" nil t)
       (replace-match "" nil nil nil 1))))
 
 (defun org-caldav-update-events-in-org ()
@@ -627,6 +627,9 @@ Returns buffer containing the ICS file."
 
 (defun org-caldav-get-preamble ()
   "Snarf preample from current ics file and return it."
+  (save-excursion
+    (while (re-search-forward "^X-WR-.*\n" nil t)
+      (replace-match "")))
   (save-excursion
     (buffer-substring (progn (search-forward "BEGIN:VCALENDAR" nil t)
 			     (point-at-bol))
