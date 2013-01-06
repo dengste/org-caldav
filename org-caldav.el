@@ -610,9 +610,7 @@ org-icalendar."
   "Change timestamp from Org item under point to NEWTIME."
   (org-narrow-to-subtree)
   (goto-char (point-min))
-  (when (or (re-search-forward org-stamp-time-of-day-regexp nil t)
-	    ;; Full day event
-	    (re-search-forward "<[0-9-]+ [A-Za-z]+\\{3\\}>" nil t))
+  (when (re-search-forward org-maybe-keyword-time-regexp nil t)
     (replace-match newtime nil t))
   (widen))
 
