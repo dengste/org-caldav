@@ -313,10 +313,14 @@ so you don't do it by accident."
     (unless (or org-caldav-empty-calendar
 		(not (y-or-n-p "This will delete EVERYTHING in your calendar. \
 Are you really sure? ")))
-      (dolist (cur (org-caldav-get-event-etag-list))
-	(message "Deleting %s" (car cur))
-	(org-caldav-delete-event (car cur)))
-      (setq org-caldav-empty-calendar t)
+      (let ((events (org-caldav-get-event-etag-list))
+	    (counter 0)
+	    (url-show-status nil))
+	(dolist (cur events)
+	  (setq counter (1+ counter))
+	  (message "Deleting event %d of %d" counter (length events))
+	  (org-caldav-delete-event (car cur)))
+	(setq org-caldav-empty-calendar t))
       (when (file-exists-p
 	     (org-caldav-sync-state-filename org-caldav-calendar-id))
 	(delete-file (org-caldav-sync-state-filename org-caldav-calendar-id)))
@@ -448,6 +452,8 @@ from the org-caldav repository."))
     (goto-char (point-min))
     (let ((events (append (org-caldav-filter-events 'new-in-org)
 			  (org-caldav-filter-events 'changed-in-org)))
+	  (counter 0)
+	  (url-show-status nil)
 	  event-etags)
       ;; Put the events via CalDAV.
       (dolist (cur events)
@@ -459,6 +465,8 @@ from the org-caldav repository."))
 	(org-caldav-narrow-event-under-point)
 	(org-caldav-cleanup-ics-description)
 	(org-caldav-set-sequence-number cur)
+	(setq counter (1+ counter))
+	(message "Putting event %d of %d" counter (length events))
 	(org-caldav-put-event icsbuf)
 	;; Get new sequence number.
 	;; While we DID just set it, the server might just choose
