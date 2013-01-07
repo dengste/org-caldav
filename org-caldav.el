@@ -180,19 +180,6 @@ and  action = {org->cal, cal->org}.")
   "Set sequence number from EVENT to SEQNUM."
   (setcar (nthcdr 3 event) seqnum))
 
-(defun org-caldav-event-set (uid prop value)
-  "For even with UID, set property PROP to VALUE."
-  (let ((event (org-caldav-search-event uid)))
-    (cond
-     ((eq prop 'md5)
-      (setcar (cdr event) value))
-     ((eq prop 'etag)
-      (setcar (nthcdr 2 event) value))
-     ((eq prop 'status)
-      (setcar (last event) value))
-     (t
-      (error "Unknown property %s." prop)))))
-
 (defun org-caldav-filter-events (status)
   "Return list of events with STATUS."
   (delq nil
@@ -331,13 +318,6 @@ Are you really sure? ")))
   (if (string-match "google\\.com" org-caldav-url)
       (concat org-caldav-url "/" org-caldav-calendar-id "/events/")
     (concat org-caldav-url "/" org-caldav-calendar-id "/")))
-
-(defun org-caldav-create-event-exist-cache ()
-  "Create internal cache for events and exist flags."
-  (let ((events (org-caldav-current-event-etag-list)))
-    (if (eq events 'empty)
-	nil
-      events)))
 
 (defun org-caldav-update-eventdb-from-org (buf)
   "With combined ics file in BUF, update the event database."
@@ -614,27 +594,6 @@ org-icalendar."
     (replace-match newtime nil t))
   (widen))
 
-(defun org-caldav-insert-new-events ()
-  "Insert new events from calendar into `org-caldav-inbox'."
-  (with-current-buffer (find-file-noselect org-caldav-inbox)
-    (let ((allevents (org-caldav-current-event-etag-list))
-	  (caldav-uids (org-caldav-get-all-caldav-uids)))
-      (unless (eq allevents 'empty)
-	(mapc
-	 (lambda (uid)
-	   ;; We now only look at events which were not put there from us
-	   (unless (string-match (concat org-caldav-id-string "$") uid)
-	     (if (member uid caldav-uids)
-		 (org-caldav-debug-print
-		  (format "Event UID %s already exists in inbox." uid))
-	       (message "Adding new event %s to inbox." uid)
-	       (org-caldav-debug-print
-		(format "Adding event UID %s to inbox." uid))
-	       (with-current-buffer (org-caldav-get-event uid)
-		 (apply 'org-caldav-insert-org-entry
-			(append (org-caldav-convert-event) (list uid)))))))
-	 allevents)))))
-
 (defun org-caldav-generate-ics ()
   "Generate ICS file from `org-caldav-files'.
 Returns buffer containing the ICS file."
@@ -711,11 +670,6 @@ Throw an error if there is no UID."
       (replace-match "" nil nil nil 2))
     (match-string 3)))
 
-(defun org-caldav-get-all-caldav-uids ()
-  "Get all CALDAV-UID properties from current org buffer."
-  (mapcar 'org-caldav-remove-text-properties
-	  (org-property-values "CALDAV-UID")))
-
 (defun org-caldav-debug-print (&rest objects)
   "Print OBJECTS into debug buffer if `org-caldav-debug' is non-nil."
   (when org-caldav-debug
@@ -730,16 +684,6 @@ Throw an error if there is no UID."
   "Return non-nil if current buffer is narrowed."
   (> (buffer-size) (- (point-max)
 		      (point-min))))
-
-(defun org-caldav-remove-text-properties (str)
-  "Remove all text properties from string."
-  (set-text-properties 0 (length str) nil str)
-  str)
-
-(defun org-caldav-filter (events condp)
-  "Filter EVENTS according to CONDP."
-  (remq nil
-	(mapcar (lambda (x) (and (funcall condp x) x)) events)))
 
 (defun org-caldav-insert-org-entry (start-d start-t end-d end-t
 					    summary description uid)
