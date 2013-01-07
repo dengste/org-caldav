@@ -116,8 +116,11 @@ necessary to add timezone information here in case your CalDAV
 server does not do that for you, or if you want to use a
 different timezone in your Org files.")
 
-(defvar org-caldav-debug t)
-(defvar org-caldav-debug-buffer "*org-caldav-debug*")
+(defvar org-caldav-debug t
+  "Whether to print debug information in `org-caldav-debug-buffer'.")
+
+(defvar org-caldav-debug-buffer "*org-caldav-debug*"
+  "Name of the debug buffer.")
 
 ;; Internal variables
 
@@ -133,7 +136,7 @@ Contains an alist with entries
   (uid status action)
 
 with status = {new,changed,deleted}-in-{org,cal}
-and  action = {org->cal, cal->org}.")
+and  action = {org->cal, cal->org, error:org->cal, error:cal->org}.")
 
 (defvar org-caldav-empty-calendar nil
   "Flag if we have an empty calendar in the beginning.")
