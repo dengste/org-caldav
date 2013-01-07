@@ -396,11 +396,14 @@ Are you really sure? ")))
 
 (defun org-caldav-generate-md5-for-org-entry (uid)
   "Find Org entry with UID and calculate its MD5."
-  (save-excursion
-    (org-id-goto uid)
-    (md5 (buffer-substring-no-properties
-	  (org-entry-beginning-position)
-	  (org-entry-end-position)))))
+  (let ((marker (org-id-find uid t)))
+    (when (null marker)
+      (error "Could not find UID %s." uid))
+    (with-current-buffer (marker-buffer marker)
+      (goto-char (marker-position marker))
+      (md5 (buffer-substring-no-properties
+	    (org-entry-beginning-position)
+	    (org-entry-end-position))))))
 
 (defun org-caldav-sync ()
   "Sync Org with calendar."
@@ -538,23 +541,27 @@ org-icalendar."
 	;; This is a changed event.
 	(org-caldav-debug-print
 	 (format "Event UID %s: Changed in Cal --> Org" uid))
-	(org-id-goto (car cur))
-	;; See what we should sync.
-	(when (or (eq org-caldav-sync-changes-to-org 'title-only)
-		  (eq org-caldav-sync-changes-to-org 'title-and-timestamp))
-	  ;; Sync title
-	  (org-caldav-change-heading (nth 4 eventdata)))
-	(when (or (eq org-caldav-sync-changes-to-org 'timestamp-only)
-		  (eq org-caldav-sync-changes-to-org 'title-and-timestamp))
-	  ;; Sync timestamp
-	  (org-caldav-change-timestamp
-	   (apply 'org-caldav-create-time-range (butlast eventdata 2))))
-	(when (eq org-caldav-sync-changes-to-org 'all)
-	  ;; Sync everything, so first remove the old one.
-	  (delete-region (org-entry-beginning-position)
-			 (org-entry-end-position))
-	  (apply 'org-caldav-insert-org-entry
-		 (append eventdata (list uid)))))
+	(let ((marker (org-id-find (car cur) t)))
+	  (when (null marker)
+	    (error "Could not find UID %s." (car cur)))
+	  (with-current-buffer (marker-buffer marker)
+	    (goto-char (marker-position marker))
+	    ;; See what we should sync.
+	    (when (or (eq org-caldav-sync-changes-to-org 'title-only)
+		      (eq org-caldav-sync-changes-to-org 'title-and-timestamp))
+	      ;; Sync title
+	      (org-caldav-change-heading (nth 4 eventdata)))
+	    (when (or (eq org-caldav-sync-changes-to-org 'timestamp-only)
+		      (eq org-caldav-sync-changes-to-org 'title-and-timestamp))
+	      ;; Sync timestamp
+	      (org-caldav-change-timestamp
+	       (apply 'org-caldav-create-time-range (butlast eventdata 2))))
+	    (when (eq org-caldav-sync-changes-to-org 'all)
+	      ;; Sync everything, so first remove the old one.
+	      (delete-region (org-entry-beginning-position)
+			     (org-entry-end-position))
+	      (apply 'org-caldav-insert-org-entry
+		     (append eventdata (list uid)))))))
       ;; Update the event database.
       (org-caldav-event-set-status cur 'synced)
       (org-caldav-event-set-md5
