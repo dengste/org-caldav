@@ -450,6 +450,7 @@ from the org-caldav repository."))
 	(search-forward (car cur))
 	(org-caldav-narrow-event-under-point)
 	(org-caldav-cleanup-ics-description)
+	(org-caldav-maybe-fix-timezone)
 	(org-caldav-set-sequence-number cur)
 	(setq counter (1+ counter))
 	(message "Putting event %d of %d" counter (length events))
@@ -513,6 +514,15 @@ org-icalendar."
     (goto-char (point-min))
     (when (re-search-forward "^DESCRIPTION:.*?\\(\\s-*<[^>]+?>\\)" nil t)
       (replace-match "" nil nil nil 1))))
+
+(defun org-caldav-maybe-fix-timezone ()
+  "Fix the timezone if it is all uppercase.
+This is a bug in older Org versions."
+  (unless (null org-icalendar-timezone)
+    (save-excursion
+      (goto-char (point-min))
+      (while (search-forward (upcase org-icalendar-timezone) nil t)
+	(replace-match org-icalendar-timezone t)))))
 
 (defun org-caldav-update-events-in-org ()
   (org-caldav-debug-print "=== Updating events in Org")
@@ -609,7 +619,10 @@ org-icalendar."
 Returns buffer containing the ICS file."
   (let ((org-combined-agenda-icalendar-file (make-temp-file "org-caldav-"))
 	;; We absolutely need UIDs for synchronization.
-	(org-icalendar-store-UID t))
+	(org-icalendar-store-UID t)
+	(org-icalendar-date-time-format (if org-icalendar-timezone
+					    ";TZID=%Z:%Y%m%dT%H%M%S"
+					  ":%Y%m%dT%H%M%S")))
     (org-caldav-debug-print (format "Generating ICS file %s."
 				    org-combined-agenda-icalendar-file))
     ;; Export events to one single ICS file.
