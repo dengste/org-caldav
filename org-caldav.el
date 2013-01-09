@@ -643,14 +643,6 @@ Returns buffer containing the ICS file."
       (match-string 1)
     (error "No UID could be found for current event.")))
 
-(defun org-caldav-current-event-etag-list ()
-  "Returns the (maybe cached) event list.
-Gets event list from server if no cache is available."
-  (unless org-caldav-event-etag-list
-    (setq org-caldav-event-etag-list
-	  (org-caldav-get-event-etag-list)))
-  org-caldav-event-etag-list)
-
 (defun org-caldav-narrow-next-event ()
   "Narrow next event in the current buffer.
 If buffer is currently not narrowed, narrow to the first one.
