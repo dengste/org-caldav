@@ -482,9 +482,10 @@ from the org-caldav repository."))
       ;; Update etags of new and changed events.
       (setq event-etags (org-caldav-get-event-etag-list))
       (dolist (cur events)
-	(org-caldav-event-set-etag
-	 cur (cdr (assoc (car cur) event-etags)))
-	(org-caldav-event-set-status cur 'synced)))
+	(unless (eq (org-caldav-event-status cur) 'error)
+	  (org-caldav-event-set-etag
+	   cur (cdr (assoc (car cur) event-etags)))
+	  (org-caldav-event-set-status cur 'synced))))
     ;; Remove events that were deleted in org
     (dolist (cur (org-caldav-filter-events 'deleted-in-org))
       (org-caldav-delete-event (car cur))
