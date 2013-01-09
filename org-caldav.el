@@ -108,6 +108,9 @@ ask = Ask for before deletion (default)
 never = Never delete Org entries
 always = Always delete")
 
+(defvar org-caldav-show-sync-results t
+  "Whether to show what was done after syncing.")
+
 (defvar org-caldav-calendar-preamble
   "BEGIN:VCALENDAR\nVERSION:2.0\nCALSCALE:GREGORIAN\n"
   "Preamble used for iCalendar events.
@@ -429,6 +432,8 @@ from the org-caldav repository."))
     (org-caldav-update-events-in-cal icsbuf)
     (org-caldav-update-events-in-org)
     (org-caldav-save-sync-state)
+    (when org-caldav-show-sync-results
+      (org-caldav-display-sync-results))
     (message "Finished sync.")))
 
 (defun org-caldav-update-events-in-cal (icsbuf)
@@ -791,6 +796,47 @@ See also `org-caldav-save-directory'."
   (expand-file-name
    (concat "org-caldav-" (substring (md5 id) 1 8) ".el")
    org-caldav-save-directory))
+
+(defvar org-caldav-sync-results-mode-map
+  (let ((map (make-keymap)))
+    (define-key map [(return)] 'org-caldav-goto-uid)
+    (define-key map [(mouse-1)] 'org-caldav-goto-uid)
+    map)
+  "Keymap for org-caldav result buffer.")
+
+(defun org-caldav-display-sync-results ()
+  "Display results of sync in a buffer."
+  (with-current-buffer (get-buffer-create "*org caldav sync result*")
+    (setq buffer-read-only nil)
+    (erase-buffer)
+    (insert "CalDAV Sync finished.\n\n")
+    (if (null org-caldav-sync-result)
+	(insert "Nothing was done.")
+      (dolist (cur org-caldav-sync-result)
+	(insert "UID: ")
+	(let ((start (point)))
+	  (insert (car cur))
+	  (unless (or (eq (nth 1 cur) 'deleted-in-org)
+		      (eq (nth 1 cur) 'deleted-in-cal))
+	    (put-text-property start (point)
+			       'face 'link)))
+	(insert "\n   Status: "
+		(symbol-name (nth 1 cur))
+		"  Action: "
+		(symbol-name (nth 2 cur))
+		"\n\n")))
+    (pop-to-buffer-same-window (current-buffer))
+    (setq buffer-read-only t)
+    (use-local-map org-caldav-sync-results-mode-map)))
+
+(defun org-caldav-goto-uid ()
+  "Jump to UID unter point."
+  (interactive)
+  (when (equal (text-properties-at (point))
+	       '(face link))
+    (beginning-of-line)
+    (looking-at "UID: \\(.+\\)$")
+    (org-id-goto (match-string 1))))
 
 ;; The following is taken from icalendar.el, written by Ulf Jasper.
 
