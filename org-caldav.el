@@ -550,13 +550,13 @@ This is a bug in older Org versions."
 	(setq eventdata (org-caldav-convert-event)))
       (if (eq (org-caldav-event-status cur) 'new-in-cal)
 	  ;; This is a new event.
-	  (progn
-	    (set-buffer (find-file-noselect org-caldav-inbox))
+	  (with-current-buffer (find-file-noselect org-caldav-inbox)
 	    (org-caldav-debug-print
 	     (format "Event UID %s: New in Cal --> Org inbox." uid))
 	    (goto-char (point-max))
 	    (apply 'org-caldav-insert-org-entry
-		   (append eventdata (list uid))))
+		   (append eventdata (list uid)))
+	    (setq buf (current-buffer)))
 	;; This is a changed event.
 	(org-caldav-debug-print
 	 (format "Event UID %s: Changed in Cal --> Org" uid))
@@ -580,13 +580,15 @@ This is a bug in older Org versions."
 	      (delete-region (org-entry-beginning-position)
 			     (org-entry-end-position))
 	      (apply 'org-caldav-insert-org-entry
-		     (append eventdata (list uid)))))))
+		     (append eventdata (list uid))))
+	    (setq buf (current-buffer)))))
       ;; Update the event database.
       (org-caldav-event-set-status cur 'synced)
-      (org-caldav-event-set-md5
-       cur (md5 (buffer-substring-no-properties
-		 (org-entry-beginning-position)
-		 (org-entry-end-position))))))
+      (with-current-buffer buf
+	(org-caldav-event-set-md5
+	 cur (md5 (buffer-substring-no-properties
+		   (org-entry-beginning-position)
+		   (org-entry-end-position)))))))
   ;; (Maybe) delete entries which were deleted in calendar.
   (unless (eq org-caldav-delete-org-entries 'never)
     (dolist (cur (org-caldav-filter-events 'deleted-in-cal))
