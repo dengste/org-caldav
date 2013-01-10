@@ -376,6 +376,7 @@ Are you really sure? ")))
 	    (org-entry-beginning-position)
 	    (org-entry-end-position))))))
 
+;;;###autoload
 (defun org-caldav-sync ()
   "Sync Org with calendar."
   (interactive)
