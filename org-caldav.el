@@ -23,44 +23,9 @@
 ;;
 ;;; Commentary:
 
-;; Tested CalDAV servers: Owncloud, Google Calendar.
+;; This code is still alpha. Be prepared. Have backups. Take care.
 ;;
-;; IMPORTANT: Do NOT simply put your main calendar in `org-caldav-calendar-id'!
-;;
-;; Instead, create a new, dedicated calendar.  The code is still
-;; pretty rough and might easily delete entries it should not delete.
-;;
-;; This package depends on the url-dav package, which unfortunately is
-;; broken in Emacs proper. Get a fixed one from
-;;   https://github.com/dengste/org-caldav
-;; and load it before using org-caldav.
-;;
-;; In a nutshell:
-;;
-;; - Create a new calendar; the name does not matter. Again, do *not*
-;;   use your precious main calendar.
-;;
-;; - Set `org-caldav-url' to the base address of your CalDAV server:
-;;    * Owncloud: https://OWNCLOUD-SERVER-URL/remote.php/caldav/calendars/USERID
-;;    * Google: https://www.google.com/calendar/dav
-;;
-;; - Set `org-caldav-calendar-id' to the calendar-id of your new calendar:
-;;    * OwnCloud: Simply the name of the calendar.
-;;    * Google: Click on 'calendar settings' and the id will be shown
-;;      next to "Calendar Address". It is of the form
-;;      ID@group.calendar.google.com. Do *not* omit the domain.
-;;
-;; - Set `org-caldav-files' to the list of org files you would like to
-;;   sync. For everything else, you can use the org-icalendar-*
-;;   variables, since org-caldav uses that package to generate the
-;;   events.
-;;
-;; - Set `org-caldav-inbox' to an org filename where new entries from
-;;   the calendar should be stored.
-;;
-;; Call `org-caldav-sync' to start the sync. The URL package will ask
-;; you for username/password for accessing the calendar.
-
+;; Otherwise, see README.
 
 ;;; Code:
 
@@ -817,22 +782,45 @@ See also `org-caldav-save-directory'."
     (insert "CalDAV Sync finished.\n\n")
     (if (null org-caldav-sync-result)
 	(insert "Nothing was done.")
-      (dolist (cur org-caldav-sync-result)
-	(insert "UID: ")
-	(let ((start (point)))
-	  (insert (car cur))
-	  (unless (or (eq (nth 1 cur) 'deleted-in-org)
-		      (eq (nth 1 cur) 'deleted-in-cal))
-	    (put-text-property start (point)
-			       'face 'link)))
-	(insert "\n   Status: "
-		(symbol-name (nth 1 cur))
-		"  Action: "
-		(symbol-name (nth 2 cur))
-		"\n\n")))
+      (insert "== Sync errors: \n\n")
+      (let ((errevents (org-caldav-sync-result-filter-errors)))
+	(if (null errevents)
+	    (insert "None.\n")
+	  (org-caldav-sync-result-print-entries errevents)))
+      (insert "\n== Successful syncs: \n\n")
+      (org-caldav-sync-result-print-entries
+       (org-caldav-sync-result-filter-errors t)))
     (pop-to-buffer-same-window (current-buffer))
     (setq buffer-read-only t)
+    (goto-char (point-min))
     (use-local-map org-caldav-sync-results-mode-map)))
+
+(defun org-caldav-sync-result-filter-errors (&optional complement)
+  "Return items from sync results with errors.
+If COMPLEMENT is non-nil, return all item without errors."
+  (delq nil
+	(mapcar
+	 (lambda (x)
+	   (if (or (eq (car (last x)) 'error:org->cal)
+		   (eq (car (last x)) 'error:cal->org))
+	       (unless complement x)
+	     (when complement x)))
+	 org-caldav-sync-result)))
+
+(defun org-caldav-sync-result-print-entries (entries)
+  (dolist (entry entries)
+    (insert "UID: ")
+    (let ((start (point)))
+      (insert (car entry))
+      (unless (or (eq (nth 1 entry) 'deleted-in-org)
+		  (eq (nth 1 entry) 'deleted-in-cal))
+	(put-text-property start (point)
+			   'face 'link)))
+    (insert "\n   Status: "
+	    (symbol-name (nth 1 entry))
+	    "  Action: "
+	    (symbol-name (nth 2 entry))
+	    "\n\n")))
 
 (defun org-caldav-goto-uid ()
   "Jump to UID unter point."
