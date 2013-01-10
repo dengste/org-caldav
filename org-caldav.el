@@ -426,7 +426,8 @@ from the org-caldav repository."))
   ;; Remove status in event list
   (dolist (cur org-caldav-event-list)
     (org-caldav-event-set-status cur nil))
-  (let ((icsbuf (org-caldav-generate-ics)))
+  (let* ((icsbuf (org-caldav-generate-ics))
+	 (filename (buffer-file-name icsbuf)))
     (org-caldav-update-eventdb-from-org icsbuf)
     (org-caldav-update-eventdb-from-cal)
     (org-caldav-update-events-in-cal icsbuf)
@@ -434,7 +435,11 @@ from the org-caldav repository."))
     (org-caldav-save-sync-state)
     (when org-caldav-show-sync-results
       (org-caldav-display-sync-results))
-    (message "Finished sync.")))
+    (with-current-buffer icsbuf
+      (set-buffer-modified-p nil)
+      (kill-buffer))
+    (delete-file filename))
+  (message "Finished sync."))
 
 (defun org-caldav-update-events-in-cal (icsbuf)
   (org-caldav-debug-print "=== Updating events in calendar")
