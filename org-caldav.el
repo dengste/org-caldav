@@ -509,12 +509,16 @@ This is a bug in older Org versions."
   (org-caldav-debug-print "=== Updating events in Org")
   (let ((events (append (org-caldav-filter-events 'new-in-cal)
 			(org-caldav-filter-events 'changed-in-cal)))
+	(url-show-status nil)
+	(counter 0)
 	eventdata buf uid)
 
     (dolist (cur events)
       (setq uid (car cur))
       (push (list uid (org-caldav-event-status cur) 'cal->org)
 	    org-caldav-sync-result)
+      (setq counter (1+ counter))
+      (message "Getting event %d of %d" counter (length events))
       (with-current-buffer (org-caldav-get-event uid)
 	;; Get sequence number
 	(goto-char (point-min))
