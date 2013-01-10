@@ -492,12 +492,17 @@ from the org-caldav repository."))
 	   cur (cdr (assoc (car cur) event-etags)))
 	  (org-caldav-event-set-status cur 'synced))))
     ;; Remove events that were deleted in org
-    (dolist (cur (org-caldav-filter-events 'deleted-in-org))
-      (org-caldav-delete-event (car cur))
-      (push (list (car cur) 'deleted-in-org 'removed-from-cal)
-	    org-caldav-sync-result)
-      (setq org-caldav-event-list
-	    (delete cur org-caldav-event-list)))
+    (let ((events (org-caldav-filter-events 'deleted-in-org))
+	  (url-show-status nil)
+	  (counter 0))
+      (dolist (cur events)
+	(setq counter (1+ counter))
+	(message "Deleting event %d from %d" counter (length events))
+	(org-caldav-delete-event (car cur))
+	(push (list (car cur) 'deleted-in-org 'removed-from-cal)
+	      org-caldav-sync-result)
+	(setq org-caldav-event-list
+	      (delete cur org-caldav-event-list))))
     ;; Remove events that could not be put
     (dolist (cur (org-caldav-filter-events 'error))
       (setq org-caldav-event-list
