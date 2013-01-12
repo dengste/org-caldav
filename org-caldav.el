@@ -73,6 +73,11 @@ ask = Ask for before deletion (default)
 never = Never delete Org entries
 always = Always delete")
 
+(defvar org-caldav-backup-file
+  (expand-file-name "org-caldav-backup.org" user-emacs-directory)
+  "Name of the file where org-caldav should backup entries.
+Set this to nil if you don't want any backups.")
+
 (defvar org-caldav-show-sync-results t
   "Whether to show what was done after syncing.")
 
@@ -554,6 +559,8 @@ This is a bug in older Org versions."
 	    (error "Could not find UID %s." (car cur)))
 	  (with-current-buffer (marker-buffer marker)
 	    (goto-char (marker-position marker))
+	    (when org-caldav-backup-file
+	      (org-caldav-backup-item))
 	    ;; See what we should sync.
 	    (when (or (eq org-caldav-sync-changes-to-org 'title-only)
 		      (eq org-caldav-sync-changes-to-org 'title-and-timestamp))
@@ -610,6 +617,15 @@ This is a bug in older Org versions."
   (when (re-search-forward org-maybe-keyword-time-regexp nil t)
     (replace-match newtime nil t))
   (widen))
+
+(defun org-caldav-backup-item ()
+  "Put current item in backup file."
+  (let ((item (buffer-substring (org-entry-beginning-position)
+				(org-entry-end-position))))
+    (with-current-buffer (find-file-noselect org-caldav-backup-file)
+      (goto-char (point-max))
+      (insert item "\n")
+      (save-buffer))))
 
 (defun org-caldav-generate-ics ()
   "Generate ICS file from `org-caldav-files'.
