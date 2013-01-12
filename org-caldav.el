@@ -386,9 +386,13 @@ Are you really sure? ")))
 from the org-caldav repository."))
   (org-caldav-debug-print "========== Started sync.")
   (org-caldav-check-connection)
-  (setq org-caldav-event-list nil)
-  (setq org-caldav-sync-result nil)
-  (org-caldav-load-sync-state)
+  ;; Check if we should resume, otherwise load sync state from disk.
+  (unless (and org-caldav-event-list
+	       (not (y-or-n-p "Last sync seems to have been aborted. \
+Should I try to resume? ")))
+    (setq org-caldav-event-list nil)
+    (setq org-caldav-sync-result nil)
+    (org-caldav-load-sync-state))
   ;; Remove status in event list
   (dolist (cur org-caldav-event-list)
     (org-caldav-event-set-status cur nil))
@@ -399,6 +403,7 @@ from the org-caldav repository."))
     (org-caldav-update-events-in-cal icsbuf)
     (org-caldav-update-events-in-org)
     (org-caldav-save-sync-state)
+    (setq org-caldav-event-list nil)
     (when org-caldav-show-sync-results
       (org-caldav-display-sync-results))
     (with-current-buffer icsbuf
