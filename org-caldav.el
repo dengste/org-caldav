@@ -339,6 +339,10 @@ Are you really sure? ")))
 	    (eq (org-caldav-event-status dbentry) 'deleted-in-org))
 	(org-caldav-debug-print
 	 (format "Cal UID %s: Ignoring (Org always wins)." (car cur))))
+       ((null (org-caldav-event-etag dbentry))
+	(org-caldav-debug-print
+	 (format "Cal UID %s: No etag, probably aborted sync. Assuming synced." (car cur)))
+	(org-caldav-event-set-status dbentry 'synced))
        ((not (string= (cdr cur) (org-caldav-event-etag dbentry)))
 	;; Event's etag changed.
 	(org-caldav-debug-print
