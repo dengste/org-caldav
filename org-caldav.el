@@ -259,8 +259,7 @@ The filename will be derived from the UID."
 	(setq org-caldav-empty-calendar nil)
 	(org-caldav-save-resource
 	 (concat (org-caldav-events-url) uid ".ics")
-	 (encode-coding-string (buffer-string) 'utf-8)
-	 "text/calendar; charset=UTF-8")))))
+	 (encode-coding-string (buffer-string) 'utf-8))))))
 
 (defun org-caldav-delete-event (uid)
   "Delete event UID from calendar."
@@ -948,33 +947,14 @@ which can be fed into `org-caldav-insert-org-entry'."
 
 ;; This is adapted from url-dav.el, written by Bill Perry.
 ;; This does more error checking on the headers.
-(defun org-caldav-save-resource (url obj &optional content-type lock-token)
-  "Save OBJ as URL using WebDAV.
-URL must be a fully qualified URL.
-OBJ may be a buffer or a string."
-  (let ((buffer nil)
-	(result nil)
-	(url-request-extra-headers nil)
-	(url-request-method "PUT")
-	(url-request-data
-	 (cond
-	  ((bufferp obj)
-	   (with-current-buffer obj
-	     (buffer-string)))
-	  ((stringp obj)
-	   obj)
-	  (t
-	   (error "Invalid object to url-dav-save-resource")))))
-    (if lock-token
-	(push
-	 (cons "If" (concat "(<" lock-token ">)"))
-	 url-request-extra-headers))
-    ;; Everything must always have a content-type when we submit it.
-    (push
-     (cons "Content-type" (or content-type "application/octet-stream"))
-     url-request-extra-headers)
-    ;; Do the save...
-    (setq buffer (url-retrieve-synchronously url))
+(defun org-caldav-save-resource (url obj)
+  "Save string OBJ as URL using WebDAV."
+  (let* ((url-request-extra-headers
+	  '(("Content-type" . "text/calendar; charset=UTF-8")))
+	 (url-request-method "PUT")
+	 (url-request-data obj)
+	 (buffer (url-retrieve-synchronously url))
+	 result)
     ;; Sanity checking
     (when buffer
       (unwind-protect
@@ -989,7 +969,6 @@ OBJ may be a buffer or a string."
 		   (format "Got error: %s" answer)))))
 	    (kill-buffer buffer))))
     result))
-
 
 (provide 'org-caldav)
 
