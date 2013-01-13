@@ -349,8 +349,8 @@ Are you really sure? ")))
 	 (format "Cal UID %s: Ignoring (Org always wins)." (car cur))))
        ((null (org-caldav-event-etag dbentry))
 	(org-caldav-debug-print
-	 (format "Cal UID %s: No etag, probably aborted sync. Assuming synced." (car cur)))
-	(org-caldav-event-set-status dbentry 'synced))
+	 (format "Cal UID %s: No Etag. Mark as change, so putting it again." (car cur)))
+	(org-caldav-event-set-status dbentry 'changed-in-org))
        ((not (string= (cdr cur) (org-caldav-event-etag dbentry)))
 	;; Event's etag changed.
 	(org-caldav-debug-print
@@ -398,20 +398,20 @@ Are you really sure? ")))
 from the org-caldav repository."))
   (org-caldav-debug-print "========== Started sync.")
   (org-caldav-check-connection)
-  ;; Check if we should resume, otherwise load sync state from disk.
-  (unless (and org-caldav-event-list
-	       (not (y-or-n-p "Last sync seems to have been aborted. \
-Should I try to resume? ")))
-    (setq org-caldav-event-list nil)
-    (setq org-caldav-sync-result nil)
-    (org-caldav-load-sync-state))
-  ;; Remove status in event list
-  (dolist (cur org-caldav-event-list)
-    (org-caldav-event-set-status cur nil))
   (let* ((icsbuf (org-caldav-generate-ics))
 	 (filename (buffer-file-name icsbuf)))
-    (org-caldav-update-eventdb-from-org icsbuf)
-    (org-caldav-update-eventdb-from-cal)
+    ;; Check if we should resume, otherwise load sync state from disk.
+    (unless (and org-caldav-event-list
+		 (y-or-n-p "Last sync seems to have been aborted. \
+Should I try to resume? "))
+      (setq org-caldav-event-list nil)
+      (setq org-caldav-sync-result nil)
+      (org-caldav-load-sync-state)
+      ;; Remove status in event list
+      (dolist (cur org-caldav-event-list)
+	(org-caldav-event-set-status cur nil))
+      (org-caldav-update-eventdb-from-org icsbuf)
+      (org-caldav-update-eventdb-from-cal))
     (org-caldav-update-events-in-cal icsbuf)
     (org-caldav-update-events-in-org)
     (org-caldav-save-sync-state)
@@ -442,6 +442,7 @@ Should I try to resume? ")))
 	(goto-char (point-min))
 	(search-forward (car cur))
 	(org-caldav-narrow-event-under-point)
+	(org-caldav-rewrite-uid-in-event)
 	(org-caldav-cleanup-ics-description)
 	(org-caldav-maybe-fix-timezone)
 	(org-caldav-set-sequence-number cur)
@@ -461,9 +462,9 @@ Should I try to resume? ")))
 		(when (re-search-forward "^SEQUENCE:\\s-*\\([0-9]+\\)" nil t)
 		  (org-caldav-event-set-sequence
 		   cur (string-to-number (match-string 1))))
-		(org-caldav-event-set-status cur 'synced)
 		(push (list (car cur) (org-caldav-event-status cur) 'org->cal)
-		      org-caldav-sync-result))
+		      org-caldav-sync-result)
+		(org-caldav-event-set-status cur 'synced))
 	    ;; There was an error putting that event
 	    (org-caldav-debug-print
 	     (format "Event UID %s: Error while doing Org --> Cal" (car cur)))
