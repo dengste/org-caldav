@@ -114,6 +114,9 @@ and  action = {org->cal, cal->org, error:org->cal, error:cal->org}.")
 (defvar org-caldav-empty-calendar nil
   "Flag if we have an empty calendar in the beginning.")
 
+(defvar org-caldav-ics-buffer nil
+  "Buffer holding the ICS data.")
+
 (defsubst org-caldav-add-event (uid md5 etag sequence status)
   "Add event with UID, MD5, ETAG and STATUS."
   (setq org-caldav-event-list
@@ -398,30 +401,29 @@ Are you really sure? ")))
 from the org-caldav repository."))
   (org-caldav-debug-print "========== Started sync.")
   (org-caldav-check-connection)
-  (let* ((icsbuf (org-caldav-generate-ics))
-	 (filename (buffer-file-name icsbuf)))
-    ;; Check if we should resume, otherwise load sync state from disk.
-    (unless (and org-caldav-event-list
-		 (y-or-n-p "Last sync seems to have been aborted. \
+  (unless (and org-caldav-event-list
+	       (y-or-n-p "Last sync seems to have been aborted. \
 Should I try to resume? "))
-      (setq org-caldav-event-list nil)
-      (setq org-caldav-sync-result nil)
-      (org-caldav-load-sync-state)
-      ;; Remove status in event list
-      (dolist (cur org-caldav-event-list)
-	(org-caldav-event-set-status cur nil))
-      (org-caldav-update-eventdb-from-org icsbuf)
-      (org-caldav-update-eventdb-from-cal))
-    (org-caldav-update-events-in-cal icsbuf)
-    (org-caldav-update-events-in-org)
-    (org-caldav-save-sync-state)
+    (setq org-caldav-ics-buffer (org-caldav-generate-ics))
+    ;; Check if we should resume, otherwise load sync state from disk.
     (setq org-caldav-event-list nil)
-    (when org-caldav-show-sync-results
-      (org-caldav-display-sync-results))
-    (with-current-buffer icsbuf
-      (set-buffer-modified-p nil)
-      (kill-buffer))
-    (delete-file filename))
+    (setq org-caldav-sync-result nil)
+    (org-caldav-load-sync-state)
+    ;; Remove status in event list
+    (dolist (cur org-caldav-event-list)
+      (org-caldav-event-set-status cur nil))
+    (org-caldav-update-eventdb-from-org org-caldav-ics-buffer)
+    (org-caldav-update-eventdb-from-cal))
+  (org-caldav-update-events-in-cal org-caldav-ics-buffer)
+  (org-caldav-update-events-in-org)
+  (org-caldav-save-sync-state)
+  (setq org-caldav-event-list nil)
+  (when org-caldav-show-sync-results
+    (org-caldav-display-sync-results))
+  (with-current-buffer org-caldav-ics-buffer
+    (set-buffer-modified-p nil)
+    (kill-buffer))
+  (delete-file (buffer-file-name org-caldav-ics-buffer))
   (message "Finished sync."))
 
 (defun org-caldav-update-events-in-cal (icsbuf)
@@ -442,7 +444,6 @@ Should I try to resume? "))
 	(goto-char (point-min))
 	(search-forward (car cur))
 	(org-caldav-narrow-event-under-point)
-	(org-caldav-rewrite-uid-in-event)
 	(org-caldav-cleanup-ics-description)
 	(org-caldav-maybe-fix-timezone)
 	(org-caldav-set-sequence-number cur)
