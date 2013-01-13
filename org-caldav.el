@@ -227,10 +227,11 @@ Return list with elements (uid . etag)."
 	      (error "Error while getting eventlist from %s."
 		     (org-caldav-events-url))))))))))
 
-(defun org-caldav-get-event (uid)
+(defun org-caldav-get-event (uid &optional with-headers)
   "Get event with UID from calendar.
 Function returns a buffer containing the event, or nil if there's
-no such event."
+no such event.
+If WITH-HEADERS is non-nil, do not delete headers."
   (org-caldav-debug-print (format "Getting event UID %s." uid))
   (with-current-buffer
       (url-retrieve-synchronously
@@ -238,7 +239,8 @@ no such event."
     (goto-char (point-min))
     (when (search-forward "BEGIN:VCALENDAR" nil t)
       (beginning-of-line)
-      (delete-region (point-min) (point))
+      (unless with-headers
+	(delete-region (point-min) (point)))
       (while (re-search-forward "\^M" nil t)
 	(replace-match ""))
       (goto-char (point-min))
@@ -255,7 +257,7 @@ The filename will be derived from the UID."
 	     (url (concat (org-caldav-events-url) (url-hexify-string uid) ".ics")))
 	(org-caldav-debug-print (format "Putting event UID %s." uid))
 	(setq org-caldav-empty-calendar nil)
-	(url-dav-save-resource
+	(org-caldav-save-resource
 	 (concat (org-caldav-events-url) uid ".ics")
 	 (encode-coding-string (buffer-string) 'utf-8)
 	 "text/calendar; charset=UTF-8")))))
@@ -287,6 +289,8 @@ Are you really sure? ")))
       (when (file-exists-p
 	     (org-caldav-sync-state-filename org-caldav-calendar-id))
 	(delete-file (org-caldav-sync-state-filename org-caldav-calendar-id)))
+      (setq org-caldav-event-list nil)
+      (setq org-caldav-sync-result nil)
       (message "Done"))))
 
 (defun org-caldav-events-url ()
@@ -445,17 +449,20 @@ Should I try to resume? ")))
 	(setq counter (1+ counter))
 	(message "Putting event %d of %d" counter (length events))
 	(org-caldav-put-event icsbuf)
-	;; Get new sequence number.
+	;; Get etag and new sequence number.
 	;; While we DID just set it, the server might just choose
 	;; another one...
 	;; This also makes sure the event was actually put.
-	(let ((buf (org-caldav-get-event (car cur))))
+	(let ((buf (org-caldav-get-event (car cur) t)))
 	  (if buf
 	      (with-current-buffer buf
 		(goto-char (point-min))
+		(re-search-forward "^Etag: \"\\(.+\\)\"" nil t)
+		(org-caldav-event-set-etag cur (match-string 1))
 		(when (re-search-forward "^SEQUENCE:\\s-*\\([0-9]+\\)" nil t)
 		  (org-caldav-event-set-sequence
 		   cur (string-to-number (match-string 1))))
+		(org-caldav-event-set-status cur 'synced)
 		(push (list (car cur) (org-caldav-event-status cur) 'org->cal)
 		      org-caldav-sync-result))
 	    ;; There was an error putting that event
@@ -463,14 +470,7 @@ Should I try to resume? ")))
 	     (format "Event UID %s: Error while doing Org --> Cal" (car cur)))
 	    (org-caldav-event-set-status cur 'error)
 	    (push (list (car cur) (org-caldav-event-status cur) 'error:org->cal)
-		  org-caldav-sync-result))))
-      ;; Update etags of new and changed events.
-      (setq event-etags (org-caldav-get-event-etag-list))
-      (dolist (cur events)
-	(unless (eq (org-caldav-event-status cur) 'error)
-	  (org-caldav-event-set-etag
-	   cur (cdr (assoc (car cur) event-etags)))
-	  (org-caldav-event-set-status cur 'synced))))
+		  org-caldav-sync-result)))))
     ;; Remove events that were deleted in org
     (let ((events (org-caldav-filter-events 'deleted-in-org))
 	  (url-show-status nil)
@@ -945,6 +945,51 @@ which can be fed into `org-caldav-insert-org-entry'."
     (list start-d start-t
 	  (if end-t end-d end-1-d)
 	  end-t summary description)))
+
+;; This is adapted from url-dav.el, written by Bill Perry.
+;; This does more error checking on the headers.
+(defun org-caldav-save-resource (url obj &optional content-type lock-token)
+  "Save OBJ as URL using WebDAV.
+URL must be a fully qualified URL.
+OBJ may be a buffer or a string."
+  (let ((buffer nil)
+	(result nil)
+	(url-request-extra-headers nil)
+	(url-request-method "PUT")
+	(url-request-data
+	 (cond
+	  ((bufferp obj)
+	   (with-current-buffer obj
+	     (buffer-string)))
+	  ((stringp obj)
+	   obj)
+	  (t
+	   (error "Invalid object to url-dav-save-resource")))))
+    (if lock-token
+	(push
+	 (cons "If" (concat "(<" lock-token ">)"))
+	 url-request-extra-headers))
+    ;; Everything must always have a content-type when we submit it.
+    (push
+     (cons "Content-type" (or content-type "application/octet-stream"))
+     url-request-extra-headers)
+    ;; Do the save...
+    (setq buffer (url-retrieve-synchronously url))
+    ;; Sanity checking
+    (when buffer
+      (unwind-protect
+	  (with-current-buffer buffer
+	    (save-excursion
+	      (goto-char (point-min))
+	      (let ((answer (buffer-substring (point) (point-at-eol))))
+		;; Every 2XX response is OK for us.
+		(if (string-match "^HTTP/1.1 2[0-9][0-9]" answer)
+		    (setq result t)
+		  (org-caldav-debug-print
+		   (format "Got error: %s" answer)))))
+	    (kill-buffer buffer))))
+    result))
+
 
 (provide 'org-caldav)
 
