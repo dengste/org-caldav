@@ -427,6 +427,8 @@ Should I try to resume? "))
   (message "Finished sync."))
 
 (defun org-caldav-update-events-in-cal (icsbuf)
+  "Update events in calendar.
+ICSBUF is the buffer containing the exported iCalendar file."
   (org-caldav-debug-print "=== Updating events in calendar")
   (with-current-buffer icsbuf
     (widen)
@@ -522,6 +524,7 @@ This is a bug in older Org versions."
 	(replace-match org-icalendar-timezone t)))))
 
 (defun org-caldav-update-events-in-org ()
+  "Update events in Org files."
   (org-caldav-debug-print "=== Updating events in Org")
   (let ((events (append (org-caldav-filter-events 'new-in-cal)
 			(org-caldav-filter-events 'changed-in-cal)))
@@ -684,8 +687,10 @@ Returns nil if there are no more events."
 		      (point))))
 
 (defun org-caldav-rewrite-uid-in-event ()
-  "Get UID from event in current buffer.
-Throw an error if there is no UID."
+  "Rewrite UID in current buffer.
+This will strip prefixes like 'DL' or 'TS' the Org exporter puts
+in the UID and also remove whitespaces. Throws an error if there
+is no UID to rewrite. Returns the UID."
   (save-excursion
     (goto-char (point-min))
     (unless
@@ -839,6 +844,7 @@ If COMPLEMENT is non-nil, return all item without errors."
 	 org-caldav-sync-result)))
 
 (defun org-caldav-sync-result-print-entries (entries)
+  "Helper function to print ENTRIES."
   (dolist (entry entries)
     (insert "UID: ")
     (let ((start (point)))
