@@ -401,11 +401,11 @@ Are you really sure? ")))
 from the org-caldav repository."))
   (org-caldav-debug-print "========== Started sync.")
   (org-caldav-check-connection)
+  ;; Skip some parts if we should resume.
   (unless (and org-caldav-event-list
 	       (y-or-n-p "Last sync seems to have been aborted. \
 Should I try to resume? "))
     (setq org-caldav-ics-buffer (org-caldav-generate-ics))
-    ;; Check if we should resume, otherwise load sync state from disk.
     (setq org-caldav-event-list nil)
     (setq org-caldav-sync-result nil)
     (org-caldav-load-sync-state)
