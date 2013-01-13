@@ -322,6 +322,11 @@ Are you really sure? ")))
 	   (format "Org UID %s: Changed" uid))
 	  (org-caldav-event-set-md5 event md5)
 	  (org-caldav-event-set-status event 'changed-in-org))
+	 ((eq (org-caldav-event-status event) 'new-in-org)
+	  (org-caldav-debug-print
+	   (format "Org UID %s: Error. Double entry." uid))
+	  (push (list uid 'new-in-org 'error:double-entry)
+		org-caldav-sync-result))
 	 (t
 	  (org-caldav-debug-print
 	   (format "Org UID %s: Synced" uid))
@@ -401,7 +406,6 @@ Are you really sure? ")))
 from the org-caldav repository."))
   (org-caldav-debug-print "========== Started sync.")
   (org-caldav-check-connection)
-  ;; Skip some parts if we should resume.
   (unless (and org-caldav-event-list
 	       (y-or-n-p "Last sync seems to have been aborted. \
 Should I try to resume? "))
@@ -437,42 +441,38 @@ ICSBUF is the buffer containing the exported iCalendar file."
 			  (org-caldav-filter-events 'changed-in-org)))
 	  (counter 0)
 	  (url-show-status nil)
-	  event-etags)
+	  (event-etag (org-caldav-get-event-etag-list)))
       ;; Put the events via CalDAV.
       (dolist (cur events)
-	(org-caldav-debug-print
-	 (format "Event UID %s: Org --> Cal" (car cur)))
-	(widen)
-	(goto-char (point-min))
-	(search-forward (car cur))
-	(org-caldav-narrow-event-under-point)
-	(org-caldav-cleanup-ics-description)
-	(org-caldav-maybe-fix-timezone)
-	(org-caldav-set-sequence-number cur)
-	(setq counter (1+ counter))
-	(message "Putting event %d of %d" counter (length events))
-	(org-caldav-put-event icsbuf)
-	;; Get etag and new sequence number.
-	;; While we DID just set it, the server might just choose
-	;; another one...
-	;; This also makes sure the event was actually put.
-	(let ((buf (org-caldav-get-event (car cur) t)))
-	  (if buf
-	      (with-current-buffer buf
-		(goto-char (point-min))
-		(re-search-forward "^Etag: \"\\(.+\\)\"" nil t)
-		(org-caldav-event-set-etag cur (match-string 1))
-		(when (re-search-forward "^SEQUENCE:\\s-*\\([0-9]+\\)" nil t)
-		  (org-caldav-event-set-sequence
-		   cur (string-to-number (match-string 1))))
-		(push (list (car cur) (org-caldav-event-status cur) 'org->cal)
-		      org-caldav-sync-result)
-		(org-caldav-event-set-status cur 'synced))
-	    ;; There was an error putting that event
+	(if (eq (org-caldav-event-etag cur) 'put)
+	    (org-caldav-debug-print
+	     (format "Event UID %s: Was already put previously." (car cur)))
+	  (org-caldav-debug-print
+	   (format "Event UID %s: Org --> Cal" (car cur)))
+	  (widen)
+	  (goto-char (point-min))
+	  (search-forward (car cur))
+	  (org-caldav-narrow-event-under-point)
+	  (org-caldav-cleanup-ics-description)
+	  (org-caldav-maybe-fix-timezone)
+	  (org-caldav-set-sequence-number cur event-etag)
+	  (setq counter (1+ counter))
+	  (message "Putting event %d of %d" counter (length events))
+	  (if (org-caldav-put-event icsbuf)
+	      (org-caldav-event-set-etag cur 'put)
 	    (org-caldav-debug-print
 	     (format "Event UID %s: Error while doing Org --> Cal" (car cur)))
 	    (org-caldav-event-set-status cur 'error)
-	    (push (list (car cur) (org-caldav-event-status cur) 'error:org->cal)
+	    (push (list (car cur) 'error 'error:org->cal)
+		  org-caldav-sync-result))))
+      ;; Get Etags
+      (setq event-etag (org-caldav-get-event-etag-list))
+      (dolist (cur events)
+	(let ((etag (assoc (car cur) event-etag)))
+	  (when (and (not (eq (org-caldav-event-status cur) 'error))
+		     etag)
+	    (org-caldav-event-set-etag cur (cdr etag))
+	    (push (list (car cur) (org-caldav-event-status cur) 'org->cal)
 		  org-caldav-sync-result)))))
     ;; Remove events that were deleted in org
     (let ((events (org-caldav-filter-events 'deleted-in-org))
@@ -491,11 +491,23 @@ ICSBUF is the buffer containing the exported iCalendar file."
       (setq org-caldav-event-list
 	    (delete cur org-caldav-event-list)))))
 
-(defun org-caldav-set-sequence-number (event)
+(defun org-caldav-set-sequence-number (event event-etag)
   "Set sequence number in ics and in eventdb for EVENT.
+EVENT-ETAG is the current list of events and etags on the server.
 The ics must be in the current buffer."
   (save-excursion
     (let ((seq (org-caldav-event-sequence event)))
+      (unless (or seq
+		  (not (assoc (car event) event-etag)))
+	;; We don't have a sequence yet, but event is already in the
+	;; calendar, hence we have to get the current number first.
+	(with-current-buffer (org-caldav-get-event (car event))
+	  (goto-char (point-min))
+	  (when (re-search-forward "^SEQUENCE:\\s-*\\([0-9]+\\)" nil t)
+	    (org-caldav-event-set-sequence
+	     event (string-to-number (match-string 1))))
+	  (setq seq (org-caldav-event-sequence event))
+	  (org-caldav-debug-print "UID %s: Got sequence number %d" (car event) seq)))
       (when seq
 	(setq seq (1+ seq))
 	(goto-char (point-min))
@@ -837,8 +849,7 @@ If COMPLEMENT is non-nil, return all item without errors."
   (delq nil
 	(mapcar
 	 (lambda (x)
-	   (if (or (eq (car (last x)) 'error:org->cal)
-		   (eq (car (last x)) 'error:cal->org))
+	   (if (string-match "^error" (symbol-name (car (last x))))
 	       (unless complement x)
 	     (when complement x)))
 	 org-caldav-sync-result)))
