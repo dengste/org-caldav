@@ -154,7 +154,7 @@ for org-caldav.
 
 #### Storage of sync information and sync from different computers
 
-The current sync state is stored in a file org-caldav-<SOMEID>.el in
+The current sync state is stored in a file org-caldav-SOMEID.el in
 the ~/.emacs.d directory. You can change the location through the
 variable org-caldav-save-directory. SOMEID directly depends on the
 calendar id (it's a snipped MD5).
@@ -175,10 +175,12 @@ C-u M-x org-caldav-delete-everything
 The function has to be called with a prefix so that you don't call it
 by accident. This will delete everything in the calendar along with
 the current sync state. You can then call org-caldav-sync afterwards
-and it will completely re-sync with the now empty calendar. Deleting
-many events can be slow; in that case, just delete the calendar and
-re-create it, delete the sync state file in ~/.emacs.d and restart
-Emacs.
+and it will completely put all Org events into the now empty
+calendar. Needless to say, don't do that if you have new events in your calendar which are not synced yet...
+
+Deleting many events can be slow, though; in that case, just delete
+the calendar and re-create it, delete the sync state file in
+~/.emacs.d and restart Emacs.
 
 #### Syncing with more than one calendar
 
@@ -195,7 +197,7 @@ stable first.
 Timezone handling is plain horrible, and it seems every CalDAV server
 does it slightly differently, also using non-standard headers like
 X-WR-TIMEZONE. If you see items being shifted by a few hours, make
-really really sure you have properly set org-icalendar-timezone and
+really really sure you have properly set org-icalendar-timezone, and
 that your calendar is configured to use the same one.
 
 #### Known Bugs
@@ -207,7 +209,8 @@ that your calendar is configured to use the same one.
 * Syncing is currently pretty slow since everything is done
   synchronously.
 
-* 'LOCATION' is ignored.
+* Pretty much everything besides SUMMARY, DESCRIPTION and time is
+  ignored in iCalendar (like 'LOCATION', for instance).
 
 
 #### How syncing happens (a.k.a. my little CalDAV rant)
