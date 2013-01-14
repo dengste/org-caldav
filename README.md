@@ -24,7 +24,7 @@ broken in Emacs <=24.2. If you don't want to upgrade Emacs, you can
 load the url-dav package from this github repository *before* using
 org-caldav.
 
-## IN A NUTSHELL
+### IN A NUTSHELL
 
 * Create a new calendar; the name does not matter.
 
@@ -67,7 +67,7 @@ Google Calendar, it is not unusual to get stuff like '409' errors
 during the initial sync. Only Google knows why. Just run
 org-caldav-sync again until all events are uploaded.
 
-## DETAILS
+### DETAILS
 
 Compared to earlier versions of this package from 2012, it now does
 proper two-way syncing, that means it does not matter where and how
@@ -77,7 +77,7 @@ org-caldav-files. The org-icalendar package will put a unique ID on
 each entry with an active timestamp, so that org-caldav can find
 it. It will also sync deletions, but more on that later.
 
-### Org and the iCalendar format
+#### Org and the iCalendar format
 
 An Org entry can store much more information than an iCalendar entry,
 so there is no one-to-one correspondence between the two formats which
@@ -113,7 +113,7 @@ to heading and/or timestamp only.
 To be extra safe, org-caldav will by default backup entries it
 changes. See the variable org-caldav-backup-file for details.
 
-### Syncing deletions
+#### Syncing deletions
 
 If you delete entries in your Org files, the corresponding iCalendar
 entries will simply get deleted.
@@ -125,14 +125,14 @@ that behavior through org-caldav-delete-org-entries.
 If you answer a deletion request with "no", the event should get
 re-synced to the calendar next time you call org-caldav-sync.
 
-### Conflict handling
+#### Conflict handling
 
 Now that's an easy one: Org always wins. That means, if you change an
 entry in Org *and* in the calendar, the changes in the calendar will
 be lost. I might implement proper conflict handling some day, but
 don't hold your breath (patches are welcome, of course).
 
-### Storing authentication information in authinfo/netrc
+#### Storing authentication information in authinfo/netrc
 
 If you don't want to enter your user/password every time, you can
 store it permanently in an authinfo file. In Emacs, the auth-source
@@ -152,7 +152,7 @@ bug which makes this feature unusable for the URL package (see bug
 version, you'll have to upgrade if you want encrypted authinfo files
 for org-caldav.
 
-### Storage of sync information and sync from different computers
+#### Storage of sync information and sync from different computers
 
 The current sync state is stored in a file org-caldav-<SOMEID>.el in
 the ~/.emacs.d directory. You can change the location through the
@@ -165,7 +165,7 @@ too. Probably your best bet is to set org-caldav-save-directory to the
 path you have your Org files in, so that it gets copied alongside with
 them.
 
-### Starting from scratch
+#### Starting from scratch
 
 If your sync state somehow gets broken, you can make a clean slate by
 doing
@@ -180,7 +180,7 @@ many events can be slow; in that case, just delete the calendar and
 re-create it, delete the sync state file in ~/.emacs.d and restart
 Emacs.
 
-### Syncing with more than one calendar
+#### Syncing with more than one calendar
 
 This is not built-in, but it can be done. Since the sync state's
 filename depends on the calendar-id, you can call org-caldav-sync more
@@ -190,7 +190,7 @@ will someday add the feature to sync only items with certain tags to
 certain calendars, but I'd like to get the basic functionality real
 stable first.
 
-### Timezone problems
+#### Timezone problems
 
 Timezone handling is plain horrible, and it seems every CalDAV server
 does it slightly differently, also using non-standard headers like
@@ -198,7 +198,7 @@ X-WR-TIMEZONE. If you see items being shifted by a few hours, make
 really really sure you have properly set org-icalendar-timezone and
 that your calendar is configured to use the same one.
 
-### Known Bugs
+#### Known Bugs
 
 * Recurring events created or changed on the calendar side cannot be
   synced (they will work fine as long as you manage them in Org,
@@ -210,7 +210,7 @@ that your calendar is configured to use the same one.
 * 'LOCATION' is ignored.
 
 
-### How syncing happens (a.k.a. my little CalDAV rant)
+#### How syncing happens (a.k.a. my little CalDAV rant)
 
 (This is probably not interesting, so you can just stop reading.)
 
