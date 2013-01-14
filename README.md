@@ -1,5 +1,4 @@
-org-caldav
-==========
+# org-caldav
 
 Caldav sync for Emacs Orgmode
 
@@ -149,7 +148,7 @@ see (info "auth"), especially section "Help for users".
 Since you are storing your password in a file it makes sense to
 encrypt it using GnuPG. While Emacs supports this, there's a subtle
 bug which makes this feature unusable for the URL package (see bug
-#11981). This was fixed in Emacs 24.2, so if you're using an older
+11981). This was fixed in Emacs 24.2, so if you're using an older
 version, you'll have to upgrade if you want encrypted authinfo files
 for org-caldav.
 
