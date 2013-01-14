@@ -444,6 +444,7 @@ ICSBUF is the buffer containing the exported iCalendar file."
 	  (event-etag (org-caldav-get-event-etag-list)))
       ;; Put the events via CalDAV.
       (dolist (cur events)
+	(setq counter (1+ counter))
 	(if (eq (org-caldav-event-etag cur) 'put)
 	    (org-caldav-debug-print
 	     (format "Event UID %s: Was already put previously." (car cur)))
@@ -456,7 +457,6 @@ ICSBUF is the buffer containing the exported iCalendar file."
 	  (org-caldav-cleanup-ics-description)
 	  (org-caldav-maybe-fix-timezone)
 	  (org-caldav-set-sequence-number cur event-etag)
-	  (setq counter (1+ counter))
 	  (message "Putting event %d of %d" counter (length events))
 	  (if (org-caldav-put-event icsbuf)
 	      (org-caldav-event-set-etag cur 'put)
