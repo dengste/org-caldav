@@ -139,7 +139,7 @@ store it permanently in an authinfo file. In Emacs, the auth-source
 package takes care of that, but the syntax for https authentication is
 a bit peculiar. You have to use a line like the following
 
-machine www.google.com:443 port https login username password secret
+    machine www.google.com:443 port https login username password secret
 
 Note that you have to specify the port number in the URL and *also*
 specify 'https' for the port. This is not a bug. For more information,
@@ -170,7 +170,7 @@ them.
 If your sync state somehow gets broken, you can make a clean slate by
 doing
 
-C-u M-x org-caldav-delete-everything
+    C-u M-x org-caldav-delete-everything
 
 The function has to be called with a prefix so that you don't call it
 by accident. This will delete everything in the calendar along with
