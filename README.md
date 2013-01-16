@@ -200,6 +200,20 @@ X-WR-TIMEZONE. If you see items being shifted by a few hours, make
 really really sure you have properly set org-icalendar-timezone, and
 that your calendar is configured to use the same one.
 
+#### Troubleshooting
+
+By default, org-caldav will put all kinds of debug output into the
+buffer \*org-caldav-debug\*. Look there if you're getting sync errors
+or if something plain doesn't work. If you're using an authinfo file
+and authentication doesn't work, set auth-info-debug to t and look in
+the \*Messages\* buffer. When you report a bug, please try to post the
+relevant portion of the \*org-caldav-debug\* buffer since it might be
+helpful to see what's going wrong. If Emacs throws an error, do
+
+    M-x toggle-debug-on-error
+
+and try to replicate the error to get a backtrace.
+
 #### Known Bugs
 
 * Recurring events created or changed on the calendar side cannot be
@@ -211,7 +225,6 @@ that your calendar is configured to use the same one.
 
 * Pretty much everything besides SUMMARY, DESCRIPTION and time is
   ignored in iCalendar (like 'LOCATION', for instance).
-
 
 #### How syncing happens (a.k.a. my little CalDAV rant)
 
