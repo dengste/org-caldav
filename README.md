@@ -4,6 +4,8 @@ Caldav sync for Emacs Orgmode
 
 Tested CalDAV servers: Owncloud, Google Calendar.
 
+Also reported to be working: SOGo
+
 *IMPORTANT*: Before using this code, please make sure you have backups
 of your precious Org files. Also, I strongly suggest to create a new,
 empty calendar on your server for using this package. The code is
