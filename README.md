@@ -50,9 +50,12 @@ org-caldav.
 
 * It is usually a good idea to manually set org-icalendar-timezone to
   the timezone of your remote calendar. It should be a simple string
-  like "Europe/Berlin". You can also take a look at the other
-  org-icalendar variables, since org-caldav uses this package to
-  export your entries.
+  like "Europe/Berlin". If that doesn't work and your events are
+  shifted by a few hours, try the setting "UTC" (the SOGo calendar
+  server seems to need this).
+
+You can also take a look at the other org-icalendar variables, since
+org-caldav uses this package to export your entries.
 
 Call org-caldav-sync to start the sync. The URL package will ask you
 for username/password for accessing the calendar. (See below on how to
@@ -201,6 +204,12 @@ does it slightly differently, also using non-standard headers like
 X-WR-TIMEZONE. If you see items being shifted by a few hours, make
 really really sure you have properly set org-icalendar-timezone, and
 that your calendar is configured to use the same one.
+
+If it still does not work, you can try setting org-icalendar-timezone
+to the string "UTC". This will put all events using UTC times and the
+server should transpose the time to the timezone you have set in your
+calendar preferences. For some servers (like SOGo) this might work
+better than setting a "real" timezone.
 
 #### Troubleshooting
 
