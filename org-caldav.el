@@ -649,9 +649,15 @@ Returns buffer containing the ICS file."
   (let ((org-combined-agenda-icalendar-file (make-temp-file "org-caldav-"))
 	;; We absolutely need UIDs for synchronization.
 	(org-icalendar-store-UID t)
-	(org-icalendar-date-time-format (if org-icalendar-timezone
-					    ";TZID=%Z:%Y%m%dT%H%M%S"
-					  ":%Y%m%dT%H%M%S")))
+	(org-icalendar-date-time-format
+	 (cond
+	  ((and org-icalendar-timezone
+		(string= org-icalendar-timezone "UTC"))
+	   ":%Y%m%dT%H%M%SZ")
+	  (org-icalendar-timezone
+	   ";TZID=%Z:%Y%m%dT%H%M%S")
+	  (t
+	   ":%Y%m%dT%H%M%S"))))
     (org-caldav-debug-print (format "Generating ICS file %s."
 				    org-combined-agenda-icalendar-file))
     ;; Export events to one single ICS file.
