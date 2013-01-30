@@ -853,7 +853,9 @@ See also `org-caldav-save-directory'."
       (insert "\n== Successful syncs: \n\n")
       (org-caldav-sync-result-print-entries
        (org-caldav-sync-result-filter-errors t)))
-    (pop-to-buffer-same-window (current-buffer))
+    (if (fboundp 'pop-to-buffer-same-window)
+	(pop-to-buffer-same-window (current-buffer))
+      (pop-to-buffer (current-buffer)))
     (setq buffer-read-only t)
     (goto-char (point-min))
     (use-local-map org-caldav-sync-results-mode-map)))
