@@ -231,7 +231,15 @@ helpful to see what's going wrong. If Emacs throws an error, do
 
 and try to replicate the error to get a backtrace.
 
+You can also turn on excessive debugging by setting the variable
+org-caldav-debug-level to 2. This will also output the *contents* of
+the events into the debug buffer. If you send such a buffer in a bug
+report, please make very sure you have removed personal information
+from those events.
+
 #### Known Bugs
+
+* Events created by sexp entires don't work correctly.
 
 * Recurring events created or changed on the calendar side cannot be
   synced (they will work fine as long as you manage them in Org,
