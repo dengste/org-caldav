@@ -250,6 +250,8 @@ If WITH-HEADERS is non-nil, do not delete headers."
       (while (re-search-forward "\^M" nil t)
 	(replace-match ""))
       (goto-char (point-min))
+      (org-caldav-debug-print 2 (format "Content of event UID %s: " uid)
+			      (buffer-string))
       (current-buffer))))
 
 (defun org-caldav-put-event (buffer)
@@ -262,6 +264,8 @@ The filename will be derived from the UID."
       (let* ((uid (org-caldav-get-uid))
 	     (url (concat (org-caldav-events-url) (url-hexify-string uid) ".ics")))
 	(org-caldav-debug-print 1 (format "Putting event UID %s." uid))
+	(org-caldav-debug-print 2 (format "Content of event UID %s: " uid)
+				(buffer-string))
 	(setq org-caldav-empty-calendar nil)
 	(org-caldav-save-resource
 	 (concat (org-caldav-events-url) uid ".ics")
