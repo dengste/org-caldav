@@ -239,7 +239,7 @@ from those events.
 
 #### Known Bugs
 
-* Events created by sexp entires don't work correctly.
+* Events created by sexp entries don't work correctly.
 
 * Recurring events created or changed on the calendar side cannot be
   synced (they will work fine as long as you manage them in Org,
