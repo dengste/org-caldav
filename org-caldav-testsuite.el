@@ -127,6 +127,7 @@ Baz Bar Foo")
 ;; Set up data for org-caldav.
 (setq org-caldav-files (list org-caldav-test-orgfile))
 (setq org-caldav-inbox org-caldav-test-inbox)
+(setq org-caldav-debug-level 2)
 
 (message "Calendar URL: %s" org-caldav-url)
 (message "Calendar ID: %s" org-caldav-calendar-id)
