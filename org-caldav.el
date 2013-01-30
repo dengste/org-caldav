@@ -89,8 +89,11 @@ necessary to add timezone information here in case your CalDAV
 server does not do that for you, or if you want to use a
 different timezone in your Org files.")
 
-(defvar org-caldav-debug t
-  "Whether to print debug information in `org-caldav-debug-buffer'.")
+(defvar org-caldav-debug-level 1
+  "Level of debug output in `org-caldav-debug-buffer'.
+0 or nil: no debug output.  1: Normal debugging.  2: Excessive
+debugging (this will also output event content into the
+buffer).")
 
 (defvar org-caldav-debug-buffer "*org-caldav-debug*"
   "Name of the debug buffer.")
@@ -171,17 +174,17 @@ and  action = {org->cal, cal->org, error:org->cal, error:cal->org}.")
 (defun org-caldav-check-connection ()
   "Check connection by doing a PROPFIND on CalDAV URL.
 Also sets `org-caldav-empty-calendar' if calendar is empty."
-  (org-caldav-debug-print (format "Check connection for %s."
+  (org-caldav-debug-print 1 (format "Check connection for %s."
 				  (org-caldav-events-url)))
   (let ((output (url-dav-get-properties
 		 (org-caldav-events-url)
 		 '(DAV:resourcetype) 1)))
   (unless (eq (plist-get (cdar output) 'DAV:status) 200)
-    (org-caldav-debug-print "Got error status from PROPFIND: " output)
+    (org-caldav-debug-print 1 "Got error status from PROPFIND: " output)
     (error "Could not query CalDAV URL %s." (org-caldav-events-url)))
   (when (= (length output) 1)
     ;; This is an empty calendar; fetching etags might return 404.
-    (org-caldav-debug-print "This is an empty calendar. Setting flag.")
+    (org-caldav-debug-print 1 "This is an empty calendar. Setting flag.")
     (setq org-caldav-empty-calendar t)))
   t)
 
@@ -235,7 +238,7 @@ Return list with elements (uid . etag)."
 Function returns a buffer containing the event, or nil if there's
 no such event.
 If WITH-HEADERS is non-nil, do not delete headers."
-  (org-caldav-debug-print (format "Getting event UID %s." uid))
+  (org-caldav-debug-print 1 (format "Getting event UID %s." uid))
   (with-current-buffer
       (url-retrieve-synchronously
        (concat (org-caldav-events-url) (url-hexify-string uid) ".ics"))
@@ -258,7 +261,7 @@ The filename will be derived from the UID."
       (goto-char (point-min))
       (let* ((uid (org-caldav-get-uid))
 	     (url (concat (org-caldav-events-url) (url-hexify-string uid) ".ics")))
-	(org-caldav-debug-print (format "Putting event UID %s." uid))
+	(org-caldav-debug-print 1 (format "Putting event UID %s." uid))
 	(setq org-caldav-empty-calendar nil)
 	(org-caldav-save-resource
 	 (concat (org-caldav-events-url) uid ".ics")
@@ -266,7 +269,7 @@ The filename will be derived from the UID."
 
 (defun org-caldav-delete-event (uid)
   "Delete event UID from calendar."
-  (org-caldav-debug-print (format "Deleting event UID %s.\n" uid))
+  (org-caldav-debug-print 1 (format "Deleting event UID %s.\n" uid))
   (url-dav-delete-file (concat (org-caldav-events-url) uid ".ics")))
 
 (defun org-caldav-delete-everything (prefix)
@@ -303,7 +306,7 @@ Are you really sure? ")))
 
 (defun org-caldav-update-eventdb-from-org (buf)
   "With combined ics file in BUF, update the event database."
-  (org-caldav-debug-print "=== Updating EventDB from Org")
+  (org-caldav-debug-print 1 "=== Updating EventDB from Org")
   (with-current-buffer buf
     (goto-char (point-min))
     (while (org-caldav-narrow-next-event)
@@ -313,33 +316,33 @@ Are you really sure? ")))
 	(cond
 	 ((null event)
 	  ;; Event does not yet exist in DB, so add it.
-	  (org-caldav-debug-print
+	  (org-caldav-debug-print 1
 	   (format "Org UID %s: New" uid))
 	  (org-caldav-add-event uid md5 nil nil 'new-in-org))
 	 ((not (string= md5 (org-caldav-event-md5 event)))
 	  ;; Event exists but has changed MD5, so mark it as changed.
-	  (org-caldav-debug-print
+	  (org-caldav-debug-print 1
 	   (format "Org UID %s: Changed" uid))
 	  (org-caldav-event-set-md5 event md5)
 	  (org-caldav-event-set-status event 'changed-in-org))
 	 ((eq (org-caldav-event-status event) 'new-in-org)
-	  (org-caldav-debug-print
+	  (org-caldav-debug-print 1
 	   (format "Org UID %s: Error. Double entry." uid))
 	  (push (list uid 'new-in-org 'error:double-entry)
 		org-caldav-sync-result))
 	 (t
-	  (org-caldav-debug-print
+	  (org-caldav-debug-print 1
 	   (format "Org UID %s: Synced" uid))
 	  (org-caldav-event-set-status event 'in-org)))))
     ;; Mark events deleted in Org
     (dolist (cur (org-caldav-filter-events nil))
-      (org-caldav-debug-print
+      (org-caldav-debug-print 1
        (format "Cal UID %s: Deleted in Org" (car cur)))
       (org-caldav-event-set-status cur 'deleted-in-org))))
 
 (defun org-caldav-update-eventdb-from-cal ()
   "Update event database from calendar."
-  (org-caldav-debug-print "=== Updating EventDB from Cal")
+  (org-caldav-debug-print 1 "=== Updating EventDB from Cal")
   (let ((events (org-caldav-get-event-etag-list))
 	dbentry)
     (dolist (cur events)
@@ -348,30 +351,30 @@ Are you really sure? ")))
       (cond
        ((not dbentry)
 	;; Event is not yet in database, so add it.
-	(org-caldav-debug-print
+	(org-caldav-debug-print 1
 	 (format "Cal UID %s: New" (car cur)))
 	(org-caldav-add-event (car cur) nil (cdr cur) nil 'new-in-cal))
        ((or (eq (org-caldav-event-status dbentry) 'changed-in-org)
 	    (eq (org-caldav-event-status dbentry) 'deleted-in-org))
-	(org-caldav-debug-print
+	(org-caldav-debug-print 1
 	 (format "Cal UID %s: Ignoring (Org always wins)." (car cur))))
        ((null (org-caldav-event-etag dbentry))
-	(org-caldav-debug-print
+	(org-caldav-debug-print 1
 	 (format "Cal UID %s: No Etag. Mark as change, so putting it again." (car cur)))
 	(org-caldav-event-set-status dbentry 'changed-in-org))
        ((not (string= (cdr cur) (org-caldav-event-etag dbentry)))
 	;; Event's etag changed.
-	(org-caldav-debug-print
+	(org-caldav-debug-print 1
 	 (format "Cal UID %s: Changed" (car cur)))
 	(org-caldav-event-set-status dbentry 'changed-in-cal)
 	(org-caldav-event-set-etag dbentry (cdr cur)))
        ((null (org-caldav-event-status dbentry))
 	;; Event was deleted in Org
-	(org-caldav-debug-print
+	(org-caldav-debug-print 1
 	 (format "Cal UID %s: Deleted in Org" (car cur)))
 	(org-caldav-event-set-status dbentry 'deleted-in-org))
        ((eq (org-caldav-event-status dbentry) 'in-org)
-	(org-caldav-debug-print
+	(org-caldav-debug-print 1
 	 (format "Cal UID %s: Synced" (car cur)))
 	(org-caldav-event-set-status dbentry 'synced))
        ((eq (org-caldav-event-status dbentry) 'changed-in-org)
@@ -381,7 +384,7 @@ Are you really sure? ")))
 	(error "Unknown status; this is probably a bug."))))
     ;; Mark events deleted in cal.
     (dolist (cur (org-caldav-filter-events 'in-org))
-      (org-caldav-debug-print
+      (org-caldav-debug-print 1
        (format "Cal UID %s: Deleted in Cal" (car cur)))
       (org-caldav-event-set-status cur 'deleted-in-cal))))
 
@@ -404,7 +407,7 @@ Are you really sure? ")))
 	      (url-dav-supported-p (org-caldav-events-url)))
     (error "You have to either use Emacs from bzr, or the patched `url-dav' package \
 from the org-caldav repository."))
-  (org-caldav-debug-print "========== Started sync.")
+  (org-caldav-debug-print 1 "========== Started sync.")
   (org-caldav-check-connection)
   (unless (and org-caldav-event-list
 	       (y-or-n-p "Last sync seems to have been aborted. \
@@ -433,7 +436,7 @@ Should I try to resume? "))
 (defun org-caldav-update-events-in-cal (icsbuf)
   "Update events in calendar.
 ICSBUF is the buffer containing the exported iCalendar file."
-  (org-caldav-debug-print "=== Updating events in calendar")
+  (org-caldav-debug-print 1 "=== Updating events in calendar")
   (with-current-buffer icsbuf
     (widen)
     (goto-char (point-min))
@@ -446,9 +449,9 @@ ICSBUF is the buffer containing the exported iCalendar file."
       (dolist (cur events)
 	(setq counter (1+ counter))
 	(if (eq (org-caldav-event-etag cur) 'put)
-	    (org-caldav-debug-print
+	    (org-caldav-debug-print 1
 	     (format "Event UID %s: Was already put previously." (car cur)))
-	  (org-caldav-debug-print
+	  (org-caldav-debug-print 1
 	   (format "Event UID %s: Org --> Cal" (car cur)))
 	  (widen)
 	  (goto-char (point-min))
@@ -460,7 +463,7 @@ ICSBUF is the buffer containing the exported iCalendar file."
 	  (message "Putting event %d of %d" counter (length events))
 	  (if (org-caldav-put-event icsbuf)
 	      (org-caldav-event-set-etag cur 'put)
-	    (org-caldav-debug-print
+	    (org-caldav-debug-print 1
 	     (format "Event UID %s: Error while doing Org --> Cal" (car cur)))
 	    (org-caldav-event-set-status cur 'error)
 	    (push (list (car cur) 'error 'error:org->cal)
@@ -507,7 +510,7 @@ The ics must be in the current buffer."
 	    (org-caldav-event-set-sequence
 	     event (string-to-number (match-string 1))))
 	  (setq seq (org-caldav-event-sequence event))
-	  (org-caldav-debug-print "UID %s: Got sequence number %d" (car event) seq)))
+	  (org-caldav-debug-print 1 "UID %s: Got sequence number %d" (car event) seq)))
       (when seq
 	(setq seq (1+ seq))
 	(goto-char (point-min))
@@ -537,7 +540,7 @@ This is a bug in older Org versions."
 
 (defun org-caldav-update-events-in-org ()
   "Update events in Org files."
-  (org-caldav-debug-print "=== Updating events in Org")
+  (org-caldav-debug-print 1 "=== Updating events in Org")
   (let ((events (append (org-caldav-filter-events 'new-in-cal)
 			(org-caldav-filter-events 'changed-in-cal)))
 	(url-show-status nil)
@@ -561,14 +564,14 @@ This is a bug in older Org versions."
       (if (eq (org-caldav-event-status cur) 'new-in-cal)
 	  ;; This is a new event.
 	  (with-current-buffer (find-file-noselect org-caldav-inbox)
-	    (org-caldav-debug-print
+	    (org-caldav-debug-print 1
 	     (format "Event UID %s: New in Cal --> Org inbox." uid))
 	    (goto-char (point-max))
 	    (apply 'org-caldav-insert-org-entry
 		   (append eventdata (list uid)))
 	    (setq buf (current-buffer)))
 	;; This is a changed event.
-	(org-caldav-debug-print
+	(org-caldav-debug-print 1
 	 (format "Event UID %s: Changed in Cal --> Org" uid))
 	(let ((marker (org-id-find (car cur) t)))
 	  (when (null marker)
@@ -612,7 +615,7 @@ This is a bug in older Org versions."
 		       (org-entry-end-position))
 	(setq org-caldav-event-list
 	      (delete cur org-caldav-event-list))
-	(org-caldav-debug-print
+	(org-caldav-debug-print 1
 	 (format "Event UID %s: Deleted from Org" (car cur)))
 	(push (list (car cur) 'deleted-in-cal 'removed-from-org)
 	      org-caldav-sync-result)))))
@@ -658,7 +661,7 @@ Returns buffer containing the ICS file."
 	   ";TZID=%Z:%Y%m%dT%H%M%S")
 	  (t
 	   ":%Y%m%dT%H%M%S"))))
-    (org-caldav-debug-print (format "Generating ICS file %s."
+    (org-caldav-debug-print 1 (format "Generating ICS file %s."
 				    org-combined-agenda-icalendar-file))
     ;; Export events to one single ICS file.
     (apply 'org-export-icalendar t (append org-caldav-files
@@ -722,9 +725,11 @@ is no UID to rewrite. Returns the UID."
       (replace-match "" nil nil nil 2))
     (match-string 3)))
 
-(defun org-caldav-debug-print (&rest objects)
-  "Print OBJECTS into debug buffer if `org-caldav-debug' is non-nil."
-  (when org-caldav-debug
+(defun org-caldav-debug-print (level &rest objects)
+  "Print OBJECTS into debug buffer with debug level LEVEL.
+Do nothing if LEVEL is larger than `org-caldav-debug-level'."
+  (unless (or (null org-caldav-debug-level)
+	      (> level org-caldav-debug-level))
     (with-current-buffer (get-buffer-create org-caldav-debug-buffer)
       (dolist (cur objects)
 	(if (stringp cur)
@@ -990,7 +995,7 @@ which can be fed into `org-caldav-insert-org-entry'."
 		;; Every 2XX response is OK for us.
 		(if (string-match "^HTTP/1.1 2[0-9][0-9]" answer)
 		    (setq result t)
-		  (org-caldav-debug-print
+		  (org-caldav-debug-print 1
 		   (format "Got error: %s" answer)))))
 	    (kill-buffer buffer))))
     result))
