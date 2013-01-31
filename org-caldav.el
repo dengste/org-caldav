@@ -247,9 +247,13 @@ If WITH-HEADERS is non-nil, do not delete headers."
       (beginning-of-line)
       (unless with-headers
 	(delete-region (point-min) (point)))
-      (while (re-search-forward "\^M" nil t)
-	(replace-match ""))
-      (goto-char (point-min))
+      (save-excursion
+	(while (re-search-forward "\^M" nil t)
+	  (replace-match "")))
+      ;; Join lines because of bug in icalendar parsing.
+      (save-excursion
+	(while (re-search-forward "^ " nil t)
+	  (delete-char -2)))
       (org-caldav-debug-print 2 (format "Content of event UID %s: " uid)
 			      (buffer-string))
       (current-buffer))))
