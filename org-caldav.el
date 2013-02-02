@@ -554,7 +554,7 @@ This is a bug in older Org versions."
 			(org-caldav-filter-events 'changed-in-cal)))
 	(url-show-status nil)
 	(counter 0)
-	eventdata buf uid)
+	eventdata buf uid timesync)
 
     (dolist (cur events)
       (setq uid (car cur))
@@ -607,8 +607,9 @@ which can only be synced to calendar. Ignoring." uid))
 	    (when (or (eq org-caldav-sync-changes-to-org 'timestamp-only)
 		      (eq org-caldav-sync-changes-to-org 'title-and-timestamp))
 	      ;; Sync timestamp
-	      (org-caldav-change-timestamp
-	       (apply 'org-caldav-create-time-range (butlast eventdata 2))))
+	      (setq timesync
+		    (org-caldav-change-timestamp
+		     (apply 'org-caldav-create-time-range (butlast eventdata 2)))))
 	    (when (eq org-caldav-sync-changes-to-org 'all)
 	      ;; Sync everything, so first remove the old one.
 	      (delete-region (org-entry-beginning-position)
@@ -616,8 +617,12 @@ which can only be synced to calendar. Ignoring." uid))
 	      (apply 'org-caldav-insert-org-entry
 		     (append eventdata (list uid))))
 	    (setq buf (current-buffer))
-	    (push (list uid (org-caldav-event-status cur) 'cal->org)
-		  org-caldav-sync-result)))))
+	    (if (eq timesync 'orgsexp)
+		(push
+		 (list uid (org-caldav-event-status cur) 'error:changed-orgsexp)
+		 org-caldav-sync-result)
+	      (push (list uid (org-caldav-event-status cur) 'cal->org)
+		    org-caldav-sync-result))))))
       ;; Update the event database.
       (unless (string-match "^orgsexp-" uid)
 	(org-caldav-event-set-status cur 'synced)
@@ -666,12 +671,16 @@ which can only be synced to calendar. Ignoring." uid))
   (widen))
 
 (defun org-caldav-change-timestamp (newtime)
-  "Change timestamp from Org item under point to NEWTIME."
+  "Change timestamp from Org item under point to NEWTIME.
+Return symbol 'orgsexp if this entry cannot be changed because it
+is on s-expression."
   (org-narrow-to-subtree)
   (goto-char (point-min))
-  (when (re-search-forward org-maybe-keyword-time-regexp nil t)
-    (replace-match newtime nil t))
-  (widen))
+  (if (search-forward "<%%(" nil t)
+      'orgsexp
+    (when (re-search-forward org-maybe-keyword-time-regexp nil t)
+      (replace-match newtime nil t))
+    (widen)))
 
 (defun org-caldav-backup-item ()
   "Put current item in backup file."

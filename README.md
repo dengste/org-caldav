@@ -124,6 +124,42 @@ to heading and/or timestamp only.
 To be extra safe, org-caldav will by default backup entries it
 changes. See the variable org-caldav-backup-file for details.
 
+* Org sexp entries
+
+On special case are sexp entries like
+
+    %%(diary-anniversary  2 2 1969) Foo's birthday
+    
+    * Regular meeting
+      <%%(diary-float t 4 2)>
+
+As you can see, they can appear in two different ways: plain by
+themselves, or inside an Org entry. If they are inside an Org entry,
+there's a good chance they will be exported (see below) and have an ID
+property, so they can be found by org-caldav. We can sync the title,
+but syncing the timestamp with the s-expression is just infeasible, so
+this will generate a sync error (which are *not* critical; you'll just
+see them at the end of the sync, just so that you're aware that some
+stuff wasn't synced properly).
+
+However, sexp-entries are insanely flexible, and there are limits as
+to what the icalendar exporter will handle. For example, this here
+
+    ** Regular event
+       <%%(memq (calendar-day-of-week date) '(1 3 5))>
+
+will not be exported at all.
+
+If the sexp entry is not inside an Org entry but stands by itself,
+they still will be exported, but they won't get an ID (since IDs are
+properties linked to Org entries). In practice, that means that you
+can delete and change them inside Org and this will be synced, but if
+you *change* them in the *calendar*, this will *not* get synced
+back. Org-caldav just cannot find those entires, so this will generate
+a one-time sync error instead (again: those are not critical, just
+FIY). If you don't want those entries to be exported at all, just set
+org-icalendar-include-sexps to nil.
+
 #### Syncing deletions
 
 If you delete entries in your Org files, the corresponding iCalendar
@@ -238,8 +274,6 @@ report, please make very sure you have removed personal information
 from those events.
 
 #### Known Bugs
-
-* Events created by sexp entries don't work correctly.
 
 * Recurring events created or changed on the calendar side cannot be
   synced (they will work fine as long as you manage them in Org,
