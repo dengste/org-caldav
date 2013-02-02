@@ -126,7 +126,7 @@ changes. See the variable org-caldav-backup-file for details.
 
 * Org sexp entries
 
-On special case are sexp entries like
+A special case are sexp entries like
 
     %%(diary-anniversary  2 2 1969) Foo's birthday
     
