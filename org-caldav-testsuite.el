@@ -355,3 +355,29 @@ Baz Bar Foo")
    (assoc '"orgcaldavtest-org2" org-caldav-event-list))
 
   )
+
+(ert-deftest org-caldav-change-heading-test ()
+  (with-current-buffer (get-buffer-create "headingtest")
+    (erase-buffer)
+    (insert "* This is a test without timestamp in headline\n"
+	    "  <2009-08-08 Sat 10:00>\n whatever\n foo\n bar\n")
+    (insert "* This is a test SCHEDULED: <2009-08-08 Sat> \n"
+	    "  whatever\n foo\n bar\n")
+    (insert "*  <2009-08-08 Sat 14:00>  This is another test\n"
+	    "  whatever\n foo\n bar\n")
+    (org-mode)
+    (goto-char (point-min))
+    (save-excursion
+      (org-caldav-change-heading "first changed heading"))
+    (should (looking-at "^\\* first changed heading$"))
+    (search-forward "*" nil t 2)
+    (beginning-of-line)
+    (save-excursion
+      (org-caldav-change-heading "second changed heading"))
+    (should (looking-at "^\\* second changed heading SCHEDULED: <2009-08-08 Sat> $"))
+    (search-forward "*" nil t 2)
+    (beginning-of-line)
+    (save-excursion
+      (org-caldav-change-heading "third changed heading"))
+    (should (looking-at "^\\*  <2009-08-08 Sat 14:00> third changed heading\n"))
+    ))
