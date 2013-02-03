@@ -761,9 +761,9 @@ is no UID to rewrite. Returns the UID."
   (save-excursion
     (goto-char (point-min))
     (cond
-     ((re-search-forward "^UID:orgsexp-" nil t)
+     ((re-search-forward "^UID:\\(orgsexp-[0-9]+\\)" nil t)
       ;; This is a sexp entry, so do nothing.
-      )
+      (match-string 1))
      ((re-search-forward "^UID:\\(\\s-*\\)\\([A-Z][A-Z]-\\)?\\(.+\\)\\s-*$"
 			 nil t)
       (when (match-string 1)
