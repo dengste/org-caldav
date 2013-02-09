@@ -25,12 +25,11 @@ This package depends on the url-dav package, which unfortunately is
 broken in Emacs <=24.2. If you don't want to upgrade Emacs, you can
 get a working version here:
 
-http://bzr.savannah.gnu.org/lh/emacs/emacs-24/annotate/head:/lisp/url/url-dav.el
+http://randomsample.de/url-dav.el
 
-Just download it and load it *before* using org-caldav. However, since
-those manual overrides of core libraries tend to be forgotten and
-might bite you later on, I'd rather recommend upgrading to a newer
-Emacs version.
+Now load this file *before* using org-caldav. However, since those manual
+overrides of core libraries tend to be forgotten and might bite you
+later on, I'd rather recommend upgrading to a newer Emacs version.
 
 ### IN A NUTSHELL
 
