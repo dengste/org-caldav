@@ -30,6 +30,7 @@
 ;;; Code:
 
 (require 'url-dav)
+(require 'url-http) ;; b/c of Emacs bug
 (require 'org-icalendar)
 (require 'org-id)
 (require 'icalendar)
