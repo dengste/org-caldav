@@ -414,7 +414,7 @@ Are you really sure? ")))
   (interactive)
   (unless (or (bound-and-true-p url-dav-patched-version)
 	      (url-dav-supported-p (org-caldav-events-url)))
-    (error "You have to either use at least Emacs version 24.2, \
+    (error "You have to either use at least Emacs pretest, \
 or the patched `url-dav' package (see Readme)."))
   (org-caldav-debug-print 1 "========== Started sync.")
   (org-caldav-check-connection)
