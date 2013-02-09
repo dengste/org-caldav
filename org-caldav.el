@@ -950,6 +950,8 @@ Returns a list '(start-d start-t end-d end-t summary description)'
 which can be fed into `org-caldav-insert-org-entry'."
   (let ((decoded (decode-coding-region (point-min) (point-max) 'utf-8 t)))
     (erase-buffer)
+    (set-buffer-multibyte t)
+    (setq buffer-file-coding-system 'utf-8)
     (insert decoded))
   (goto-char (point-min))
   (let* ((calendar-date-style 'european)
