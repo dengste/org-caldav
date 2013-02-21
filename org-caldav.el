@@ -79,8 +79,10 @@ always = Always delete")
   "Name of the file where org-caldav should backup entries.
 Set this to nil if you don't want any backups.")
 
-(defvar org-caldav-show-sync-results t
-  "Whether to show what was done after syncing.")
+(defvar org-caldav-show-sync-results 'with-headings
+  "Whether to show what was done after syncing.
+If this is the symbol 'with-headings, the results will also
+include headings from Org entries.")
 
 (defvar org-caldav-calendar-preamble
   "BEGIN:VCALENDAR\nVERSION:2.0\nCALSCALE:GREGORIAN\n"
@@ -921,18 +923,37 @@ If COMPLEMENT is non-nil, return all item without errors."
 (defun org-caldav-sync-result-print-entries (entries)
   "Helper function to print ENTRIES."
   (dolist (entry entries)
-    (insert "UID: ")
-    (let ((start (point)))
-      (insert (car entry))
-      (unless (or (eq (nth 1 entry) 'deleted-in-org)
-		  (eq (nth 1 entry) 'deleted-in-cal))
-	(put-text-property start (point)
-			   'face 'link)))
-    (insert "\n   Status: "
-	    (symbol-name (nth 1 entry))
-	    "  Action: "
-	    (symbol-name (nth 2 entry))
-	    "\n\n")))
+    (let ((deleted (or (eq (nth 1 entry) 'deleted-in-org)
+		       (eq (nth 1 entry) 'deleted-in-cal))))
+      (insert "UID: ")
+      (let ((start (point)))
+	(insert (car entry))
+	(unless deleted
+	  (put-text-property start (point)
+			     'face 'link)))
+      (when (and (eq org-caldav-show-sync-results 'with-headings)
+		 (not deleted))
+	(insert "\n   Title: "
+		(org-caldav-get-heading-from-uid (car entry))))
+      (insert "\n   Status: "
+	      (symbol-name (nth 1 entry))
+	      "  Action: "
+	      (symbol-name (nth 2 entry))
+	      "\n\n"))))
+
+(defun org-caldav-get-heading-from-uid (uid)
+  "Get org heading from entry with UID."
+  (let ((marker (org-id-find uid t)))
+    (if (null marker)
+	"(Could not find UID)"
+      (with-current-buffer (marker-buffer marker)
+	(goto-char (marker-position marker))
+	(org-narrow-to-subtree)
+	(goto-char (point-min))
+	(org-show-subtree)
+	(if (re-search-forward org-complex-heading-regexp nil t)
+	    (match-string 4)
+	  "(Could not find heading)")))))
 
 (defun org-caldav-goto-uid ()
   "Jump to UID unter point."
