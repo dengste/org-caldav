@@ -951,9 +951,11 @@ If COMPLEMENT is non-nil, return all item without errors."
 	(org-narrow-to-subtree)
 	(goto-char (point-min))
 	(org-show-subtree)
-	(if (re-search-forward org-complex-heading-regexp nil t)
-	    (match-string 4)
-	  "(Could not find heading)")))))
+	(prog1
+	    (if (re-search-forward org-complex-heading-regexp nil t)
+		(match-string 4)
+	      "(Could not find heading)")
+	  (widen))))))
 
 (defun org-caldav-goto-uid ()
   "Jump to UID unter point."
