@@ -31,7 +31,8 @@
 
 (require 'url-dav)
 (require 'url-http) ;; b/c of Emacs bug
-(require 'org-icalendar)
+(unless (require 'ox-icalendar nil t)
+  (require 'org-icalendar))
 (require 'org-id)
 (require 'icalendar)
 (require 'url-util)
