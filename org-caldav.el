@@ -698,7 +698,12 @@ is on s-expression."
 (defun org-caldav-generate-ics ()
   "Generate ICS file from `org-caldav-files'.
 Returns buffer containing the ICS file."
-  (let ((org-combined-agenda-icalendar-file (make-temp-file "org-caldav-"))
+  (let ((icalendar-file
+	 (if (featurep 'ox-icalendar)
+	     'org-icalendar-combined-agenda-file
+	   'org-combined-agenda-icalendar-file))
+	(orgfiles (append org-caldav-files
+			  (list org-caldav-inbox)))
 	;; We absolutely need UIDs for synchronization.
 	(org-icalendar-store-UID t)
 	(icalendar-uid-format "orgsexp-%h")
@@ -711,12 +716,15 @@ Returns buffer containing the ICS file."
 	   ";TZID=%Z:%Y%m%dT%H%M%S")
 	  (t
 	   ":%Y%m%dT%H%M%S"))))
+    (set icalendar-file (make-temp-file "org-caldav-"))
     (org-caldav-debug-print 1 (format "Generating ICS file %s."
-				    org-combined-agenda-icalendar-file))
+				      (symbol-value icalendar-file)))
     ;; Export events to one single ICS file.
-    (apply 'org-export-icalendar t (append org-caldav-files
-					   (list org-caldav-inbox)))
-    (find-file-noselect org-combined-agenda-icalendar-file)))
+    (if (featurep 'ox-icalendar)
+	;; New exporter (Org 8)
+	(apply 'org-icalendar--combine-files nil orgfiles)
+      (apply 'org-export-icalendar t orgfiles))
+    (find-file-noselect (symbol-value icalendar-file))))
 
 (defun org-caldav-get-uid ()
   "Get UID for event in current buffer."
