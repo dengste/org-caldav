@@ -413,7 +413,7 @@ Are you really sure? ")))
 
 (defun org-caldav-generate-md5-for-org-entry (uid)
   "Find Org entry with UID and calculate its MD5."
-  (let ((marker (org-id-find uid t)))
+  (let ((marker (org-id-find (org-caldav-trim-uid uid) t)))
     (when (null marker)
       (error "Could not find UID %s." uid))
     (with-current-buffer (marker-buffer marker)
@@ -606,7 +606,7 @@ which can only be synced to calendar. Ignoring." uid))
 	;; This is a changed event.
 	(org-caldav-debug-print
 	 1 (format "Event UID %s: Changed in Cal --> Org" uid))
-	(let ((marker (org-id-find (car cur) t)))
+	(let ((marker (org-id-find (org-caldav-trim-uid (car cur)) t)))
 	  (when (null marker)
 	    (error "Could not find UID %s." (car cur)))
 	  (with-current-buffer (marker-buffer marker)
@@ -648,7 +648,7 @@ which can only be synced to calendar. Ignoring." uid))
   ;; (Maybe) delete entries which were deleted in calendar.
   (unless (eq org-caldav-delete-org-entries 'never)
     (dolist (cur (org-caldav-filter-events 'deleted-in-cal))
-      (org-id-goto (car cur))
+      (org-id-goto (org-caldav-trim-uid (car cur)))
       (when (or (eq org-caldav-delete-org-entries 'always)
 		(and (eq org-caldav-delete-org-entries 'ask)
 		     (y-or-n-p "Delete this entry? ")))
@@ -775,6 +775,9 @@ Returns nil if there are no more events."
 		      (forward-line 1)
 		      (point))))
 
+(defun org-caldav-trim-uid (uid)
+  (replace-regexp-in-string "^[A-Z][A-Z][0-9]?-" "" uid))
+
 (defun org-caldav-rewrite-uid-in-event ()
   "Rewrite UID in current buffer.
 This will strip prefixes like 'DL' or 'TS' the Org exporter puts
@@ -786,13 +789,11 @@ is no UID to rewrite. Returns the UID."
      ((re-search-forward "^UID:\\(orgsexp-[0-9]+\\)" nil t)
       ;; This is a sexp entry, so do nothing.
       (match-string 1))
-     ((re-search-forward "^UID:\\(\\s-*\\)\\([A-Z][A-Z]-\\)?\\(.+\\)\\s-*$"
+     ((re-search-forward "^UID:\\(\\s-*\\)\\(.+\\)\\s-*$"
 			 nil t)
       (when (match-string 1)
 	(replace-match "" nil nil nil 1))
-      (when (match-string 2)
-	(replace-match "" nil nil nil 2))
-      (match-string 3))
+      (match-string 2))
      (t
       (error "No UID for event in buffer %s."
 	     (buffer-name (current-buffer)))))))
@@ -962,7 +963,7 @@ If COMPLEMENT is non-nil, return all item without errors."
 
 (defun org-caldav-get-heading-from-uid (uid)
   "Get org heading from entry with UID."
-  (let ((marker (org-id-find uid t)))
+  (let ((marker (org-id-find (org-caldav-trim-uid uid) t)))
     (if (null marker)
 	"(Could not find UID)"
       (with-current-buffer (marker-buffer marker)
@@ -983,7 +984,7 @@ If COMPLEMENT is non-nil, return all item without errors."
 	       '(face link))
     (beginning-of-line)
     (looking-at "UID: \\(.+\\)$")
-    (org-id-goto (match-string 1))))
+    (org-id-goto (org-caldav-trim-uid (match-string 1)))))
 
 ;; The following is taken from icalendar.el, written by Ulf Jasper.
 
