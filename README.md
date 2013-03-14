@@ -2,9 +2,11 @@
 
 Caldav sync for Emacs Orgmode
 
-Tested CalDAV servers: Owncloud, Google Calendar.
+Tested CalDAV servers: Owncloud.
 
-Also reported to be working: SOGo
+Also reported to be working: SOGo.
+
+Working, but deprecated: Google Calendar (will shut down CalDAV API in 9/2013).
 
 *IMPORTANT*: Before using this code, please make sure you have backups
 of your precious Org files. Also, I strongly suggest to create a new,
