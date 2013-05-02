@@ -786,7 +786,7 @@ is no UID to rewrite. Returns the UID."
      ((re-search-forward "^UID:\\(orgsexp-[0-9]+\\)" nil t)
       ;; This is a sexp entry, so do nothing.
       (match-string 1))
-     ((re-search-forward "^UID:\\(\\s-*\\)\\([A-Z][A-Z]-\\)?\\(.+\\)\\s-*$"
+     ((re-search-forward "^UID:\\(\\s-*\\)\\([A-Z][A-Z][0-9]?-\\)?\\(.+\\)\\s-*$"
 			 nil t)
       (when (match-string 1)
 	(replace-match "" nil nil nil 1))
