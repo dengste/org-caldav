@@ -716,6 +716,8 @@ Returns buffer containing the ICS file."
 			  (list org-caldav-inbox)))
 	;; We absolutely need UIDs for synchronization.
 	(org-icalendar-store-UID t)
+	;; Does not work yet
+	(org-icalendar-include-bbdb-anniversaries nil)
 	(icalendar-uid-format "orgsexp-%h")
 	(org-icalendar-date-time-format
 	 (cond
