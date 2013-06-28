@@ -237,18 +237,18 @@ Baz Bar Foo")
     (save-excursion
       (should (search-forward "SUMMARY:Appointment number 2 was changed!")))
     (save-excursion
-      (should (re-search-forward "DTSTART:20121204T\\(170000Z\\|180000\\)" nil t)))
+      (should (re-search-forward "DTSTART.*:20121204T\\(170000Z\\|180000\\)" nil t)))
     (save-excursion
-      (should (re-search-forward "DTEND:20121204T\\(180000Z\\|190000\\)" nil t))))
+      (should (re-search-forward "DTEND.*:20121204T\\(180000Z\\|190000\\)" nil t))))
 
   (with-current-buffer (org-caldav-get-event "orgcaldavtest-org2")
     (goto-char (point-min))
     (save-excursion
       (should (search-forward "SUMMARY:This is a changed test heading")))
     (save-excursion
-      (should (re-search-forward "DTSTART:20121219T\\(190000Z\\|200000\\)" nil t)))
+      (should (re-search-forward "DTSTART.*:20121219T\\(190000Z\\|200000\\)" nil t)))
     (save-excursion
-      (should (re-search-forward "DTEND:20121219T\\(210000Z\\|220000\\)" nil t))))
+      (should (re-search-forward "DTEND.*:20121219T\\(210000Z\\|220000\\)" nil t))))
 
   ;; Now change events in Cal
   (with-current-buffer (org-caldav-get-event "orgcaldavtest@cal1")
