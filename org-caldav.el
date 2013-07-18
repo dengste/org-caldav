@@ -955,7 +955,8 @@ If COMPLEMENT is non-nil, return all item without errors."
       (when (and (eq org-caldav-show-sync-results 'with-headings)
 		 (not deleted))
 	(insert "\n   Title: "
-		(org-caldav-get-heading-from-uid (car entry))))
+		(or (org-caldav-get-heading-from-uid (car entry))
+		    "(no title)")))
       (insert "\n   Status: "
 	      (symbol-name (nth 1 entry))
 	      "  Action: "
