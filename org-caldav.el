@@ -427,9 +427,14 @@ Are you really sure? ")))
   "Sync Org with calendar."
   (interactive)
   (unless (or (bound-and-true-p url-dav-patched-version)
-	      (url-dav-supported-p (org-caldav-events-url)))
-    (error "You have to either use at least Emacs pretest, \
+	      (> emacs-major-version 24)
+	      (and (= emacs-major-version 24)
+		   (> emacs-minor-version 2)))
+    (error "You have to either use at least Emacs 24.3, \
 or the patched `url-dav' package (see Readme)."))
+  (unless (url-dav-supported-p (org-caldav-events-url))
+    (error "The URL %s does not seem to accept DAV \
+requests" (org-caldav-events-url)))
   (org-caldav-debug-print 1 "========== Started sync.")
   (org-caldav-check-connection)
   (unless (and org-caldav-event-list
