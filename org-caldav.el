@@ -987,8 +987,8 @@ If COMPLEMENT is non-nil, return all item without errors."
 (defun org-caldav-goto-uid ()
   "Jump to UID unter point."
   (interactive)
-  (when (equal (text-properties-at (point))
-	       '(face link))
+  (when (equal (plist-get (text-properties-at (point)) 'face)
+	       'link)
     (beginning-of-line)
     (looking-at "UID: \\(.+\\)$")
     (org-id-goto (match-string 1))))
