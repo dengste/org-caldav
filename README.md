@@ -2,7 +2,10 @@
 
 Caldav sync for Emacs Orgmode
 
-Tested CalDAV servers: Owncloud, Google Calendar.
+Tested CalDAV servers: Owncloud
+
+Google Calendar works on old, deprecated endpoint only. New endpoint
+requires OAuth2 authentication. See issue #28 on why that's a problem.
 
 Also reported to be working: SOGo.
 
