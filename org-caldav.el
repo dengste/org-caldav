@@ -459,6 +459,7 @@ Should I try to resume? "))
     (set-buffer-modified-p nil)
     (kill-buffer))
   (delete-file (buffer-file-name org-caldav-ics-buffer))
+  (kill-buffer org-caldav-ics-buffer)
   (message "Finished sync."))
 
 (defun org-caldav-update-events-in-cal (icsbuf)
