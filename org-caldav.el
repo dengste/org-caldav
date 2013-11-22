@@ -437,29 +437,30 @@ or the patched `url-dav' package (see Readme)."))
 requests" (org-caldav-events-url)))
   (org-caldav-debug-print 1 "========== Started sync.")
   (org-caldav-check-connection)
-  (unless (and org-caldav-event-list
-	       (y-or-n-p "Last sync seems to have been aborted. \
+  (unwind-protect
+      (progn
+	(unless (and org-caldav-event-list
+		     (y-or-n-p "Last sync seems to have been aborted. \
 Should I try to resume? "))
-    (setq org-caldav-ics-buffer (org-caldav-generate-ics))
-    (setq org-caldav-event-list nil)
-    (setq org-caldav-sync-result nil)
-    (org-caldav-load-sync-state)
-    ;; Remove status in event list
-    (dolist (cur org-caldav-event-list)
-      (org-caldav-event-set-status cur nil))
-    (org-caldav-update-eventdb-from-org org-caldav-ics-buffer)
-    (org-caldav-update-eventdb-from-cal))
-  (org-caldav-update-events-in-cal org-caldav-ics-buffer)
-  (org-caldav-update-events-in-org)
-  (org-caldav-save-sync-state)
-  (setq org-caldav-event-list nil)
-  (when org-caldav-show-sync-results
-    (org-caldav-display-sync-results))
-  (with-current-buffer org-caldav-ics-buffer
-    (set-buffer-modified-p nil)
-    (kill-buffer))
-  (delete-file (buffer-file-name org-caldav-ics-buffer))
-  (kill-buffer org-caldav-ics-buffer)
+	  (setq org-caldav-ics-buffer (org-caldav-generate-ics))
+	  (setq org-caldav-event-list nil)
+	  (setq org-caldav-sync-result nil)
+	  (org-caldav-load-sync-state)
+	  ;; Remove status in event list
+	  (dolist (cur org-caldav-event-list)
+	    (org-caldav-event-set-status cur nil))
+	  (org-caldav-update-eventdb-from-org org-caldav-ics-buffer)
+	  (org-caldav-update-eventdb-from-cal))
+	(org-caldav-update-events-in-cal org-caldav-ics-buffer)
+	(org-caldav-update-events-in-org)
+	(org-caldav-save-sync-state)
+	(setq org-caldav-event-list nil)
+	(when org-caldav-show-sync-results
+	  (org-caldav-display-sync-results)))
+    (with-current-buffer org-caldav-ics-buffer
+      (set-buffer-modified-p nil)
+      (kill-buffer))
+    (delete-file (buffer-file-name org-caldav-ics-buffer)))
   (message "Finished sync."))
 
 (defun org-caldav-update-events-in-cal (icsbuf)
