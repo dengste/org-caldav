@@ -43,6 +43,10 @@
 (defvar org-caldav-calendar-id "abcde1234@group.calendar.google.com"
   "ID of your calendar.")
 
+(defvar org-caldav-uuid-extension ".ics"
+  "The file extension to add to uuids in webdav requests.
+This is usually .ics, but on some servers (davmail), it is .EML")
+
 (defvar org-caldav-files '("~/org/appointments.org")
   "List of files which should end up in calendar.
 The file in `org-caldav-inbox' is implicitly included, so you
@@ -199,7 +203,7 @@ Also sets `org-caldav-empty-calendar' if calendar is empty."
     (while (setq prop (pop properties))
       (let ((url (car prop))
 	    (etag (plist-get (cdr prop) 'DAV:getetag)))
-      (if (string-match ".*/\\(.+\\)\\.ics/?$" url)
+      (if (string-match (concat ".*/\\(.+\\)\\" org-caldav-uuid-extension "/?$") url)
 	  (setq url (match-string 1 url))
 	(setq url nil))
       (when (string-match "\"\\(.*\\)\"" etag)
@@ -245,7 +249,7 @@ If WITH-HEADERS is non-nil, do not delete headers."
   (org-caldav-debug-print 1 (format "Getting event UID %s." uid))
   (with-current-buffer
       (url-retrieve-synchronously
-       (concat (org-caldav-events-url) (url-hexify-string uid) ".ics"))
+       (concat (org-caldav-events-url) (url-hexify-string uid) org-caldav-uuid-extension))
     (goto-char (point-min))
     (when (search-forward "BEGIN:VCALENDAR" nil t)
       (beginning-of-line)
@@ -270,13 +274,13 @@ The filename will be derived from the UID."
       (insert org-caldav-calendar-preamble event "END:VCALENDAR\n")
       (goto-char (point-min))
       (let* ((uid (org-caldav-get-uid))
-	     (url (concat (org-caldav-events-url) (url-hexify-string uid) ".ics")))
+	     (url (concat (org-caldav-events-url) (url-hexify-string uid) org-caldav-uuid-extension)))
 	(org-caldav-debug-print 1 (format "Putting event UID %s." uid))
 	(org-caldav-debug-print 2 (format "Content of event UID %s: " uid)
 				(buffer-string))
 	(setq org-caldav-empty-calendar nil)
 	(org-caldav-save-resource
-	 (concat (org-caldav-events-url) uid ".ics")
+	 (concat (org-caldav-events-url) uid org-caldav-uuid-extension)
 	 (encode-coding-string (buffer-string) 'utf-8))))))
 
 (defun org-caldav-delete-event (uid)
@@ -286,7 +290,7 @@ be caught and a message displayed instead."
   (org-caldav-debug-print 1 (format "Deleting event UID %s." uid))
   (condition-case err
       (progn
-	(url-dav-delete-file (concat (org-caldav-events-url) uid ".ics"))
+	(url-dav-delete-file (concat (org-caldav-events-url) uid org-caldav-uuid-extension))
 	t)
     (error
      (progn
