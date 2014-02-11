@@ -554,7 +554,7 @@ This removes timestamps which weren't properly removed by
 org-icalendar."
   (save-excursion
     (goto-char (point-min))
-    (when (re-search-forward "^DESCRIPTION:.*?\\(\\s-*<[^>]+>\\)" nil t)
+    (when (re-search-forward "^DESCRIPTION:.*?\\(\\s-*<[^>]+>\\(–<[^>]+>\\)?\\\\n\\)" nil t)
       (replace-match "" nil nil nil 1))))
 
 (defun org-caldav-maybe-fix-timezone ()
@@ -964,7 +964,7 @@ If COMPLEMENT is non-nil, return all item without errors."
 		    "(no title)")))
       (insert "\n   Status: "
 	      (symbol-name (nth 1 entry))
-	      "  Action: "
+	      "	 Action: "
 	      (symbol-name (nth 2 entry))
 	      "\n\n"))))
 
@@ -1041,11 +1041,11 @@ which can be fed into `org-caldav-insert-org-entry'."
 	 (rdate (icalendar--get-event-property e 'RDATE))
 	 (duration (icalendar--get-event-property e 'DURATION)))
     ;; check whether start-time is missing
-    (if  (and dtstart
-	      (string=
-	       (cadr (icalendar--get-event-property-attributes
-		      e 'DTSTART))
-	       "DATE"))
+    (if	(and dtstart
+	     (string=
+	      (cadr (icalendar--get-event-property-attributes
+		     e 'DTSTART))
+	      "DATE"))
 	(setq start-t nil))
     (when duration
       (let ((dtend-dec-d (icalendar--add-decoded-times
