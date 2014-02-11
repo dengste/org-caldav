@@ -59,6 +59,14 @@ don't have to add it here.")
 (file \"path/to/file\")
 (file+headline \"path/to/file\" \"node headline\")")
 
+(defvar org-caldav-calendars nil
+  "A list of plists which define different calendars which are
+synced in order by org-caldav-sync.
+
+The plist may contain any key of :url, :calendar-id, :files,
+:select-tags, :inbox, which will be used to overwrite the
+respective global variables.")
+
 (defvar org-caldav-save-directory user-emacs-directory
   "Directory where org-caldav saves its sync state.")
 
@@ -112,6 +120,10 @@ buffer).")
 
 ;; Internal variables
 
+(defvar org-caldav-previous-calendar nil
+  "The plist from org-caldav-calendars, which holds the last
+synced calendar. Used to properly resume an interupted attempt.")
+
 (defvar org-caldav-event-list nil
   "The event list database.
 This is an alist with elements
@@ -121,7 +133,7 @@ It will be saved to disk between sessions.")
 (defvar org-caldav-sync-result nil
   "Result from last synchronization.
 Contains an alist with entries
-  (uid status action)
+  (calendar-id uid status action)
 
 with status = {new,changed,deleted}-in-{org,cal}
 and  action = {org->cal, cal->org, error:org->cal, error:cal->org}.")
@@ -186,6 +198,10 @@ and  action = {org->cal, cal->org, error:org->cal, error:cal->org}.")
 (defun org-caldav-check-connection ()
   "Check connection by doing a PROPFIND on CalDAV URL.
 Also sets `org-caldav-empty-calendar' if calendar is empty."
+  (unless (url-dav-supported-p (org-caldav-events-url))
+    (error "The URL %s does not seem to accept DAV \
+requests" (org-caldav-events-url)))
+
   (org-caldav-debug-print 1 (format "Check connection for %s."
 				  (org-caldav-events-url)))
   (let ((output (url-dav-get-properties
@@ -430,6 +446,45 @@ Are you really sure? ")))
 	    (org-entry-beginning-position)
 	    (org-entry-end-position))))))
 
+(defun org-caldav-var-for-key (key)
+  (case key
+    (:url 'org-caldav-url)
+    (:calendar-id 'org-caldav-calendar-id)
+    (:files 'org-caldav-files)
+    (:select-tags 'org-caldav-select-tags)
+    (:inbox 'org-caldav-inbox)
+    (t (error "Key '%s' is not allowed in org-caldav-calendars" key))))
+
+(defun org-caldav-sync-calendar (&optional calendar resume)
+  (setq org-caldav-previous-calendar calendar)
+  (let ((org-caldav-url org-caldav-url)
+	(org-caldav-calendar-id org-caldav-calendar-id)
+	(org-caldav-files org-caldav-files)
+	(org-caldav-select-tags org-caldav-select-tags)
+	(org-caldav-inbox org-caldav-inbox))
+    (while calendar
+      (let ((key (pop calendar))
+	    (value (pop calendar)))
+	(set (org-caldav-var-for-key key) value)))
+    (org-caldav-check-connection)
+    (unless resume
+      (setq org-caldav-ics-buffer (org-caldav-generate-ics))
+      (setq org-caldav-event-list nil)
+      (org-caldav-load-sync-state)
+      ;; Remove status in event list
+      (dolist (cur org-caldav-event-list)
+	(org-caldav-event-set-status cur nil))
+      (org-caldav-update-eventdb-from-org org-caldav-ics-buffer)
+      (org-caldav-update-eventdb-from-cal))
+    (org-caldav-update-events-in-cal org-caldav-ics-buffer)
+    (org-caldav-update-events-in-org)
+    (org-caldav-save-sync-state)
+    (setq org-caldav-event-list nil)
+    (with-current-buffer org-caldav-ics-buffer
+      (set-buffer-modified-p nil)
+      (kill-buffer))
+    (delete-file (buffer-file-name org-caldav-ics-buffer))))
+
 ;;;###autoload
 (defun org-caldav-sync ()
   "Sync Org with calendar."
@@ -440,33 +495,18 @@ Are you really sure? ")))
 		   (> emacs-minor-version 2)))
     (error "You have to either use at least Emacs 24.3, \
 or the patched `url-dav' package (see Readme)."))
-  (unless (url-dav-supported-p (org-caldav-events-url))
-    (error "The URL %s does not seem to accept DAV \
-requests" (org-caldav-events-url)))
   (org-caldav-debug-print 1 "========== Started sync.")
-  (org-caldav-check-connection)
-  (unless (and org-caldav-event-list
-	       (y-or-n-p "Last sync seems to have been aborted. \
+  (if (and org-caldav-event-list
+	   (y-or-n-p "Last sync seems to have been aborted. \
 Should I try to resume? "))
-    (setq org-caldav-ics-buffer (org-caldav-generate-ics))
-    (setq org-caldav-event-list nil)
+      (org-caldav-sync-calendar org-caldav-previous-calendar t)
     (setq org-caldav-sync-result nil)
-    (org-caldav-load-sync-state)
-    ;; Remove status in event list
-    (dolist (cur org-caldav-event-list)
-      (org-caldav-event-set-status cur nil))
-    (org-caldav-update-eventdb-from-org org-caldav-ics-buffer)
-    (org-caldav-update-eventdb-from-cal))
-  (org-caldav-update-events-in-cal org-caldav-ics-buffer)
-  (org-caldav-update-events-in-org)
-  (org-caldav-save-sync-state)
-  (setq org-caldav-event-list nil)
+    (if (null org-caldav-calendars)
+	(org-caldav-sync-calendar)
+      (dolist (calendar org-caldav-calendars)
+	(org-caldav-sync-calendar calendar))))
   (when org-caldav-show-sync-results
     (org-caldav-display-sync-results))
-  (with-current-buffer org-caldav-ics-buffer
-    (set-buffer-modified-p nil)
-    (kill-buffer))
-  (delete-file (buffer-file-name org-caldav-ics-buffer))
   (message "Finished sync."))
 
 (defun org-caldav-update-events-in-cal (icsbuf)
@@ -502,7 +542,8 @@ ICSBUF is the buffer containing the exported iCalendar file."
 	    (org-caldav-debug-print 1
 	     (format "Event UID %s: Error while doing Org --> Cal" (car cur)))
 	    (org-caldav-event-set-status cur 'error)
-	    (push (list (car cur) 'error 'error:org->cal)
+	    (push (list org-caldav-calendar-id (car cur)
+			'error 'error:org->cal)
 		  org-caldav-sync-result))))
       ;; Get Etags
       (setq event-etag (org-caldav-get-event-etag-list))
@@ -511,7 +552,8 @@ ICSBUF is the buffer containing the exported iCalendar file."
 	  (when (and (not (eq (org-caldav-event-status cur) 'error))
 		     etag)
 	    (org-caldav-event-set-etag cur (cdr etag))
-	    (push (list (car cur) (org-caldav-event-status cur) 'org->cal)
+	    (push (list org-caldav-calendar-id (car cur)
+			(org-caldav-event-status cur) 'org->cal)
 		  org-caldav-sync-result)))))
     ;; Remove events that were deleted in org
     (let ((events (org-caldav-filter-events 'deleted-in-org))
@@ -521,7 +563,8 @@ ICSBUF is the buffer containing the exported iCalendar file."
 	(setq counter (1+ counter))
 	(message "Deleting event %d from %d" counter (length events))
 	(org-caldav-delete-event (car cur))
-	(push (list (car cur) 'deleted-in-org 'removed-from-cal)
+	(push (list org-caldav-calendar-id (car cur)
+		    'deleted-in-org 'removed-from-cal)
 	      org-caldav-sync-result)
 	(setq org-caldav-event-list
 	      (delete cur org-caldav-event-list))))
@@ -636,13 +679,15 @@ This is a bug in older Org versions."
 		  (goto-char (car point-and-level))
 		  (apply 'org-caldav-insert-org-entry
 			 (append eventdata (list uid (cdr point-and-level)))))
-		(push (list uid (org-caldav-event-status cur) 'cal->org)
+		(push (list org-caldav-calendar-id uid
+			    (org-caldav-event-status cur) 'cal->org)
 		      org-caldav-sync-result)
 		(setq buf (current-buffer)))
 	    (error
 	     ;; inbox file/headline could not be found
 	     (org-caldav-event-set-status cur 'error)
-	     (push (list uid (org-caldav-event-status cur) 'error:inbox-notfound)
+	     (push (list org-caldav-calendar-id uid
+			 (org-caldav-event-status cur) 'error:inbox-notfound)
 		   org-caldav-sync-result)
 	     (throw 'next nil))))
 	 ((string-match "^orgsexp-" uid)
@@ -651,7 +696,8 @@ This is a bug in older Org versions."
 	   1 (format "Event UID %s: Changed in Cal, but this is a sexp entry \
 which can only be synced to calendar. Ignoring." uid))
 	  (org-caldav-event-set-status cur 'synced)
-	  (push (list uid (org-caldav-event-status cur) 'error:changed-orgsexp)
+	  (push (list org-caldav-calendar-id uid
+		      (org-caldav-event-status cur) 'error:changed-orgsexp)
 		org-caldav-sync-result)
 	  (throw 'next nil))
 	 (t
@@ -684,7 +730,8 @@ which can only be synced to calendar. Ignoring." uid))
 		  (apply 'org-caldav-insert-org-entry
 			 (append eventdata (list uid level)))))
 	      (setq buf (current-buffer))
-	      (push (list uid (org-caldav-event-status cur)
+	      (push (list org-caldav-calendar-id uid
+			  (org-caldav-event-status cur)
 			  (if (eq timesync 'orgsexp)
 			      'error:changed-orgsexp 'cal->org))
 		    org-caldav-sync-result)))))
@@ -708,7 +755,8 @@ which can only be synced to calendar. Ignoring." uid))
 	      (delete cur org-caldav-event-list))
 	(org-caldav-debug-print 1
 	 (format "Event UID %s: Deleted from Org" (car cur)))
-	(push (list (car cur) 'deleted-in-cal 'removed-from-org)
+	(push (list org-caldav-calendar-id (car cur)
+		    'deleted-in-cal 'removed-from-org)
 	      org-caldav-sync-result)))))
 
 (defun org-caldav-change-heading (newheading)
@@ -1001,24 +1049,26 @@ If COMPLEMENT is non-nil, return all item without errors."
   (if (null entries)
       (insert "None.\n")
     (dolist (entry entries)
-      (let ((deleted (or (eq (nth 1 entry) 'deleted-in-org)
-			 (eq (nth 1 entry) 'deleted-in-cal))))
+      (let ((deleted (or (eq (nth 2 entry) 'deleted-in-org)
+			 (eq (nth 2 entry) 'deleted-in-cal))))
 	(insert "UID: ")
 	(let ((start (point)))
-	  (insert (car entry))
+	  (insert (nth 1 entry))
 	  (unless deleted
 	    (put-text-property start (point)
 			       'face 'link)))
 	(when (and (eq org-caldav-show-sync-results 'with-headings)
 		   (not deleted))
 	  (insert "\n	Title: "
-		  (or (org-caldav-get-heading-from-uid (car entry))
+		  (or (org-caldav-get-heading-from-uid (nth 1 entry))
 		      "(no title)")))
 	(insert "\n   Status: "
-		(symbol-name (nth 1 entry))
-		"  Action: "
 		(symbol-name (nth 2 entry))
-		"\n\n")))))
+		"  Action: "
+		(symbol-name (nth 3 entry)))
+	(when org-caldav-calendars
+	  (insert "\n	Calendar: " (car entry)))
+	(insert "\n\n")))))
 
 (defun org-caldav-get-heading-from-uid (uid)
   "Get org heading from entry with UID."
