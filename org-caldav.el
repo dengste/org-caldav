@@ -921,10 +921,8 @@ See also `org-caldav-save-directory'."
     (if (null org-caldav-sync-result)
 	(insert "Nothing was done.")
       (insert "== Sync errors: \n\n")
-      (let ((errevents (org-caldav-sync-result-filter-errors)))
-	(if (null errevents)
-	    (insert "None.\n")
-	  (org-caldav-sync-result-print-entries errevents)))
+      (org-caldav-sync-result-print-entries
+       (org-caldav-sync-result-filter-errors))
       (insert "\n== Successful syncs: \n\n")
       (org-caldav-sync-result-print-entries
        (org-caldav-sync-result-filter-errors t)))
@@ -948,25 +946,27 @@ If COMPLEMENT is non-nil, return all item without errors."
 
 (defun org-caldav-sync-result-print-entries (entries)
   "Helper function to print ENTRIES."
-  (dolist (entry entries)
-    (let ((deleted (or (eq (nth 1 entry) 'deleted-in-org)
-		       (eq (nth 1 entry) 'deleted-in-cal))))
-      (insert "UID: ")
-      (let ((start (point)))
-	(insert (car entry))
-	(unless deleted
-	  (put-text-property start (point)
-			     'face 'link)))
-      (when (and (eq org-caldav-show-sync-results 'with-headings)
-		 (not deleted))
-	(insert "\n   Title: "
-		(or (org-caldav-get-heading-from-uid (car entry))
-		    "(no title)")))
-      (insert "\n   Status: "
-	      (symbol-name (nth 1 entry))
-	      "	 Action: "
-	      (symbol-name (nth 2 entry))
-	      "\n\n"))))
+  (if (null entries)
+      (insert "None.\n")
+    (dolist (entry entries)
+      (let ((deleted (or (eq (nth 1 entry) 'deleted-in-org)
+			 (eq (nth 1 entry) 'deleted-in-cal))))
+	(insert "UID: ")
+	(let ((start (point)))
+	  (insert (car entry))
+	  (unless deleted
+	    (put-text-property start (point)
+			       'face 'link)))
+	(when (and (eq org-caldav-show-sync-results 'with-headings)
+		   (not deleted))
+	  (insert "\n	Title: "
+		  (or (org-caldav-get-heading-from-uid (car entry))
+		      "(no title)")))
+	(insert "\n   Status: "
+		(symbol-name (nth 1 entry))
+		"  Action: "
+		(symbol-name (nth 2 entry))
+		"\n\n")))))
 
 (defun org-caldav-get-heading-from-uid (uid)
   "Get org heading from entry with UID."
