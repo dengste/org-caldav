@@ -50,6 +50,9 @@ don't have to add it here.")
 
 (defvar org-caldav-inbox "~/org/from-calendar.org"
   "Filename for putting new entries obtained from calendar.")
+(defvar org-caldav-select-tags nil
+  "Tags to filter the synced tasks")
+
 
 (defvar org-caldav-save-directory user-emacs-directory
   "Directory where org-caldav saves its sync state.")
@@ -719,6 +722,7 @@ Returns buffer containing the ICS file."
 	   'org-combined-agenda-icalendar-file))
 	(orgfiles (append org-caldav-files
 			  (list org-caldav-inbox)))
+	(org-export-select-tags org-caldav-select-tags)
 	;; We absolutely need UIDs for synchronization.
 	(org-icalendar-store-UID t)
 	;; Does not work yet
@@ -834,6 +838,7 @@ Returns MD5 from entry."
     (insert
      (org-caldav-create-time-range start-d start-t end-d end-t))
     (org-set-property "ID" (url-unhex-string uid))
+    (org-set-tags-to org-caldav-select-tags)
     (insert "\n")
     (forward-line -1)
     (md5 (buffer-substring-no-properties
