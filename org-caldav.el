@@ -1059,7 +1059,7 @@ If COMPLEMENT is non-nil, return all item without errors."
 			       'face 'link)))
 	(when (and (eq org-caldav-show-sync-results 'with-headings)
 		   (not deleted))
-	  (insert "\n	Title: "
+	  (insert "\n   Title: "
 		  (or (org-caldav-get-heading-from-uid (nth 1 entry))
 		      "(no title)")))
 	(insert "\n   Status: "
@@ -1067,7 +1067,7 @@ If COMPLEMENT is non-nil, return all item without errors."
 		"  Action: "
 		(symbol-name (nth 3 entry)))
 	(when org-caldav-calendars
-	  (insert "\n	Calendar: " (car entry)))
+	  (insert "\n   Calendar: " (car entry)))
 	(insert "\n\n")))))
 
 (defun org-caldav-get-heading-from-uid (uid)
