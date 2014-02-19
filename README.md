@@ -236,12 +236,12 @@ org-caldav-sync will go through these plists in order.
 
 Example:
 
-  (setq org-caldav-calendars
-    '((:calendar-id "work@whatever" :files ("~/org/work.org")
-       :inbox "~/org/fromwork.org")
-      (:calendar-id "stuff@mystuff"
-       :files ("~/org/sports.org" "~/org/play.org")
-       :inbox "~/org/fromstuff.org")) )
+    (setq org-caldav-calendars
+      '((:calendar-id "work@whatever" :files ("~/org/work.org")
+         :inbox "~/org/fromwork.org")
+        (:calendar-id "stuff@mystuff"
+         :files ("~/org/sports.org" "~/org/play.org")
+         :inbox "~/org/fromstuff.org")) )
 
 This means that you have two calendars with IDs "work@whatever" and
 "stuff@mystuff". Both will be accessed through the global value of
