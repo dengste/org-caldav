@@ -527,6 +527,7 @@ Should I try to resume? "))
     (if (null org-caldav-calendars)
 	(org-caldav-sync-calendar)
       (dolist (calendar org-caldav-calendars)
+	(org-caldav-debug-print 1 "Syncing first calendar entry:" calendar)
 	(org-caldav-sync-calendar calendar))))
   (when org-caldav-show-sync-results
     (org-caldav-display-sync-results))
