@@ -37,6 +37,9 @@
 (require 'icalendar)
 (require 'url-util)
 
+(eval-when-compile
+  (require 'cl))
+
 (defvar org-caldav-url "https://www.google.com/calendar/dav"
   "Base URL for CalDAV access.")
 
