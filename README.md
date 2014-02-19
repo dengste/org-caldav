@@ -234,18 +234,18 @@ the calendar and re-create it, delete the sync state file in
 #### Syncing with more than one calendar
 
 This can be done by setting the variable org-caldav-calendars. It
-should be alist of plists (a 'plist' is simply a list with alternating
+should be a list of plists (a 'plist' is simply a list with alternating
 :key's and values). Through these plists, you can override the global
 values of variables like org-caldav-calendar-id, and calling
 org-caldav-sync will go through these plists in order.
 
 Example:
 
-    '((:calendar-id \"work@whatever\" :files (\"~/org/work.org\")
-       :inbox \"~/org/fromwork.org\")
+    '((:calendar-id "work@whatever" :files ("~/org/work.org")
+       :inbox "~/org/fromwork.org")
       (:calendar-id \"stuff@mystuff\"
-       :files (\"~/org/sports.org\" \"~/org/play.org\")
-       :inbox \"~/org/fromstuff.org\"))")
+       :files ("~/org/sports.org" "~/org/play.org")
+       :inbox "~/org/fromstuff.org"))")
 
 This means that you have two calendars with IDs "work@whatever" and
 "stuff@whatever". Both will be accessed through the global value of
