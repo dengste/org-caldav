@@ -49,23 +49,38 @@ The file in `org-caldav-inbox' is implicitly included, so you
 don't have to add it here.")
 
 (defvar org-caldav-select-tags nil
-  "Tags to filter the synced tasks")
+  "List of tags to filter the synced tasks.
+If any such tag is found in a buffer, all items that do not carry
+one of these tags will not be exported.")
 
 (defvar org-caldav-inbox "~/org/appointments.org"
   "Where to put new entries obtained from calendar.
 
-\"path/to/file\"
-(id \"id of existing org entry\")
-(file \"path/to/file\")
-(file+headline \"path/to/file\" \"node headline\")")
+This can be simply be a filename to an Org file where all new
+entries will bet put.  It can also be an alist, in which case you
+can choose between the following options:
+
+ - (file \"path/to/file\"), or
+ - (id \"id of existing org entry\"), or
+ - (file+headline \"path/to/file\" \"node headline\").")
 
 (defvar org-caldav-calendars nil
-  "A list of plists which define different calendars which are
-synced in order by org-caldav-sync.
+  "A list of plists which define different calendars.
+Use this variable to sync with several different remote
+calendars.  If you set this, the global variables
+`org-caldav-url', `org-caldav-calendar-id', `org-caldav-files',
+`org-caldav-select-tags', and `org-caldav-inbox' will only serve
+as default values.  They can be overridden through the plist keys
+:url, :calendar-id, :files, :select-tags and :inbox, resp.  All
+provided calendars can then be synced in order by calling
+`org-caldav-sync' as usual.
 
-The plist may contain any key of :url, :calendar-id, :files,
-:select-tags, :inbox, which will be used to overwrite the
-respective global variables.")
+Example:
+'((:calendar-id \"work@whatever\" :files (\"~/org/work.org\")
+   :inbox \"~/org/fromwork.org\")
+  (:calendar-id \"stuff@mystuff\"
+   :files (\"~/org/sports.org\" \"~/org/play.org\")
+   :inbox \"~/org/fromstuff.org\"))")
 
 (defvar org-caldav-save-directory user-emacs-directory
   "Directory where org-caldav saves its sync state.")
@@ -447,6 +462,7 @@ Are you really sure? ")))
 	    (org-entry-end-position))))))
 
 (defun org-caldav-var-for-key (key)
+  "Return associated global org-caldav variable for key KEY."
   (case key
     (:url 'org-caldav-url)
     (:calendar-id 'org-caldav-calendar-id)
@@ -456,6 +472,10 @@ Are you really sure? ")))
     (t (error "Key '%s' is not allowed in org-caldav-calendars" key))))
 
 (defun org-caldav-sync-calendar (&optional calendar resume)
+  "Sync one calendar, optionally provided through plist CALENDAR.
+The format of CALENDAR is described in `org-caldav-calendars'.
+If CALENDAR is not provided, the default values will be used.
+If RESUME is non-nil, try to resume."
   (setq org-caldav-previous-calendar calendar)
   (let ((org-caldav-url org-caldav-url)
 	(org-caldav-calendar-id org-caldav-calendar-id)
@@ -618,7 +638,8 @@ This is a bug in older Org versions."
 	(replace-match org-icalendar-timezone t)))))
 
 (defun org-caldav-inbox-file (inbox)
-  "The file associated with the INBOX object"
+  "Return file name associated with INBOX.
+For format of INBOX, see `org-caldav-inbox'."
   (cond ((stringp inbox)
 	 inbox)
 	((memq (car inbox) '(file file+headline))
@@ -627,7 +648,9 @@ This is a bug in older Org versions."
 	 (org-id-find-id-file (nth 1 inbox)))))
 
 (defun org-caldav-inbox-point-and-level (inbox)
-  "Where to add a new entry in INBOX"
+  "Return position and level where to add new entries in INBOX.
+For format of INBOX, see `org-caldav-inbox'.  The values are
+returned as a cons (POINT . LEVEL)."
   (cond ((or (stringp inbox) (eq (car inbox) 'file))
 	 (cons (point-max) 1))
 	((eq (car inbox) 'file+headline)
