@@ -11,18 +11,13 @@ Also reported to be working: SOGo.
 
 *IMPORTANT*: Before using this code, please make sure you have backups
 of your precious Org files. Also, I strongly suggest to create a new,
-empty calendar on your server for using this package. The code is
-still pretty rough and might easily delete entries it should not
-delete.
+empty calendar on your server for using this package.
 
-*ALSO IMPORTANT*: When using this package, all Org entries with an
-active timestamp will get an UID property (see doc-string of
-org-icalendar-store-UID for further details). If you don't want this,
-then *do not use this package*; there is just no way around that. It is
-the only reliable way to uniquely identify Org entries.
-
-*ALSO ALSO IMPORTANT*: If you used earlier versions of this package from
-2012, you will have to start from scratch.
+*ALSO IMPORTANT*: When using this package, possibly all Org entries
+will get an UID property (see doc-string of org-icalendar-store-UID
+for further details). If you don't want this, then *do not use this
+package*; there is just no way around that. It is the only reliable
+way to uniquely identify Org entries.
 
 This package depends on the url-dav package, which unfortunately is
 broken in Emacs <=24.2. If you don't want to upgrade Emacs, you can
@@ -40,7 +35,7 @@ later on, I'd rather recommend upgrading to a newer Emacs version.
 
 * Set org-caldav-url to the base address of your CalDAV server:
     - Owncloud: https://OWNCLOUD-SERVER-URL/remote.php/caldav/calendars/USERID
-    - Google: https://www.google.com/calendar/dav
+    - Google: https://www.google.com/calendar/dav (this is the old endpoint!).
 
 * Set org-caldav-calendar-id to the calendar-id of your new calendar:
     - OwnCloud: Simply the name of the calendar.
@@ -233,13 +228,37 @@ the calendar and re-create it, delete the sync state file in
 
 #### Syncing with more than one calendar
 
-This is not built-in, but it can be done. Since the sync state's
-filename depends on the calendar-id, you can call org-caldav-sync more
-than once with different values for org-caldav-files, org-caldav-inbox
-and org-caldav-calendar-id. I admit this is cumbersome, and I probably
-will someday add the feature to sync only items with certain tags to
-certain calendars, but I'd like to get the basic functionality real
-stable first.
+This can be done by setting the variable org-caldav-calendars. It
+should be a list of plists (a 'plist' is simply a list with alternating
+:key's and values). Through these plists, you can override the global
+values of variables like org-caldav-calendar-id, and calling
+org-caldav-sync will go through these plists in order.
+
+Example:
+
+    (setq org-caldav-calendars
+      '((:calendar-id "work@whatever" :files ("~/org/work.org")
+         :inbox "~/org/fromwork.org")
+        (:calendar-id "stuff@mystuff"
+         :files ("~/org/sports.org" "~/org/play.org")
+         :inbox "~/org/fromstuff.org")) )
+
+This means that you have two calendars with IDs "work@whatever" and
+"stuff@mystuff". Both will be accessed through the global value of
+org-caldav-url, since the key :url isn't specified. The calendar
+"work@whatever" will be synced with the file 'work.org' and inbox
+'fromwork.org', while "stuff@mystuff" with 'sports.org' and 'play.org'
+and inbox 'fromstuff.org'. See the doc-string of org-caldav-calendars
+for more details on which keys you can use.
+
+#### Additional stuff
+
+See the doc-string of org-caldav-inbox if you want more flexibility in
+where new items should be put. Instead of simply providing a file, you
+can also choose an existing entry or headline.
+
+Also, you can use org-caldav-select-tags to filter the tags that
+should be exported.
 
 #### Timezone problems
 
