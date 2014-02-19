@@ -1005,10 +1005,12 @@ See also `org-caldav-save-directory'."
     (insert ";; This is the sync state from org-caldav\n;; calendar-id: "
 	    org-caldav-calendar-id "\n;; Do not modify this file.\n\n")
     (insert "(setq org-caldav-event-list\n'")
-    (prin1 (delq nil
-		 (mapcar (lambda (ev) (unless (eq (org-caldav-event-status ev) 'error) ev))
-			 org-caldav-event-list))
-	   (current-buffer))
+    (let ((print-length nil)
+	  (print-level nil))
+      (prin1 (delq nil
+		   (mapcar (lambda (ev) (unless (eq (org-caldav-event-status ev) 'error) ev))
+			   org-caldav-event-list))
+	     (current-buffer)))
     (insert ")\n")
     ;; This is just cosmetics.
     (goto-char (point-min))
