@@ -11,18 +11,13 @@ Also reported to be working: SOGo.
 
 *IMPORTANT*: Before using this code, please make sure you have backups
 of your precious Org files. Also, I strongly suggest to create a new,
-empty calendar on your server for using this package. The code is
-still pretty rough and might easily delete entries it should not
-delete.
+empty calendar on your server for using this package.
 
 *ALSO IMPORTANT*: When using this package, possibly all Org entries
 will get an UID property (see doc-string of org-icalendar-store-UID
 for further details). If you don't want this, then *do not use this
 package*; there is just no way around that. It is the only reliable
 way to uniquely identify Org entries.
-
-*ALSO ALSO IMPORTANT*: If you used earlier versions of this package from
-2012, you will have to start from scratch.
 
 This package depends on the url-dav package, which unfortunately is
 broken in Emacs <=24.2. If you don't want to upgrade Emacs, you can
@@ -40,7 +35,7 @@ later on, I'd rather recommend upgrading to a newer Emacs version.
 
 * Set org-caldav-url to the base address of your CalDAV server:
     - Owncloud: https://OWNCLOUD-SERVER-URL/remote.php/caldav/calendars/USERID
-    - Google: https://www.google.com/calendar/dav
+    - Google: https://www.google.com/calendar/dav (this is the old endpoint!).
 
 * Set org-caldav-calendar-id to the calendar-id of your new calendar:
     - OwnCloud: Simply the name of the calendar.
@@ -243,7 +238,7 @@ Example:
 
     '((:calendar-id "work@whatever" :files ("~/org/work.org")
        :inbox "~/org/fromwork.org")
-      (:calendar-id \"stuff@mystuff\"
+      (:calendar-id "stuff@mystuff"
        :files ("~/org/sports.org" "~/org/play.org")
        :inbox "~/org/fromstuff.org"))")
 
