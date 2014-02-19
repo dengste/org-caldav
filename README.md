@@ -236,18 +236,20 @@ org-caldav-sync will go through these plists in order.
 
 Example:
 
+  (setq org-caldav-calendars
     '((:calendar-id "work@whatever" :files ("~/org/work.org")
        :inbox "~/org/fromwork.org")
       (:calendar-id "stuff@mystuff"
        :files ("~/org/sports.org" "~/org/play.org")
-       :inbox "~/org/fromstuff.org"))")
+       :inbox "~/org/fromstuff.org")) )
 
 This means that you have two calendars with IDs "work@whatever" and
-"stuff@whatever". Both will be accessed through the global value of
+"stuff@mystuff". Both will be accessed through the global value of
 org-caldav-url, since the key :url isn't specified. The calendar
 "work@whatever" will be synced with the file 'work.org' and inbox
 'fromwork.org', while "stuff@mystuff" with 'sports.org' and 'play.org'
-and inbox 'fromstuff.org'. See the doc-string for more details.
+and inbox 'fromstuff.org'. See the doc-string of org-caldav-calendars
+for more details on which keys you can use.
 
 #### Additional stuff
 
