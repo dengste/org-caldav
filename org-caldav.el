@@ -478,21 +478,34 @@ Are you really sure? ")))
     (:inbox 'org-caldav-inbox)
     (t (error "Key '%s' is not allowed in org-caldav-calendars" key))))
 
+(defmacro with-calendar (calendar &rest body)
+  "Optionally switch to calendar provided through plist CALENDAR,
+and evaluate BODY there. The format of CALENDAR is described in
+`org-caldav-calendars'."
+  (declare (indent 1) (debug t))
+  (let ((calendarq (make-symbol "calendarq")))
+    `(let ((,calendarq ,calendar))
+       (if ,calendarq
+	   (let ((org-caldav-url org-caldav-url)
+		 (org-caldav-calendar-id org-caldav-calendar-id)
+		 (org-caldav-files org-caldav-files)
+		 (org-caldav-select-tags org-caldav-select-tags)
+		 (org-caldav-inbox org-caldav-inbox))
+	     (while ,calendarq
+	       (let ((key (pop ,calendarq))
+		     (value (pop ,calendarq)))
+		 (set (org-caldav-var-for-key key) value)))
+	     (progn
+	       ,@body))
+	 ,@body))))
+
 (defun org-caldav-sync-calendar (&optional calendar resume)
   "Sync one calendar, optionally provided through plist CALENDAR.
 The format of CALENDAR is described in `org-caldav-calendars'.
 If CALENDAR is not provided, the default values will be used.
 If RESUME is non-nil, try to resume."
   (setq org-caldav-previous-calendar calendar)
-  (let ((org-caldav-url org-caldav-url)
-	(org-caldav-calendar-id org-caldav-calendar-id)
-	(org-caldav-files org-caldav-files)
-	(org-caldav-select-tags org-caldav-select-tags)
-	(org-caldav-inbox org-caldav-inbox))
-    (while calendar
-      (let ((key (pop calendar))
-	    (value (pop calendar)))
-	(set (org-caldav-var-for-key key) value)))
+  (with-calendar calendar
     (org-caldav-check-connection)
     (unless resume
       (setq org-caldav-ics-buffer (org-caldav-generate-ics))
