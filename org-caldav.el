@@ -490,7 +490,8 @@ and evaluate BODY there. The format of CALENDAR is described in
 		 (org-caldav-calendar-id org-caldav-calendar-id)
 		 (org-caldav-files org-caldav-files)
 		 (org-caldav-select-tags org-caldav-select-tags)
-		 (org-caldav-inbox org-caldav-inbox))
+		 (org-caldav-inbox org-caldav-inbox)
+		 (org-caldav-empty-calendar nil))
 	     (while ,calendarq
 	       (let ((key (pop ,calendarq))
 		     (value (pop ,calendarq)))
