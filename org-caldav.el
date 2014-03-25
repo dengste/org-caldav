@@ -647,7 +647,7 @@ This removes timestamps which weren't properly removed by
 org-icalendar."
   (save-excursion
     (goto-char (point-min))
-    (when (re-search-forward "^DESCRIPTION:.*?\\(\\s-*<[^>]+>\\(–<[^>]+>\\)?\\\\n\\)" nil t)
+    (when (re-search-forward "^DESCRIPTION:.*?\\(\s*-*<[^>]+>\\(–<[^>]+>\\)?\\(\\\\n\\\\n\\)?\\)" nil t)
       (replace-match "" nil nil nil 1))))
 
 (defun org-caldav-maybe-fix-timezone ()
