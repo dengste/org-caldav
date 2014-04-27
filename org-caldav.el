@@ -4,6 +4,7 @@
 
 ;; Author: David Engster <dengste@eml.cc>
 ;; Keywords: calendar, caldav
+;; Package-Requires: ((org "7"))
 ;;
 ;; This file is not part of GNU Emacs.
 ;;
