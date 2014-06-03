@@ -378,7 +378,7 @@ Are you really sure? ")))
   (with-current-buffer buf
     (goto-char (point-min))
     (while (org-caldav-narrow-next-event)
-      (let* ((uid (org-caldav-rewrite-uid-in-event))
+      (let* ((uid (org-caldav-get-uid))
 	     (md5 (unless (string-match "^orgsexp-" uid)
 		    (org-caldav-generate-md5-for-org-entry uid)))
 	     (event (org-caldav-search-event uid)))
@@ -548,7 +548,8 @@ ICSBUF is the buffer containing the exported iCalendar file."
 			  (org-caldav-filter-events 'changed-in-org)))
 	  (counter 0)
 	  (url-show-status nil)
-	  (event-etag (org-caldav-get-event-etag-list)))
+	  (event-etag (org-caldav-get-event-etag-list))
+	  uid)
       ;; Put the events via CalDAV.
       (dolist (cur events)
 	(setq counter (1+ counter))
@@ -559,7 +560,10 @@ ICSBUF is the buffer containing the exported iCalendar file."
 	   (format "Event UID %s: Org --> Cal" (car cur)))
 	  (widen)
 	  (goto-char (point-min))
-	  (search-forward (car cur))
+	  (while (and (setq uid (org-caldav-get-uid))
+		      (not (string-match (car cur) uid))))
+	  (unless (string-match (car cur) uid)
+	    (error "Could not find UID %s" (car cur)))
 	  (org-caldav-narrow-event-under-point)
 	  (org-caldav-cleanup-ics-description)
 	  (org-caldav-maybe-fix-timezone)
@@ -873,9 +877,16 @@ Returns buffer containing the ICS file."
 
 (defun org-caldav-get-uid ()
   "Get UID for event in current buffer."
-  (goto-char (point-min))
   (if (re-search-forward "^UID:\\s-*\\(.+\\)\\s-*$" nil t)
-      (match-string 1)
+      (let ((uid (match-string 1)))
+	(while (progn (forward-line)
+		      (looking-at " \\(.+\\)\\s-*$"))
+	  (setq uid (concat uid (match-string 1))))
+	(while (string-match "\\s-+" uid)
+	  (setq uid (replace-match "" nil nil uid)))
+	(when (string-match "^\\([A-Z][A-Z][0-9]*-\\)" uid)
+	  (setq uid (replace-match "" nil nil uid)))
+	uid)
     (error "No UID could be found for current event.")))
 
 (defun org-caldav-narrow-next-event ()
@@ -917,20 +928,12 @@ in the UID and also remove whitespaces. Throws an error if there
 is no UID to rewrite. Returns the UID."
   (save-excursion
     (goto-char (point-min))
-    (cond
-     ((re-search-forward "^UID:\\(orgsexp-[0-9]+\\)" nil t)
-      ;; This is a sexp entry, so do nothing.
-      (match-string 1))
-     ((re-search-forward "^UID:\\(\\s-*\\)\\([A-Z][A-Z][0-9]*-\\)?\\(.+\\)\\s-*$"
-			 nil t)
-      (when (match-string 1)
-	(replace-match "" nil nil nil 1))
-      (when (match-string 2)
-	(replace-match "" nil nil nil 2))
-      (match-string 3))
-     (t
-      (error "No UID for event in buffer %s."
-	     (buffer-name (current-buffer)))))))
+    (let ((uid (org-caldav-get-uid)))
+      (while (string-match "\\s-+" uid)
+	(setq uid (replace-match "" nil nil uid)))
+      (when (string-match "^\\([A-Z][A-Z][0-9]*-\\)" uid)
+	(setq uid (replace-match "" nil nil uid)))
+      uid)))
 
 (defun org-caldav-debug-print (level &rest objects)
   "Print OBJECTS into debug buffer with debug level LEVEL.
