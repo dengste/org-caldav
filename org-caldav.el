@@ -378,7 +378,7 @@ Are you really sure? ")))
   (with-current-buffer buf
     (goto-char (point-min))
     (while (org-caldav-narrow-next-event)
-      (let* ((uid (org-caldav-get-uid))
+      (let* ((uid (org-caldav-rewrite-uid-in-event))
 	     (md5 (unless (string-match "^orgsexp-" uid)
 		    (org-caldav-generate-md5-for-org-entry uid)))
 	     (event (org-caldav-search-event uid)))
@@ -929,10 +929,14 @@ is no UID to rewrite. Returns the UID."
   (save-excursion
     (goto-char (point-min))
     (let ((uid (org-caldav-get-uid)))
-      (while (string-match "\\s-+" uid)
-	(setq uid (replace-match "" nil nil uid)))
-      (when (string-match "^\\([A-Z][A-Z][0-9]*-\\)" uid)
-	(setq uid (replace-match "" nil nil uid)))
+      (when uid
+	(goto-char (point-min))
+	(re-search-forward "^UID:")
+	(let ((pos (point)))
+	  (while (progn (forward-line)
+			(looking-at " \\(.+\\)\\s-*$")))
+	  (delete-region pos (point)))
+	(insert uid "\n"))
       uid)))
 
 (defun org-caldav-debug-print (level &rest objects)
