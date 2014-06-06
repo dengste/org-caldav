@@ -397,7 +397,8 @@ Are you really sure? ")))
 	 ((eq (org-caldav-event-status event) 'new-in-org)
 	  (org-caldav-debug-print 1
 	   (format "Org UID %s: Error. Double entry." uid))
-	  (push (list uid 'new-in-org 'error:double-entry)
+	  (push (list org-caldav-calendar-id
+		      uid 'new-in-org 'error:double-entry)
 		org-caldav-sync-result))
 	 (t
 	  (org-caldav-debug-print 1
