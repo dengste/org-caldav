@@ -478,6 +478,7 @@ Are you really sure? ")))
     (:files 'org-caldav-files)
     (:select-tags 'org-caldav-select-tags)
     (:inbox 'org-caldav-inbox)
+    (:skip-function 'org-agenda-skip-function)
     (t (error "Key '%s' is not allowed in org-caldav-calendars" key))))
 
 (defun org-caldav-sync-calendar (&optional calendar resume)
