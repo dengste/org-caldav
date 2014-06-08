@@ -489,7 +489,8 @@ If RESUME is non-nil, try to resume."
 	(org-caldav-calendar-id org-caldav-calendar-id)
 	(org-caldav-files org-caldav-files)
 	(org-caldav-select-tags org-caldav-select-tags)
-	(org-caldav-inbox org-caldav-inbox))
+	(org-caldav-inbox org-caldav-inbox)
+	(org-caldav-empty-calendar nil))
     (while calendar
       (let ((key (pop calendar))
 	    (value (pop calendar)))
