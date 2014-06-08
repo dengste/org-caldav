@@ -1,6 +1,6 @@
 ;;; org-caldav.el --- Sync org files with external calendar through CalDAV
 
-;; Copyright (C) 2012-2013 Free Software Foundation, Inc.
+;; Copyright (C) 2012-2014 Free Software Foundation, Inc.
 
 ;; Author: David Engster <dengste@eml.cc>
 ;; Keywords: calendar, caldav
