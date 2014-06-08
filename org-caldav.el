@@ -79,8 +79,11 @@ calendars.  If you set this, the global variables
 `org-caldav-url', `org-caldav-calendar-id', `org-caldav-files',
 `org-caldav-select-tags', and `org-caldav-inbox' will only serve
 as default values.  They can be overridden through the plist keys
-:url, :calendar-id, :files, :select-tags and :inbox, resp.  All
-provided calendars can then be synced in order by calling
+:url, :calendar-id, :files, :select-tags and :inbox, resp.  If
+you specify any other key, it will be prefixed with \"org-\",
+meaning that if you use for instance :agenda-skip-function, it
+will override `org-agenda-skip-function'.
+All provided calendars can then be synced in order by calling
 `org-caldav-sync' as usual.
 
 Example:
@@ -478,7 +481,9 @@ Are you really sure? ")))
     (:files 'org-caldav-files)
     (:select-tags 'org-caldav-select-tags)
     (:inbox 'org-caldav-inbox)
-    (t (error "Key '%s' is not allowed in org-caldav-calendars" key))))
+    (t (intern
+	(concat "org-"
+		(substring (symbol-name key) 1))))))
 
 (defun org-caldav-sync-calendar (&optional calendar resume)
   "Sync one calendar, optionally provided through plist CALENDAR.
