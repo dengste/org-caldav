@@ -485,6 +485,16 @@ Are you really sure? ")))
 	(concat "org-"
 		(substring (symbol-name key) 1))))))
 
+(defun org-caldav-odds (plist)
+  (when plist
+    (cons (car plist)
+	  (org-caldav-odds (cddr plist)))))
+
+(defun org-caldav-evens (plist)
+  (when plist
+    (cons (cadr plist)
+	  (org-caldav-evens (cddr plist)))))
+
 (defun org-caldav-sync-calendar (&optional calendar resume)
   "Sync one calendar, optionally provided through plist CALENDAR.
 The format of CALENDAR is described in `org-caldav-calendars'.
@@ -497,28 +507,27 @@ If RESUME is non-nil, try to resume."
 	(org-caldav-select-tags org-caldav-select-tags)
 	(org-caldav-inbox org-caldav-inbox)
 	(org-caldav-empty-calendar nil))
-    (while calendar
-      (let ((key (pop calendar))
-	    (value (pop calendar)))
-	(set (org-caldav-var-for-key key) value)))
-    (org-caldav-check-connection)
-    (unless resume
-      (setq org-caldav-ics-buffer (org-caldav-generate-ics))
+    (progv
+	(mapcar 'org-caldav-var-for-key (org-caldav-odds calendar))
+	(org-caldav-evens calendar)
+      (org-caldav-check-connection)
+      (unless resume
+	(setq org-caldav-ics-buffer (org-caldav-generate-ics))
+	(setq org-caldav-event-list nil)
+	(org-caldav-load-sync-state)
+	;; Remove status in event list
+	(dolist (cur org-caldav-event-list)
+	  (org-caldav-event-set-status cur nil))
+	(org-caldav-update-eventdb-from-org org-caldav-ics-buffer)
+	(org-caldav-update-eventdb-from-cal))
+      (org-caldav-update-events-in-cal org-caldav-ics-buffer)
+      (org-caldav-update-events-in-org)
+      (org-caldav-save-sync-state)
       (setq org-caldav-event-list nil)
-      (org-caldav-load-sync-state)
-      ;; Remove status in event list
-      (dolist (cur org-caldav-event-list)
-	(org-caldav-event-set-status cur nil))
-      (org-caldav-update-eventdb-from-org org-caldav-ics-buffer)
-      (org-caldav-update-eventdb-from-cal))
-    (org-caldav-update-events-in-cal org-caldav-ics-buffer)
-    (org-caldav-update-events-in-org)
-    (org-caldav-save-sync-state)
-    (setq org-caldav-event-list nil)
-    (with-current-buffer org-caldav-ics-buffer
-      (set-buffer-modified-p nil)
-      (kill-buffer))
-    (delete-file (buffer-file-name org-caldav-ics-buffer))))
+      (with-current-buffer org-caldav-ics-buffer
+	(set-buffer-modified-p nil)
+	(kill-buffer))
+      (delete-file (buffer-file-name org-caldav-ics-buffer)))))
 
 ;;;###autoload
 (defun org-caldav-sync ()
