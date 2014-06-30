@@ -229,17 +229,17 @@ Also sets `org-caldav-empty-calendar' if calendar is empty."
 requests" (org-caldav-events-url)))
 
   (org-caldav-debug-print 1 (format "Check connection for %s."
-				  (org-caldav-events-url)))
+				    (org-caldav-events-url)))
   (let ((output (url-dav-get-properties
 		 (org-caldav-events-url)
 		 '(DAV:resourcetype) 1)))
-  (unless (eq (plist-get (cdar output) 'DAV:status) 200)
-    (org-caldav-debug-print 1 "Got error status from PROPFIND: " output)
-    (error "Could not query CalDAV URL %s." (org-caldav-events-url)))
-  (when (= (length output) 1)
-    ;; This is an empty calendar; fetching etags might return 404.
-    (org-caldav-debug-print 1 "This is an empty calendar. Setting flag.")
-    (setq org-caldav-empty-calendar t)))
+    (unless (member (plist-get (cdar output) 'DAV:status) '(200 207))
+      (org-caldav-debug-print 1 "Got error status from PROPFIND: " output)
+      (error "Could not query CalDAV URL %s." (org-caldav-events-url)))
+    (when (= (length output) 1)
+      ;; This is an empty calendar; fetching etags might return 404.
+      (org-caldav-debug-print 1 "This is an empty calendar. Setting flag.")
+      (setq org-caldav-empty-calendar t)))
   t)
 
 ;; This defun is partly taken out of url-dav.el, written by Bill Perry.
