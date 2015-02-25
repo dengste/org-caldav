@@ -1058,7 +1058,7 @@ See also `org-caldav-save-directory'."
    org-caldav-save-directory))
 
 (defvar org-caldav-sync-results-mode-map
-  (let ((map (make-keymap)))
+  (let ((map (make-sparse-keymap)))
     (define-key map [(return)] 'org-caldav-goto-uid)
     (define-key map [(mouse-1)] 'org-caldav-goto-uid)
     map)
