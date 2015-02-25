@@ -1083,6 +1083,7 @@ See also `org-caldav-save-directory'."
       (pop-to-buffer (current-buffer)))
     (setq buffer-read-only t)
     (goto-char (point-min))
+    (view-mode-enter)
     (use-local-map org-caldav-sync-results-mode-map)))
 
 (defun org-caldav-sync-result-filter-errors (&optional complement)
