@@ -1172,7 +1172,7 @@ which can be fed into `org-caldav-insert-org-entry'."
 						     dtstart-zone))
 	 (start-d (icalendar--datetime-to-diary-date
 		   dtstart-dec))
-	 (start-t (icalendar--datetime-to-colontime dtstart-dec))
+	 (start-t (if dtstart-dec (icalendar--datetime-to-colontime dtstart-dec) nil))
 	 (dtend (icalendar--get-event-property e 'DTEND))
 	 (dtend-zone (icalendar--find-time-zone
 		      (icalendar--get-event-property-attributes
