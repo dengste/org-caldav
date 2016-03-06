@@ -65,7 +65,7 @@ one of these tags will not be exported.")
   "Where to put new entries obtained from calendar.
 
 This can be simply be a filename to an Org file where all new
-entries will bet put.  It can also be an alist, in which case you
+entries will be put.  It can also be an alist, in which case you
 can choose between the following options:
 
  - (file \"path/to/file\"), or
