@@ -1058,7 +1058,7 @@ See also `org-caldav-save-directory'."
    org-caldav-save-directory))
 
 (defvar org-caldav-sync-results-mode-map
-  (let ((map (make-keymap)))
+  (let ((map (make-sparse-keymap)))
     (define-key map [(return)] 'org-caldav-goto-uid)
     (define-key map [(mouse-1)] 'org-caldav-goto-uid)
     map)
@@ -1083,6 +1083,7 @@ See also `org-caldav-save-directory'."
       (pop-to-buffer (current-buffer)))
     (setq buffer-read-only t)
     (goto-char (point-min))
+    (view-mode-enter)
     (use-local-map org-caldav-sync-results-mode-map)))
 
 (defun org-caldav-sync-result-filter-errors (&optional complement)
