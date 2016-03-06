@@ -58,7 +58,8 @@ later on, I'd rather recommend upgrading to a newer Emacs version.
   server seems to need this).
 
 You can also take a look at the other org-icalendar variables, since
-org-caldav uses this package to export your entries.
+org-caldav uses this package to export your entries. For instance, you
+can use org-icalendar-alarm-time to add a reminder to your entries.
 
 Call org-caldav-sync to start the sync. The URL package will ask you
 for username/password for accessing the calendar. (See below on how to
