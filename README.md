@@ -98,9 +98,9 @@ iCalendar format (.ics files). By default, it uses the title of the
 Org entry as SUMMARY and puts the entry's body into DESCRIPTION,
 snipping stuff like properties and timestamps (you can override that
 with properties of the same name, but IMO it makes stuff just more
-complicated). The variable org-icalendar-include-body (100 by default)
+complicated). The variable `org-icalendar-include-body`
 denotes how many characters from the body should be included as
-DESCRIPTION.
+DESCRIPTION (by default all characters are included).
 
 * iCalendar to Org
 
