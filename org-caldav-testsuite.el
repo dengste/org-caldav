@@ -381,3 +381,21 @@ Baz Bar Foo")
       (org-caldav-change-heading "third changed heading"))
     (should (looking-at "^\\*  <2009-08-08 Sat 14:00> third changed heading\n"))
     ))
+
+(ert-deftest org-caldav-insert-org-entry ()
+  "Make sure that `org-caldav-insert-org-entry' works fine."
+  (let ((entry '("01 01 2015" "19:00" "01 01 2015" "20:00" "The summary" "The description"))
+        (org-caldav-select-tags ""))
+    (cl-flet ((write-entry (uid level)
+                           (with-temp-buffer
+                             (org-mode) ; useful to set org-mode's
+                                        ; internal variables
+                             (apply #'org-caldav-insert-org-entry
+                                    (append entry (list uid level)))
+                             (buffer-string))))
+      (should (string= "* The summary\n<2015-01-01 Thu 19:00-20:00>\nThe description\n"
+                       (write-entry nil nil)))
+      (should (string= "** The summary\n<2015-01-01 Thu 19:00-20:00>\nThe description\n"
+                       (write-entry nil 2)))
+      (should (string= "* The summary\n  :PROPERTIES:\n  :ID:       1\n  :END:\n<2015-01-01 Thu 19:00-20:00>\nThe description\n"
+                       (write-entry "1" nil))))))

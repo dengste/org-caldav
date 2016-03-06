@@ -969,19 +969,25 @@ Do nothing if LEVEL is larger than `org-caldav-debug-level'."
 		      (point-min))))
 
 (defun org-caldav-insert-org-entry (start-d start-t end-d end-t
-					    summary description uid level)
+                                            summary description
+                                            &optional uid level)
   "Insert org block from given data at current position.
 START/END-D: Start/End date.  START/END-T: Start/End time.
 SUMMARY, DESCRIPTION, UID: obvious.
 Dates must be given in a format `org-read-date' can parse.
+
+If UID is nil, no UID: property is written.
+If LEVEL is nil, it defaults to 1.
+
 Returns MD5 from entry."
-  (insert (make-string level ?*) " " summary "\n")
+  (insert (make-string (or level 1) ?*) " " summary "\n")
   (insert
    (org-caldav-create-time-range start-d start-t end-d end-t) "\n")
   (when (> (length description) 0)
     (insert description "\n"))
   (forward-line -1)
-  (org-set-property "ID" (url-unhex-string uid))
+  (when uid
+    (org-set-property "ID" (url-unhex-string uid)))
   (org-set-tags-to org-caldav-select-tags)
   (md5 (buffer-substring-no-properties
 	(org-entry-beginning-position)
