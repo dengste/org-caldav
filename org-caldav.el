@@ -128,7 +128,7 @@ If this is the symbol 'with-headings, the results will also
 include headings from Org entries.")
 
 (defvar org-caldav-calendar-preamble
-  "BEGIN:VCALENDAR\nVERSION:2.0\nCALSCALE:GREGORIAN\n"
+  "BEGIN:VCALENDAR\nPRODID:\nVERSION:2.0\nCALSCALE:GREGORIAN\n"
   "Preamble used for iCalendar events.
 You usually should not have to touch this, but it might be
 necessary to add timezone information here in case your CalDAV
