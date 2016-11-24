@@ -1266,6 +1266,7 @@ which can be fed into `org-caldav-insert-org-entry'."
 	    (kill-buffer buffer))))
     result))
 
+;;;###autoload
 (defun org-caldav-import-ics-buffer-to-org ()
   "Add ics content in current buffer to `org-caldav-inbox'."
   (let ((event (org-caldav-convert-event))
@@ -1285,6 +1286,7 @@ which can be fed into `org-caldav-insert-org-entry'."
                     (goto-char point)
                     (point-at-eol 2))))))))
 
+;;;###autoload
 (defun org-caldav-import-ics-to-org (path)
   "Add ics content in PATH to `org-caldav-inbox'."
   (with-current-buffer (get-buffer-create "*import-ics-to-org*")
