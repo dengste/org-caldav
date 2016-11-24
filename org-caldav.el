@@ -1266,6 +1266,32 @@ which can be fed into `org-caldav-insert-org-entry'."
 	    (kill-buffer buffer))))
     result))
 
+(defun org-caldav-import-ics-buffer-to-org ()
+  "Add ics content in current buffer to `org-caldav-inbox'."
+  (let ((event (org-caldav-convert-event))
+        (file (org-caldav-inbox-file org-caldav-inbox)))
+    (with-current-buffer (find-file-noselect file)
+      (let* ((point-and-level (org-caldav-inbox-point-and-level org-caldav-inbox))
+             (point (car point-and-level))
+             (level (cdr point-and-level)))
+        (goto-char point)
+        (apply #'org-caldav-insert-org-entry
+               (append event (list nil level)))
+        (message "%s: Added event: %s"
+                 file
+                 (buffer-substring
+                  point
+                  (save-excursion
+                    (goto-char point)
+                    (point-at-eol 2))))))))
+
+(defun org-caldav-import-ics-to-org (path)
+  "Add ics content in PATH to `org-caldav-inbox'."
+  (with-current-buffer (get-buffer-create "*import-ics-to-org*")
+    (delete-region (point-min) (point-max))
+    (insert-file-contents path)
+    (org-caldav-import-ics-buffer-to-org)))
+
 (provide 'org-caldav)
 
 ;;; org-caldav.el ends here
