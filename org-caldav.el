@@ -152,6 +152,14 @@ buffer).")
 (defvar org-caldav-debug-buffer "*org-caldav-debug*"
   "Name of the debug buffer.")
 
+(defvar org-caldav-resume-aborted 'ask
+  "Whether aborted sync attempts should be resumed.
+Can be one of the following symbols:
+
+ask = Ask for before resuming (default)
+never = Never resume
+always = Always resume")
+
 ;; Internal variables
 
 (defvar org-caldav-previous-calendar nil
@@ -562,8 +570,11 @@ If RESUME is non-nil, try to resume."
 or the patched `url-dav' package (see Readme)."))
   (org-caldav-debug-print 1 "========== Started sync.")
   (if (and org-caldav-event-list
-	   (y-or-n-p "Last sync seems to have been aborted. \
-Should I try to resume? "))
+        (not (eq org-caldav-resume-aborted 'never))
+        (or (eq org-caldav-resume-aborted 'always)
+          (and (eq org-caldav-resume-aborted 'ask))
+          (y-or-n-p "Last sync seems to have been aborted. \
+Should I try to resume? ")))
       (org-caldav-sync-calendar org-caldav-previous-calendar t)
     (setq org-caldav-sync-result nil)
     (if (null org-caldav-calendars)
