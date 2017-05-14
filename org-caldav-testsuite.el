@@ -57,8 +57,8 @@ END:VEVENT
 \\s-*:PROPERTIES:
 \\s-*:ID:\\s-*orgcaldavtest@cal1
 \\s-*:END:
-\\s-*A first test
-\\s-*<2012-12-20 Thu>")
+\\s-*<2012-12-20 Thu>
+\\s-*A first test")
 
 ;; Dto., second one
 (setq org-caldav-test-ics2
@@ -80,8 +80,8 @@ END:VEVENT
 \\s-*:PROPERTIES:
 \\s-*:ID:\\s-*orgcaldavtest-cal2
 \\s-*:END:
-\\s-*A second test
-\\s-*<2012-12-05 Wed 19:00-20:00>")
+\\s-*<2012-12-05 Wed 19:00-20:00>
+\\s-*A second test")
 
 ;; First test entry in Org which should end up in calendar
 (setq org-caldav-test-org1
@@ -183,13 +183,13 @@ Baz Bar Foo")
   ;; Do the sync.
   (org-caldav-sync)
   ;; Check result.
-  (should (member '("orgcaldavtest@cal1" new-in-cal cal->org)
+  (should (member `(,org-caldav-calendar-id "orgcaldavtest@cal1" new-in-cal cal->org)
 		  org-caldav-sync-result))
-  (should (member '("orgcaldavtest-cal2" new-in-cal cal->org)
+  (should (member `(,org-caldav-calendar-id "orgcaldavtest-cal2" new-in-cal cal->org)
 		  org-caldav-sync-result))
-  (should (member '("orgcaldavtest@org1" new-in-org org->cal)
+  (should (member `(,org-caldav-calendar-id "orgcaldavtest@org1" new-in-org org->cal)
 		  org-caldav-sync-result))
-  (should (member '("orgcaldavtest-org2" new-in-org org->cal)
+  (should (member `(,org-caldav-calendar-id "orgcaldavtest-org2" new-in-org org->cal)
 		  org-caldav-sync-result))
   ;; State file should exist now.
   (should (file-exists-p
@@ -227,8 +227,8 @@ Baz Bar Foo")
 
   ;; And sync...
   (org-caldav-sync)
-  (should (equal '(("orgcaldavtest-cal2" changed-in-org org->cal)
-		   ("orgcaldavtest-org2" changed-in-org org->cal))
+  (should (equal `((,org-caldav-calendar-id "orgcaldavtest-cal2" changed-in-org org->cal)
+		   (,org-caldav-calendar-id "orgcaldavtest-org2" changed-in-org org->cal))
 		 org-caldav-sync-result))
 
   ;; Check if those events correctly end up in calendar.
@@ -300,8 +300,8 @@ Baz Bar Foo")
   ;; Aaaand sync!
   (org-caldav-sync)
 
-  (should (equal '(("orgcaldavtest@cal1" changed-in-cal cal->org)
-		   ("orgcaldavtest@org1" changed-in-cal cal->org))
+  (should (equal `((,org-caldav-calendar-id "orgcaldavtest@cal1" changed-in-cal cal->org)
+		   (,org-caldav-calendar-id "orgcaldavtest@org1" changed-in-cal cal->org))
 		 org-caldav-sync-result))
 
   (with-current-buffer (find-file-noselect org-caldav-test-inbox)
@@ -311,8 +311,8 @@ Baz Bar Foo")
 \\s-*:PROPERTIES:
 \\s-*:ID:\\s-*orgcaldavtest@cal1
 \\s-*:END:
-\\s-*A first test
-\\s-*<2012-12-12 Wed>")))
+\\s-*<2012-12-12 Wed>
+\\s-*A first test")))
 
   (with-current-buffer (find-file-noselect org-caldav-test-orgfile)
     (goto-char (point-min))
@@ -335,7 +335,7 @@ Baz Bar Foo")
     (should-not (assoc '"orgcaldavtest@org1" calevents)))
   (should
    (equal org-caldav-sync-result
-	  '(("orgcaldavtest@org1" deleted-in-org removed-from-cal))))
+	  `((,org-caldav-calendar-id "orgcaldavtest@org1" deleted-in-org removed-from-cal))))
   (should-not
    (assoc '"orgcaldavtest@org1" org-caldav-event-list))
 
@@ -346,7 +346,7 @@ Baz Bar Foo")
 
   (should
    (equal org-caldav-sync-result
-  	  '(("orgcaldavtest-org2" deleted-in-cal removed-from-org))))
+  	  `((,org-caldav-calendar-id "orgcaldavtest-org2" deleted-in-cal removed-from-org))))
   ;; There shouldn't be anything left in that buffer
   (with-current-buffer (find-file-noselect org-caldav-test-orgfile)
     (goto-char (point-min))
@@ -392,10 +392,10 @@ Baz Bar Foo")
                                         ; internal variables
                              (apply #'org-caldav-insert-org-entry
                                     (append entry (list uid level)))
-                             (buffer-string))))
-      (should (string= "* The summary\n<2015-01-01 Thu 19:00-20:00>\nThe description\n"
+                             (setq foo (buffer-string)))))
+      (should (string-match "\\*\\s-+The summary\n\\s-*<2015-01-01 Thu 19:00-20:00>\n\\s-*The description\n"
                        (write-entry nil nil)))
-      (should (string= "** The summary\n<2015-01-01 Thu 19:00-20:00>\nThe description\n"
+      (should (string-match "\\*\\*\\s-+The summary\n\\s-*<2015-01-01 Thu 19:00-20:00>\n\\s-*The description\n"
                        (write-entry nil 2)))
-      (should (string= "* The summary\n  :PROPERTIES:\n  :ID:       1\n  :END:\n<2015-01-01 Thu 19:00-20:00>\nThe description\n"
+      (should (string-match "\\*\\s-+The summary\n\\s-*:PROPERTIES:\n\\s-*:ID:\\s-*1\n\\s-*:END:\n\\s-*<2015-01-01 Thu 19:00-20:00>\n\\s-*The description\n"
                        (write-entry "1" nil))))))
