@@ -61,6 +61,10 @@ don't have to add it here.")
 If any such tag is found in a buffer, all items that do not carry
 one of these tags will not be exported.")
 
+(defvar org-caldav-exclude-tags nil
+  "List of tags to exclude from the synced tasks.
+All items that carry one of these tags will not be exported.")
+
 (defvar org-caldav-inbox "~/org/appointments.org"
   "Where to put new entries obtained from calendar.
 
@@ -77,7 +81,8 @@ can choose between the following options:
 Use this variable to sync with several different remote
 calendars.  If you set this, the global variables
 `org-caldav-url', `org-caldav-calendar-id', `org-caldav-files',
-`org-caldav-select-tags', and `org-caldav-inbox' will only serve
+`org-caldav-select-tags', `org-caldav-exclude-tags' and
+`org-caldav-inbox' will only serve
 as default values.  They can be overridden through the plist keys
 :url, :calendar-id, :files, :select-tags and :inbox, resp.  If
 you specify any other key, it will be prefixed with \"org-\",
@@ -480,6 +485,7 @@ Are you really sure? ")))
     (:calendar-id 'org-caldav-calendar-id)
     (:files 'org-caldav-files)
     (:select-tags 'org-caldav-select-tags)
+    (:exclude-tags 'org-caldav-exclude-tags)
     (:inbox 'org-caldav-inbox)
     (t (intern
 	(concat "org-"
@@ -495,6 +501,7 @@ If RESUME is non-nil, try to resume."
 	(org-caldav-calendar-id org-caldav-calendar-id)
 	(org-caldav-files org-caldav-files)
 	(org-caldav-select-tags org-caldav-select-tags)
+	(org-caldav-exclude-tags org-caldav-exclude-tags)
 	(org-caldav-inbox org-caldav-inbox)
 	(org-caldav-empty-calendar nil))
     (while calendar
@@ -859,6 +866,7 @@ Returns buffer containing the ICS file."
 		      (append org-caldav-files
 			      (list inbox-file)))))
 	(org-export-select-tags org-caldav-select-tags)
+	(org-icalendar-exclude-tags org-caldav-exclude-tags)
 	;; We absolutely need UIDs for synchronization.
 	(org-icalendar-store-UID t)
 	;; Does not work yet
@@ -896,7 +904,7 @@ Returns buffer containing the ICS file."
 	  (setq uid (concat uid (match-string 1))))
 	(while (string-match "\\s-+" uid)
 	  (setq uid (replace-match "" nil nil uid)))
-	(when (string-match "^\\([A-Z][A-Z][0-9]*-\\)" uid)
+	(when (string-match "^\\(\\(DL\\|SC\\|TS\\)[0-9]*-\\)" uid)
 	  (setq uid (replace-match "" nil nil uid)))
 	uid)
     (error "No UID could be found for current event.")))
@@ -1265,6 +1273,34 @@ which can be fed into `org-caldav-insert-org-entry'."
 		   (format "Got error: %s" answer)))))
 	    (kill-buffer buffer))))
     result))
+
+;;;###autoload
+(defun org-caldav-import-ics-buffer-to-org ()
+  "Add ics content in current buffer to `org-caldav-inbox'."
+  (let ((event (org-caldav-convert-event))
+        (file (org-caldav-inbox-file org-caldav-inbox)))
+    (with-current-buffer (find-file-noselect file)
+      (let* ((point-and-level (org-caldav-inbox-point-and-level org-caldav-inbox))
+             (point (car point-and-level))
+             (level (cdr point-and-level)))
+        (goto-char point)
+        (apply #'org-caldav-insert-org-entry
+               (append event (list nil level)))
+        (message "%s: Added event: %s"
+                 file
+                 (buffer-substring
+                  point
+                  (save-excursion
+                    (goto-char point)
+                    (point-at-eol 2))))))))
+
+;;;###autoload
+(defun org-caldav-import-ics-to-org (path)
+  "Add ics content in PATH to `org-caldav-inbox'."
+  (with-current-buffer (get-buffer-create "*import-ics-to-org*")
+    (delete-region (point-min) (point-max))
+    (insert-file-contents path)
+    (org-caldav-import-ics-buffer-to-org)))
 
 (provide 'org-caldav)
 
