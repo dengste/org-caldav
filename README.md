@@ -4,7 +4,7 @@ Caldav sync for Emacs Orgmode
 
 Minimum Emacs version needed: 24.3
 
-Tested CalDAV servers: Owncloud, Nextcould
+Tested CalDAV servers: Owncloud, Nextcloud
 
 Google Calendar works on old, deprecated endpoint only. New endpoint
 requires OAuth2 authentication. See issue #28 on why that's a problem.
@@ -16,7 +16,8 @@ work if you use a recent Emacs 26.0.x snapshot, see issue #86).
 
 Note that current Emacs releases do not correctly handle https over a
 proxy connection
-(https://debbugs.gnu.org/cgi/bugreport.cgi?bug=11788).
+(https://debbugs.gnu.org/cgi/bugreport.cgi?bug=11788). If you need
+that, you'll have to use a recent Emacs 26.0.x snapshot.
 
 *IMPORTANT*: Before using this code, please make sure you have backups
 of your precious Org files. Also, I strongly suggest to create a new,
