@@ -2,6 +2,8 @@
 
 Caldav sync for Emacs Orgmode
 
+Minimum Emacs version needed: 24.3
+
 Tested CalDAV servers: Owncloud, Nextcould
 
 Google Calendar works on old, deprecated endpoint only. New endpoint
@@ -9,7 +11,12 @@ requires OAuth2 authentication. See issue #28 on why that's a problem.
 
 Also reported to be working: SOGo, Kolab (https://kolabnow.com/clients/emacs)
 
-Reported to be **not** working: Baikal
+Reported to be **not** working: Baikal, Radicale (the latter might
+work if you use a recent Emacs 26.0.x snapshot, see issue #86).
+
+Note that current Emacs releases do not correctly handle https over a
+proxy connection
+(https://debbugs.gnu.org/cgi/bugreport.cgi?bug=11788).
 
 *IMPORTANT*: Before using this code, please make sure you have backups
 of your precious Org files. Also, I strongly suggest to create a new,
@@ -20,16 +27,6 @@ will get an UID property (see doc-string of org-icalendar-store-UID
 for further details). If you don't want this, then *do not use this
 package*; there is just no way around that. It is the only reliable
 way to uniquely identify Org entries.
-
-This package depends on the url-dav package, which unfortunately is
-broken in Emacs <=24.2. If you don't want to upgrade Emacs, you can
-get a working version here:
-
-http://randomsample.de/url-dav.el
-
-Now load this file *before* using org-caldav. However, since those manual
-overrides of core libraries tend to be forgotten and might bite you
-later on, I'd rather recommend upgrading to a newer Emacs version.
 
 ### IN A NUTSHELL
 
