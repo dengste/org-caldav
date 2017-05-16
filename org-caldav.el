@@ -133,7 +133,7 @@ If this is the symbol 'with-headings, the results will also
 include headings from Org entries.")
 
 (defvar org-caldav-retry-attempts 5
-  "Number of times we should try to retrieve events.")
+  "Number of times trying to retrieve/put events.")
 
 (defvar org-caldav-calendar-preamble
   "BEGIN:VCALENDAR\nPRODID:\nVERSION:2.0\nCALSCALE:GREGORIAN\n"
@@ -299,13 +299,33 @@ Return list with elements (uid . etag)."
   "Get event with UID from calendar.
 Function returns a buffer containing the event, or nil if there's
 no such event.
-If WITH-HEADERS is non-nil, do not delete headers."
+If WITH-HEADERS is non-nil, do not delete headers.
+If retrieve fails, do `org-caldav-retry-attempts' retries."
   (org-caldav-debug-print 1 (format "Getting event UID %s." uid))
-  (with-current-buffer
-      (url-retrieve-synchronously
-       (concat (org-caldav-events-url) (url-hexify-string uid) org-caldav-uuid-extension))
-    (goto-char (point-min))
-    (when (search-forward "BEGIN:VCALENDAR" nil t)
+  (let ((counter 0)
+	eventbuffer errormessage)
+    (while (and (not eventbuffer)
+		(< counter org-caldav-retry-attempts))
+      (with-current-buffer
+	  (url-retrieve-synchronously
+	   (concat (org-caldav-events-url) (url-hexify-string uid) org-caldav-uuid-extension))
+	(goto-char (point-min))
+	(if (looking-at "HTTP.*2[0-9][0-9]")
+	    (setq eventbuffer (current-buffer))
+	  ;; There was an error retrieving the event
+	  (setq errormessage (buffer-substring (point-min) (point-at-eol)))
+	  (setq counter (1+ counter))
+	  (org-caldav-debug-print
+	   1 (format "(Try %d) Error when trying to retrieve UID %s: %s"
+		     counter uid errormessage)))))
+    (unless eventbuffer
+      ;; Give up
+      (error "Failed to retrieve UID %s after %d tries with error %s"
+	     uid org-caldav-retry-attempts errormessage))
+    (with-current-buffer eventbuffer
+      (unless (search-forward "BEGIN:VCALENDAR" nil t)
+	(error "Failed to find calendar entry for UID %s (see buffer %s)"
+	       uid (buffer-name eventbuffer)))
       (beginning-of-line)
       (unless with-headers
 	(delete-region (point-min) (point)))
@@ -317,8 +337,8 @@ If WITH-HEADERS is non-nil, do not delete headers."
 	(while (re-search-forward "^ " nil t)
 	  (delete-char -2)))
       (org-caldav-debug-print 2 (format "Content of event UID %s: " uid)
-			      (buffer-string))
-      (current-buffer))))
+			      (buffer-string)))
+    eventbuffer))
 
 (defun org-caldav-put-event (buffer)
   "Add event in BUFFER to calendar.
@@ -628,18 +648,27 @@ ICSBUF is the buffer containing the exported iCalendar file."
 EVENT-ETAG is the current list of events and etags on the server.
 The ics must be in the current buffer."
   (save-excursion
-    (let ((seq (org-caldav-event-sequence event)))
+    (let ((seq (org-caldav-event-sequence event))
+	  retrieve)
       (unless (or seq
 		  (not (assoc (car event) event-etag)))
 	;; We don't have a sequence yet, but event is already in the
 	;; calendar, hence we have to get the current number first.
-	(with-current-buffer (org-caldav-get-event (car event))
-	  (goto-char (point-min))
-	  (when (re-search-forward "^SEQUENCE:\\s-*\\([0-9]+\\)" nil t)
-	    (org-caldav-event-set-sequence
-	     event (string-to-number (match-string 1))))
-	  (setq seq (org-caldav-event-sequence event))
-	  (org-caldav-debug-print 1 "UID %s: Got sequence number %d" (car event) seq)))
+	(setq retrieve (org-caldav-get-event (car event)))
+	(when (null retrieve)
+	  ;; Retrieving the event failed... so let's just use '1' and
+	  ;; hope it works.
+	  (org-caldav-debug-print 1 "UID %s: Failed to retrieve item from server." (car event))
+	  (org-caldav-debug-print 1 "UID %s: Use sequence number 1 and hope for the best." (car event))
+	  (setq seq 1))
+	(unless seq
+	  (with-current-buffer (org-caldav-get-event (car event))
+	    (goto-char (point-min))
+	    (when (re-search-forward "^SEQUENCE:\\s-*\\([0-9]+\\)" nil t)
+	      (org-caldav-event-set-sequence
+	       event (string-to-number (match-string 1))))
+	    (setq seq (org-caldav-event-sequence event))
+	    (org-caldav-debug-print 1 "UID %s: Got sequence number %d" (car event) seq))))
       (when seq
 	(setq seq (1+ seq))
 	(goto-char (point-min))
@@ -1253,29 +1282,37 @@ which can be fed into `org-caldav-insert-org-entry'."
 	  end-t summary description)))
 
 ;; This is adapted from url-dav.el, written by Bill Perry.
-;; This does more error checking on the headers.
+;; This does more error checking on the headers and retries
+;; in case of an error.
 (defun org-caldav-save-resource (url obj)
   "Save string OBJ as URL using WebDAV."
   (let* ((url-request-extra-headers
 	  '(("Content-type" . "text/calendar; charset=UTF-8")))
 	 (url-request-method "PUT")
 	 (url-request-data obj)
-	 (buffer (url-retrieve-synchronously url))
-	 result)
-    ;; Sanity checking
-    (when buffer
-      (unwind-protect
-	  (with-current-buffer buffer
-	    (save-excursion
-	      (goto-char (point-min))
-	      (let ((answer (buffer-substring (point) (point-at-eol))))
-		;; Every 2XX response is OK for us.
-		(if (string-match "^HTTP/1.1 2[0-9][0-9]" answer)
-		    (setq result t)
-		  (org-caldav-debug-print 1
-		   (format "Got error: %s" answer)))))
-	    (kill-buffer buffer))))
-    result))
+	 (counter 0)
+	 errormessage)
+    (while (and (not buffer)
+		(< counter org-caldav-retry-attempts))
+      (with-current-buffer
+	  (url-retrieve-synchronously url)
+	(goto-char (point-min))
+	(if (looking-at "HTTP.*2[0-9][0-9]")
+	    (setq buffer (current-buffer))
+	  ;; There was an error putting the resource, try again.
+    	  (setq errormessage (buffer-substring (point-min) (point-at-eol)))
+	  (setq counter (1+ counter))
+	  (org-caldav-debug-print
+	   1 (format "(Try %d) Error when trying to put URL %s: %s"
+		     counter url errormessage))
+	  (kill-buffer))))
+    (if buffer
+	(kill-buffer buffer)
+      (org-caldav-debug-print
+       1
+       "Failed to put URL %s after %d tries with error %s"
+       url org-caldav-retry-attempts errormessage))
+    (< counter org-caldav-retry-attempts)))
 
 ;;;###autoload
 (defun org-caldav-import-ics-buffer-to-org ()
