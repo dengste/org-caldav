@@ -7,7 +7,9 @@ Tested CalDAV servers: Owncloud
 Google Calendar works on old, deprecated endpoint only. New endpoint
 requires OAuth2 authentication. See issue #28 on why that's a problem.
 
-Also reported to be working: SOGo.
+Also reported to be working: SOGo, Kolab (https://kolabnow.com/clients/emacs)
+
+Reported to be **not** working: Baikal
 
 *IMPORTANT*: Before using this code, please make sure you have backups
 of your precious Org files. Also, I strongly suggest to create a new,
