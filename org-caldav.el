@@ -1305,7 +1305,7 @@ which can be fed into `org-caldav-insert-org-entry'."
 	 (url-request-method "PUT")
 	 (url-request-data obj)
 	 (counter 0)
-	 errormessage)
+	 errormessage buffer)
     (while (and (not buffer)
 		(< counter org-caldav-retry-attempts))
       (with-current-buffer
