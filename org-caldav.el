@@ -2,7 +2,7 @@
 
 ;; Copyright (C) 2012-2014 Free Software Foundation, Inc.
 
-;; Author: David Engster <dengste@eml.cc>
+;; Author: David Engster <deng@randomsample.de>
 ;; Keywords: calendar, caldav
 ;; Package-Requires: ((org "7"))
 ;;
