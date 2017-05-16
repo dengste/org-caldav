@@ -132,6 +132,9 @@ Set this to nil if you don't want any backups.")
 If this is the symbol 'with-headings, the results will also
 include headings from Org entries.")
 
+(defvar org-caldav-retry-attempts 5
+  "Number of times we should try to retrieve events.")
+
 (defvar org-caldav-calendar-preamble
   "BEGIN:VCALENDAR\nPRODID:\nVERSION:2.0\nCALSCALE:GREGORIAN\n"
   "Preamble used for iCalendar events.

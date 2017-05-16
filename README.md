@@ -34,7 +34,8 @@ later on, I'd rather recommend upgrading to a newer Emacs version.
 * Create a new calendar; the name does not matter.
 
 * Set org-caldav-url to the base address of your CalDAV server:
-    - Owncloud: https://OWNCLOUD-SERVER-URL/remote.php/caldav/calendars/USERID
+    - Owncloud/Nextcloud (9.x and above): https://OWNCLOUD-SERVER-URL/remote.php/dav/calendars/USERID
+    - Owncloud 8.x and below: https://OWNCLOUD-SERVER-URL/remote.php/caldav/calendars/USERID
     - Google: https://www.google.com/calendar/dav (this is the old endpoint!).
 
 * Set org-caldav-calendar-id to the calendar-id of your new calendar:
