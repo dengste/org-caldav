@@ -58,9 +58,13 @@ later on, I'd rather recommend upgrading to a newer Emacs version.
   shifted by a few hours, try the setting "UTC" (the SOGo calendar
   server seems to need this).
 
-You can also take a look at the other org-icalendar variables, since
-org-caldav uses this package to export your entries. For instance, you
-can use org-icalendar-alarm-time to add a reminder to your entries.
+Please note that org-caldav does not directly control how and which
+entries are exported, it just uses the org-icalendar
+exporter. Therefore, you should also take a look at the options from
+the org-icalendar exporter. Most importantly, take a look at
+org-icalendar-alarm-time to add a reminder to your entries, and
+org-icalendar-use-deadline and org-icalendar-use-scheduled to control
+which timestamps should be used.
 
 Call org-caldav-sync to start the sync. The URL package will ask you
 for username/password for accessing the calendar. (See below on how to
