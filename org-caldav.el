@@ -727,7 +727,10 @@ returned as a cons (POINT . LEVEL)."
 	 (save-excursion
 	   (let ((org-link-search-inhibit-query t)
 		 level)
-	     (org-link-search (concat "*" (nth 2 inbox)) nil nil t)
+	     ;; org-link-search changed signature in v8.3
+	     (if (version< org-version "8.3")
+		 (org-link-search (concat "*" (nth 2 inbox)) nil nil t)
+	       (org-link-search (concat "*" (nth 2 inbox)) nil t))
 	     (setq level (1+ (org-current-level)))
 	     (org-end-of-subtree t t)
 	     (cons (point) level))))
