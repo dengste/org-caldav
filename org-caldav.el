@@ -237,13 +237,39 @@ and  action = {org->cal, cal->org, error:org->cal, error:cal->org}.")
 	     event))
 	 org-caldav-event-list)))
 
+;; Since not being able to access an URL via DAV is the most reported
+;; error, let's be very verbose about checking for DAV availability.
+(defun org-caldav-check-dav (url)
+  "Check if URL accepts DAV requests.
+Report an error with further details if that is not the case."
+  (let* ((url-request-method "OPTIONS")
+	 (url-request-data nil)
+	 (buffer (url-retrieve-synchronously url))
+	 (header nil)
+	 (options nil))
+    (when (not buffer)
+      (error "Retrieving URL %s failed." url))
+    (with-current-buffer buffer
+      (goto-char (point-min))
+      (when (not (re-search-forward "^HTTP[^ ]* \\([0-9]+ .*\\)$"
+				    (point-at-eol) t))
+	(switch-to-buffer buffer)
+	(error "No valid HTTP response from URL %s." url))
+      (let ((response (match-string 1)))
+	(when (not (string-match "2[0-9][0-9].*" response))
+	  (switch-to-buffer buffer)
+	  (error "Error while checking for OPTIONS at URL %s: %s" url response)))
+      (mail-narrow-to-head)
+      (let ((davheader (mail-fetch-field "dav")))
+	(when (not davheader)
+	  (switch-to-buffer buffer)
+	  (error "The URL %s does not accept DAV requests" url)))))
+  t)
+
 (defun org-caldav-check-connection ()
   "Check connection by doing a PROPFIND on CalDAV URL.
 Also sets `org-caldav-empty-calendar' if calendar is empty."
-  (unless (url-dav-supported-p (org-caldav-events-url))
-    (error "The URL %s does not seem to accept DAV \
-requests" (org-caldav-events-url)))
-
+  (org-caldav-check-dav (org-caldav-events-url))
   (org-caldav-debug-print 1 (format "Check connection for %s."
 				    (org-caldav-events-url)))
   (let ((output (url-dav-get-properties
