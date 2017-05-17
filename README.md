@@ -282,6 +282,19 @@ better than setting a "real" timezone.
 
 #### Troubleshooting
 
+If org-caldav reports a problem with the given URL, please
+triple-check that the URL is correct. It must point to a valid
+calendar on your CalDAV server.
+
+If the error is that the URL does not seem to accept DAV requests, you
+can additionally check with 'curl' by doing
+
+     curl -D - -X OPTIONS --basic -u mylogin:mypassword URL
+
+The output of this command must contain a 'DAV' header like this:
+
+    DAV: 1, 3, extended-mkcol, access-control, ... etc. ...
+
 By default, org-caldav will put all kinds of debug output into the
 buffer \*org-caldav-debug\*. Look there if you're getting sync errors
 or if something plain doesn't work. If you're using an authinfo file
