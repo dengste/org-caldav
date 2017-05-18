@@ -588,12 +588,10 @@ If RESUME is non-nil, try to resume."
 (defun org-caldav-sync ()
   "Sync Org with calendar."
   (interactive)
-  (unless (or (bound-and-true-p url-dav-patched-version)
-	      (> emacs-major-version 24)
+  (unless (or (> emacs-major-version 24)
 	      (and (= emacs-major-version 24)
 		   (> emacs-minor-version 2)))
-    (error "You have to either use at least Emacs 24.3, \
-or the patched `url-dav' package (see Readme)."))
+    (user-error "You have to use at least Emacs 24.3"))
   (org-caldav-debug-print 1 "========== Started sync.")
   (if (and org-caldav-event-list
         (not (eq org-caldav-resume-aborted 'never))
