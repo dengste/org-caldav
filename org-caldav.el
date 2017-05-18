@@ -565,6 +565,11 @@ If RESUME is non-nil, try to resume."
       (let ((key (pop calendar))
 	    (value (pop calendar)))
 	(set (org-caldav-var-for-key key) value)))
+    ;; Make sure org files are existing
+    (dolist (filename (append org-caldav-files
+			      (list (org-caldav-inbox-file org-caldav-inbox))))
+	    (when (not (file-exists-p filename))
+	      (user-error "File %s does not exist" filename)))
     (org-caldav-check-connection)
     (unless resume
       (setq org-caldav-ics-buffer (org-caldav-generate-ics))
