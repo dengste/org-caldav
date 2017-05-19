@@ -2,13 +2,18 @@
 ;; Copyright, authorship, license: see org-caldav.el.
 
 ;; Run it from the org-caldav directory like this:
-;; emacs -Q -L . --eval '(setq org-caldav-url "CALDAV-URL" org-caldav-calendar-id "CAL-ID")' -l org-caldav-testsuite.el -f ert
-
-;; This will completely wipe the named calendar!
+;;   emacs -Q -L . --eval '(setq org-caldav-url "CALDAV-URL")' -l org-caldav-testsuite.el -f ert
+;; On the server, there must already exist two calendars "test1" and "test2".
+;; These will completely wiped by running this test!
 
 (require 'ert)
 (require 'org)
 (require 'org-caldav)
+
+(setq org-caldav-test-calendar-names '("test1" "test2"))
+
+(setq org-caldav-calendar-id (car org-caldav-test-calendar-names))
+(setq org-caldav-save-directory (make-temp-file "org-caldav-test-" t))
 
 (setq org-caldav-test-preamble
       "BEGIN:VCALENDAR
@@ -107,6 +112,7 @@ Baz Bar Foo")
 
 ;; Test files.
 (setq org-caldav-test-orgfile "/tmp/org-caldav-test-orgfile.org")
+(setq org-caldav-test-second-orgfile "/tmp/org-caldav-test-another-orgfile.org")
 (setq org-caldav-test-inbox "/tmp/org-caldav-test-inbox.org")
 
 (when (file-exists-p org-caldav-test-orgfile)
@@ -150,8 +156,7 @@ Baz Bar Foo")
 (defun org-caldav-test-set-up ()
   "Make a clean slate."
   (message "SET UP")
-  (unless (or (org-caldav-test-calendar-empty-p)
-	      (not (y-or-n-p "Deleting everything in calendar. OK? ")))
+  (unless (org-caldav-test-calendar-empty-p)
     (dolist (cur (org-caldav-get-event-etag-list))
       (message "Deleting %s" (car cur))
       (org-caldav-delete-event (car cur))))
@@ -399,3 +404,44 @@ Baz Bar Foo")
                        (write-entry nil 2)))
       (should (string-match "\\*\\s-+The summary\n\\s-*:PROPERTIES:\n\\s-*:ID:\\s-*1\n\\s-*:END:\n\\s-*<2015-01-01 Thu 19:00-20:00>\n\\s-*The description\n"
                        (write-entry "1" nil))))))
+
+(ert-deftest org-caldav-multiple-calendars ()
+  (with-current-buffer (find-file-noselect org-caldav-test-orgfile)
+    (erase-buffer)
+    (insert org-caldav-test-org1)
+    (save-buffer))
+
+  (with-current-buffer (find-file-noselect org-caldav-test-second-orgfile)
+    (erase-buffer)
+    (insert org-caldav-test-org2)
+    (save-buffer))
+
+  ;; Delete calendar contents
+  (let ((org-caldav-calendar-id (car org-caldav-test-calendar-names)))
+    (org-caldav-test-set-up))
+  (let ((org-caldav-calendar-id (nth 1 org-caldav-test-calendar-names)))
+    (org-caldav-test-set-up))
+  
+  (let
+      ((org-caldav-calendars
+	`((:calendar-id ,(car org-caldav-test-calendar-names)
+			:url ,org-caldav-url
+			:files (,org-caldav-test-orgfile)
+			:inbox ,org-caldav-test-orgfile)
+	  (:calendar-id ,(nth 1 org-caldav-test-calendar-names)
+			:url ,org-caldav-url
+			:files (,org-caldav-test-second-orgfile)
+			:inbox ,org-caldav-test-second-orgfile))))
+    (org-caldav-sync))
+
+  ;; Check that each calendar has one event
+  (let
+      ((org-caldav-calendar-id (car org-caldav-test-calendar-names)))
+    (should (org-caldav-get-event "orgcaldavtest@org1"))
+    (should-error (org-caldav-get-event "orgcaldavtest-org2")))
+
+  (let
+      ((org-caldav-calendar-id (nth 1 org-caldav-test-calendar-names)))
+    (should-error (org-caldav-get-event "orgcaldavtest@org1"))
+    (should (org-caldav-get-event "orgcaldavtest-org2")))
+  )
