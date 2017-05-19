@@ -554,40 +554,33 @@ The format of CALENDAR is described in `org-caldav-calendars'.
 If CALENDAR is not provided, the default values will be used.
 If RESUME is non-nil, try to resume."
   (setq org-caldav-previous-calendar calendar)
-  (let ((org-caldav-url org-caldav-url)
-	(org-caldav-calendar-id org-caldav-calendar-id)
-	(org-caldav-files org-caldav-files)
-	(org-caldav-select-tags org-caldav-select-tags)
-	(org-caldav-exclude-tags org-caldav-exclude-tags)
-	(org-caldav-inbox org-caldav-inbox)
-	(org-caldav-empty-calendar nil))
-    (while calendar
-      (let ((key (pop calendar))
-	    (value (pop calendar)))
-	(set (org-caldav-var-for-key key) value)))
-    ;; Make sure org files are existing
-    (dolist (filename (append org-caldav-files
-			      (list (org-caldav-inbox-file org-caldav-inbox))))
-	    (when (not (file-exists-p filename))
-	      (user-error "File %s does not exist" filename)))
-    (org-caldav-check-connection)
-    (unless resume
-      (setq org-caldav-ics-buffer (org-caldav-generate-ics))
+  (let (calkeys calvalues)
+    (dolist (i (number-sequence 0 (1- (length calendar)) 2))
+      (setq calkeys (append calkeys (list (nth i calendar)))
+	    calvalues (append calvalues (list (nth (1+ i) calendar)))))
+    (progv (mapcar 'org-caldav-var-for-key calkeys) calvalues
+      (dolist (filename (append org-caldav-files
+				(list (org-caldav-inbox-file org-caldav-inbox))))
+	(when (not (file-exists-p filename))
+	  (user-error "File %s does not exist" filename)))
+      (org-caldav-check-connection)
+      (unless resume
+	(setq org-caldav-ics-buffer (org-caldav-generate-ics))
+	(setq org-caldav-event-list nil)
+	(org-caldav-load-sync-state)
+	;; Remove status in event list
+	(dolist (cur org-caldav-event-list)
+	  (org-caldav-event-set-status cur nil))
+	(org-caldav-update-eventdb-from-org org-caldav-ics-buffer)
+	(org-caldav-update-eventdb-from-cal))
+      (org-caldav-update-events-in-cal org-caldav-ics-buffer)
+      (org-caldav-update-events-in-org)
+      (org-caldav-save-sync-state)
       (setq org-caldav-event-list nil)
-      (org-caldav-load-sync-state)
-      ;; Remove status in event list
-      (dolist (cur org-caldav-event-list)
-	(org-caldav-event-set-status cur nil))
-      (org-caldav-update-eventdb-from-org org-caldav-ics-buffer)
-      (org-caldav-update-eventdb-from-cal))
-    (org-caldav-update-events-in-cal org-caldav-ics-buffer)
-    (org-caldav-update-events-in-org)
-    (org-caldav-save-sync-state)
-    (setq org-caldav-event-list nil)
-    (with-current-buffer org-caldav-ics-buffer
-      (set-buffer-modified-p nil)
-      (kill-buffer))
-    (delete-file (buffer-file-name org-caldav-ics-buffer))))
+      (with-current-buffer org-caldav-ics-buffer
+	(set-buffer-modified-p nil)
+	(kill-buffer))
+      (delete-file (buffer-file-name org-caldav-ics-buffer)))))
 
 ;;;###autoload
 (defun org-caldav-sync ()
