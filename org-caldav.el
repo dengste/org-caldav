@@ -122,6 +122,13 @@ ask = Ask for before deletion (default)
 never = Never delete Org entries
 always = Always delete")
 
+(defvar org-caldav-skip-conditions nil
+  "Conditions for skipping entries during icalendar export.
+This must be a list of conditions, which are described in the
+doc-string of `org-agenda-skip-if'.  Any entry that matches will
+not be exported.  Note that the normal `org-agenda-skip-function'
+has no effect on the icalendar exporter.")
+
 (defvar org-caldav-backup-file
   (expand-file-name "org-caldav-backup.org" user-emacs-directory)
   "Name of the file where org-caldav should backup entries.
@@ -544,6 +551,7 @@ Are you really sure? ")))
     (:select-tags 'org-caldav-select-tags)
     (:exclude-tags 'org-caldav-exclude-tags)
     (:inbox 'org-caldav-inbox)
+    (:skip-conditions 'org-caldav-skip-conditions)
     (t (intern
 	(concat "org-"
 		(substring (symbol-name key) 1))))))
@@ -922,6 +930,14 @@ is on s-expression."
       (insert item "\n")
       (save-buffer))))
 
+(defun org-caldav-skip-function (backend)
+  (when (eq backend 'icalendar)
+    (org-map-entries
+     (lambda ()
+       (let ((pt (apply 'org-agenda-skip-entry-if org-caldav-skip-conditions)))
+	 (when pt
+	   (delete-region (point) pt)))))))
+
 (defun org-caldav-generate-ics ()
   "Generate ICS file from `org-caldav-files'.
 Returns buffer containing the ICS file."
@@ -941,6 +957,9 @@ Returns buffer containing the ICS file."
 	;; Does not work yet
 	(org-icalendar-include-bbdb-anniversaries nil)
 	(icalendar-uid-format "orgsexp-%h")
+	(org-export-before-parsing-hook
+	 (append org-export-before-parsing-hook
+		 (when org-caldav-skip-conditions '(org-caldav-skip-function))))
 	(org-icalendar-date-time-format
 	 (cond
 	  ((and org-icalendar-timezone
