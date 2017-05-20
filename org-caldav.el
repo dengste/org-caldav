@@ -276,9 +276,14 @@ Report an error with further details if that is not the case."
 (defun org-caldav-check-connection ()
   "Check connection by doing a PROPFIND on CalDAV URL.
 Also sets `org-caldav-empty-calendar' if calendar is empty."
-  (org-caldav-check-dav (org-caldav-events-url))
   (org-caldav-debug-print 1 (format "Check connection for %s."
 				    (org-caldav-events-url)))
+  (condition-case err
+      (org-caldav-check-dav (org-caldav-events-url))
+    (error
+     (org-caldav-debug-print
+      1 "Got error while checking for DAV (will try again):" err)
+     (org-caldav-check-dav (org-caldav-events-url))))
   (let ((output (url-dav-get-properties
 		 (org-caldav-events-url)
 		 '(DAV:resourcetype) 1)))
