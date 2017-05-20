@@ -163,6 +163,26 @@ a one-time sync error instead (again: those are not critical, just
 FIY). If you don't want those entries to be exported at all, just set
 org-icalendar-include-sexps to nil.
 
+#### Filtering entries
+
+There are several possibilities to choose which entries should be
+synced and which not:
+
+* If you only want to sync manually marked entries, use
+  org-caldav-select-tags, which is directly mapped to
+  org-export-select-tags, so see its doc-string on how it works.
+
+* If you want to exclude certain tags, use org-caldav-exclude-tags,
+  which is mapped to org-icalendar-exclude tags.
+
+* If you want more fine grained control, use
+  org-caldav-skip-conditions. The syntax of the conditions is
+  described in the doc-string of org-agenda-skip-if.
+
+Note however that the normal org-agenda-skip-function(-global) will
+**not** have any effect on the icalendar exporter (this used to be the
+case, but changed with the new exporters).
+
 #### Syncing deletions
 
 If you delete entries in your Org files, the corresponding iCalendar
@@ -247,15 +267,17 @@ Example:
          :inbox "~/org/fromwork.org")
         (:calendar-id "stuff@mystuff"
          :files ("~/org/sports.org" "~/org/play.org")
+	 :skip-conditions (regexp "soccer")
          :inbox "~/org/fromstuff.org")) )
 
 This means that you have two calendars with IDs "work@whatever" and
 "stuff@mystuff". Both will be accessed through the global value of
 org-caldav-url, since the key :url isn't specified. The calendar
 "work@whatever" will be synced with the file 'work.org' and inbox
-'fromwork.org', while "stuff@mystuff" with 'sports.org' and 'play.org'
-and inbox 'fromstuff.org'. See the doc-string of org-caldav-calendars
-for more details on which keys you can use.
+'fromwork.org', while "stuff@mystuff" with 'sports.org' and
+'play.org', *unless* there's the string 'soccer' in the heading, and
+and inbox is 'fromstuff.org'. See the doc-string of
+org-caldav-calendars for more details on which keys you can use.
 
 #### Additional stuff
 

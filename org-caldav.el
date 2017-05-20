@@ -81,15 +81,15 @@ can choose between the following options:
 Use this variable to sync with several different remote
 calendars.  If you set this, the global variables
 `org-caldav-url', `org-caldav-calendar-id', `org-caldav-files',
-`org-caldav-select-tags', `org-caldav-exclude-tags' and
-`org-caldav-inbox' will only serve
-as default values.  They can be overridden through the plist keys
-:url, :calendar-id, :files, :select-tags and :inbox, resp.  If
-you specify any other key, it will be prefixed with \"org-\",
-meaning that if you use for instance :agenda-skip-function, it
-will override `org-agenda-skip-function'.
-All provided calendars can then be synced in order by calling
-`org-caldav-sync' as usual.
+`org-caldav-select-tags', `org-caldav-exclude-tags',
+`org-caldav-inbox' and `org-caldav-skip-conditions' will only
+serve as default values.  They can be overridden through the
+plist keys :url, :calendar-id, :files, :select-tags, :inbox,
+and :skip-conditions, resp.  If you specify any other key, it
+will be prefixed with \"org-\", meaning that if you use for
+instance :agenda-skip-function, it will override
+`org-agenda-skip-function'.  All provided calendars can then be
+synced in order by calling `org-caldav-sync' as usual.
 
 Example:
 '((:calendar-id \"work@whatever\" :files (\"~/org/work.org\")
