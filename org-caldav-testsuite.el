@@ -11,10 +11,7 @@
 (require 'org-caldav)
 
 (setq org-caldav-test-calendar-names '("test1" "test2"))
-
-(setq org-caldav-calendar-id (car org-caldav-test-calendar-names))
-(setq org-caldav-save-directory (make-temp-file "org-caldav-test-" t))
-
+(setq org-caldav-backup-file nil)
 (setq org-caldav-test-preamble
       "BEGIN:VCALENDAR
 VERSION:2.0
@@ -95,7 +92,8 @@ END:VEVENT
 :ID:       orgcaldavtest@org1
 :END:
 <2012-12-23 Sun 20:00-21:00>
-Foo Bar Baz")
+Foo Bar Baz
+")
 
 ;; Dto., second one
 (setq org-caldav-test-org2
@@ -104,46 +102,23 @@ Foo Bar Baz")
 :ID:       orgcaldavtest-org2
 :END:
 <2012-12-19 Wed 19:00-21:00>
-Baz Bar Foo")
+Baz Bar Foo
+")
+
+(setq org-caldav-test-org3
+      "* This is a test with a tag :sometag:
+:PROPERTIES:
+:ID:       orgcaldavtest-org3
+:END:
+<2012-12-20 Thu 19:00-21:00>
+moose
+")
 
 ;; All events after sync.
 (setq org-caldav-test-allevents
       '("orgcaldavtest@org1" "orgcaldavtest-org2" "orgcaldavtest@cal1" "orgcaldavtest-cal2"))
 
 ;; Test files.
-(setq org-caldav-test-orgfile "/tmp/org-caldav-test-orgfile.org")
-(setq org-caldav-test-second-orgfile "/tmp/org-caldav-test-another-orgfile.org")
-(setq org-caldav-test-inbox "/tmp/org-caldav-test-inbox.org")
-
-(when (file-exists-p org-caldav-test-orgfile)
-  (delete-file org-caldav-test-orgfile))
-(when (file-exists-p org-caldav-test-inbox)
-  (delete-file org-caldav-test-inbox))
-
-;; Set up inbox.
-(with-current-buffer (find-file-noselect org-caldav-test-inbox)
-  (save-buffer))
-
-;; Set up orgfile.
-(with-current-buffer (find-file-noselect org-caldav-test-orgfile)
-  (insert org-caldav-test-org1 "\n")
-  (insert org-caldav-test-org2 "\n")
-  (save-buffer))
-
-;; Set up data for org-caldav.
-(setq org-caldav-files (list org-caldav-test-orgfile))
-(setq org-caldav-inbox org-caldav-test-inbox)
-(setq org-caldav-debug-level 2)
-
-(message "Calendar URL: %s" org-caldav-url)
-(message "Calendar ID: %s" org-caldav-calendar-id)
-
-;; Remove state.
-(when (file-exists-p
-       (org-caldav-sync-state-filename org-caldav-calendar-id))
-  (message "Removing state file")
-  (delete-file (org-caldav-sync-state-filename org-caldav-calendar-id)))
-
 (defun org-caldav-test-calendar-empty-p ()
   "Check if calendar is empty."
   (let ((output (url-dav-get-properties
@@ -179,9 +154,47 @@ Baz Bar Foo")
     (should (assoc "orgcaldavtest@cal1" events))
     (should (assoc "orgcaldavtest-cal2" events))))
 
+(defun org-caldav-test-setup-temp-files ()
+  (let ((tmpdir (make-temp-file "org-caldav-test-" t)))
+    (message "Using tempdir %s" tmpdir)
+    (setq org-caldav-save-directory (expand-file-name "org-caldav-savedir" tmpdir)
+	  org-caldav-test-orgfile (expand-file-name "test.org" tmpdir)
+	  org-caldav-test-second-orgfile (expand-file-name "test-second.org" tmpdir)
+	  org-caldav-test-inbox (expand-file-name "inbox.org" tmpdir)
+	  org-id-locations-file (expand-file-name "org-id-locations" tmpdir)
+	  org-id-locations nil
+	  org-id-files nil
+	  org-caldav-test-current-tempdir tmpdir))
+  (make-directory org-caldav-save-directory)
+  (with-current-buffer (find-file-noselect org-caldav-test-inbox)
+    (save-buffer)))
+
+(defun org-caldav-test-cleanup ()
+  (dolist (name '("test.org" "test-second.org" "inbox.org" "org-id-locations"))
+    (let ((buf (get-buffer name)))
+      (when buf
+	(with-current-buffer buf
+	  (set-buffer-modified-p nil)
+	  (kill-buffer)))))
+  (setq org-id-locations nil)
+  (when org-caldav-test-current-tempdir
+    (delete-directory org-caldav-test-current-tempdir t)
+    (setq org-caldav-test-current-tempdir nil)))
+
 ;; This is one, big, big test, since pretty much everything depends on
 ;; the current calendar/org state and I cannot easily split it.
-(ert-deftest org-caldav-sync-test ()
+(ert-deftest org-caldav-01-sync-test ()
+  (org-caldav-test-setup-temp-files)
+  (setq org-caldav-calendar-id (car org-caldav-test-calendar-names))
+  ;; Set up orgfile.
+  (with-current-buffer (find-file-noselect org-caldav-test-orgfile)
+    (insert org-caldav-test-org1 "\n")
+    (insert org-caldav-test-org2 "\n")
+    (save-buffer))
+  ;; Set up data for org-caldav.
+  (setq org-caldav-files (list org-caldav-test-orgfile))
+  (setq org-caldav-inbox org-caldav-test-inbox)
+  (setq org-caldav-debug-level 2)
   (org-caldav-test-set-up)
   (org-caldav-test-put-events)
   (message "SYNC")
@@ -347,7 +360,8 @@ Baz Bar Foo")
   ;; Delete event in calendar
   (org-caldav-delete-event "orgcaldavtest-org2")
   ;; Sync one last time
-  (org-caldav-sync)
+  (let ((org-caldav-delete-org-entries 'always))
+    (org-caldav-sync))
 
   (should
    (equal org-caldav-sync-result
@@ -359,9 +373,11 @@ Baz Bar Foo")
   (should-not
    (assoc '"orgcaldavtest-org2" org-caldav-event-list))
 
+  (org-caldav-test-cleanup)
+
   )
 
-(ert-deftest org-caldav-change-heading-test ()
+(ert-deftest org-caldav-02-change-heading-test ()
   (with-current-buffer (get-buffer-create "headingtest")
     (erase-buffer)
     (insert "* This is a test without timestamp in headline\n"
@@ -387,7 +403,7 @@ Baz Bar Foo")
     (should (looking-at "^\\*  <2009-08-08 Sat 14:00> third changed heading\n"))
     ))
 
-(ert-deftest org-caldav-insert-org-entry ()
+(ert-deftest org-caldav-03-insert-org-entry ()
   "Make sure that `org-caldav-insert-org-entry' works fine."
   (let ((entry '("01 01 2015" "19:00" "01 01 2015" "20:00" "The summary" "The description"))
         (org-caldav-select-tags ""))
@@ -405,14 +421,13 @@ Baz Bar Foo")
       (should (string-match "\\*\\s-+The summary\n\\s-*:PROPERTIES:\n\\s-*:ID:\\s-*1\n\\s-*:END:\n\\s-*<2015-01-01 Thu 19:00-20:00>\n\\s-*The description\n"
                        (write-entry "1" nil))))))
 
-(ert-deftest org-caldav-multiple-calendars ()
+(ert-deftest org-caldav-04-multiple-calendars ()
+  (org-caldav-test-setup-temp-files)
   (with-current-buffer (find-file-noselect org-caldav-test-orgfile)
-    (erase-buffer)
     (insert org-caldav-test-org1)
     (save-buffer))
 
   (with-current-buffer (find-file-noselect org-caldav-test-second-orgfile)
-    (erase-buffer)
     (insert org-caldav-test-org2)
     (save-buffer))
 
@@ -444,4 +459,54 @@ Baz Bar Foo")
       ((org-caldav-calendar-id (nth 1 org-caldav-test-calendar-names)))
     (should-error (org-caldav-get-event "orgcaldavtest@org1"))
     (should (org-caldav-get-event "orgcaldavtest-org2")))
+
+  (org-caldav-test-cleanup)
   )
+
+(ert-deftest org-caldav-05-multiple-calendars-agenda-skip-function ()
+  (org-caldav-test-setup-temp-files)
+  (with-current-buffer (find-file-noselect org-caldav-test-orgfile)
+    (insert org-caldav-test-org1)
+    (insert org-caldav-test-org2)
+    (insert org-caldav-test-org3)
+    (save-buffer))
+
+  ;; Delete calendar contents
+  (let ((org-caldav-calendar-id (car org-caldav-test-calendar-names)))
+    (org-caldav-test-set-up))
+  (let ((org-caldav-calendar-id (nth 1 org-caldav-test-calendar-names)))
+    (org-caldav-test-set-up))
+  (message "Starting sync")
+  (let
+      ((org-caldav-calendars
+	`((:calendar-id ,(car org-caldav-test-calendar-names)
+			:url ,org-caldav-url
+			:skip-conditions  (regexp ":sometag:")
+			:files (,org-caldav-test-orgfile)
+			:inbox ,org-caldav-test-orgfile)
+	  (:calendar-id ,(nth 1 org-caldav-test-calendar-names)
+			:url ,org-caldav-url
+			:skip-conditions (notregexp ":sometag:")
+			:files (,org-caldav-test-orgfile)
+			:inbox ,org-caldav-test-orgfile))))
+    (org-caldav-sync))
+
+  ;; Check that each calendar has one event
+  (let
+      ((org-caldav-calendar-id (car org-caldav-test-calendar-names)))
+    (should (org-caldav-get-event "orgcaldavtest@org1"))
+    (should (org-caldav-get-event "orgcaldavtest-org2"))
+    (should-error (org-caldav-get-event "orgcaldavtest-org3")))
+
+  (let
+      ((org-caldav-calendar-id (nth 1 org-caldav-test-calendar-names)))
+    (should (org-caldav-get-event "orgcaldavtest-org3"))
+    (should-error (org-caldav-get-event "orgcaldavtest@org1"))
+    (should-error (org-caldav-get-event "orgcaldavtest-org2")))
+
+  ;; Make sure org-agenda-skip-function-global is not set permanently
+  (should-not org-agenda-skip-function-global)
+
+  (org-caldav-test-cleanup)
+  )
+
