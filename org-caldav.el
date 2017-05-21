@@ -41,10 +41,10 @@
 (eval-when-compile
   (require 'cl))
 
-(defvar org-caldav-url "https://www.google.com/calendar/dav"
+(defvar org-caldav-url "https://my.calendarserver.invalid/caldav"
   "Base URL for CalDAV access.")
 
-(defvar org-caldav-calendar-id "abcde1234@group.calendar.google.com"
+(defvar org-caldav-calendar-id "mycalendar"
   "ID of your calendar.")
 
 (defvar org-caldav-uuid-extension ".ics"
