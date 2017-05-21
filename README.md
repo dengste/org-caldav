@@ -6,8 +6,9 @@ Minimum Emacs version needed: 24.3
 
 Tested CalDAV servers: Owncloud, Nextcloud
 
-Google Calendar works on old, deprecated endpoint only. New endpoint
-requires OAuth2 authentication. See issue #28 on why that's a problem.
+Google Calendar should work, but you need to register an application
+with the Google Developer Console for OAuth2 authentication (see
+below).
 
 Also reported to be working: SOGo, Kolab (https://kolabnow.com/clients/emacs)
 
@@ -36,7 +37,7 @@ way to uniquely identify Org entries.
 * Set org-caldav-url to the base address of your CalDAV server:
     - Owncloud/Nextcloud (9.x and above): https://OWNCLOUD-SERVER-URL/remote.php/dav/calendars/USERID
     - Owncloud 8.x and below: https://OWNCLOUD-SERVER-URL/remote.php/caldav/calendars/USERID
-    - Google: https://www.google.com/calendar/dav (this is the old endpoint!).
+    - Google: Set to symbol 'google. See below for further documentation.
 
 * Set org-caldav-calendar-id to the calendar-id of your new calendar:
     - OwnCloud: Simply the name of the calendar.
@@ -80,6 +81,32 @@ The same goes for sync errors you might get. Especially when using
 Google Calendar, it is not unusual to get stuff like '409' errors
 during the initial sync. Only Google knows why. Just run
 org-caldav-sync again until all events are uploaded.
+
+### Syncing to Google Calendar
+
+The new CalDAV endpoint for Google Calendar requires OAuth2
+authentication.  So first, you need to install the oauth2 library from
+GNU ELPA, and afterwards you need to acquire an application ID and
+secret from the Google Developer Console. For details on how to do
+this, follow the Google documentation at
+
+https://developers.google.com/google-apps/calendar/caldav/v2/guide#creating_your_client_id
+
+Put the client ID and secret into org-caldav-oauth2-client-id and
+org-caldav-oauth2-client-secret, respectively. Then set org-caldav-url
+to the symbol 'google, and look up the org-caldav-calendar-id as
+described above.
+
+On first connection, the oauth2 library should redirect you to the
+Google OAuth2 authentication site. This requires a javacript enabled
+browser, so make sure that browse-url-browser-function is set to
+something like browse-url-firefox (the internal shr or w3m browser
+will **not** work). After authentication, you will be given a key that
+you have to paste into the Emacs prompt. The oauth2 library will save
+this key in Emacs' secure plist store, which is encrypted with
+GnuPG. If you have not yet used a secure plist store, you will be
+asked for its encryption passphrase. In the future, you should only
+need to enter that passphrase again to connect with Google Calendar.
 
 ### DETAILS
 

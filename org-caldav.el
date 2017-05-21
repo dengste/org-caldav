@@ -42,7 +42,22 @@
   (require 'cl))
 
 (defvar org-caldav-url "https://my.calendarserver.invalid/caldav"
-  "Base URL for CalDAV access.")
+  "Base URL for CalDAV access.
+By default, `org-caldav-calendar-id' will be appended to this to
+get an URL for calendar events.  If this default is not correct,
+use '%s' to where the calendar id must be placed.
+
+Set this to symbol \\='google to use Google Calendar, using OAuth2
+authentication.  In that case, also make sure that
+`browse-url-browser-function' is set to a Javascript-capable
+browser (like `browse-url-firefox').  Note that you need to have
+the OAuth2 library installed, and you will also have to set
+`org-caldav-oauth2-client-id' and
+`org-caldav-oauth2-client-secret' (see README).
+
+In general, if this variable is a symbol, do OAuth2
+authentication with access URIs set in
+`org-caldav-oauth2-providers'.")
 
 (defvar org-caldav-calendar-id "mycalendar"
   "ID of your calendar.")
@@ -167,7 +182,30 @@ ask = Ask for before resuming (default)
 never = Never resume
 always = Always resume")
 
+(defvar org-caldav-oauth2-providers
+  '((google "https://accounts.google.com/o/oauth2/auth"
+	    "https://accounts.google.com/o/oauth2/token"
+	    "https://www.googleapis.com/auth/calendar"
+	    "https://apidata.googleusercontent.com/caldav/v2/%s/events"))
+  "List of providers that need OAuth2.  Each must be of the form
+
+    IDENTIFIER AUTH-URL TOKEN-URL RESOURCE-URL CALENDAR-URL
+
+where IDENTIFIER is a symbol that can be set in `org-caldav-url'
+and '%s' in the CALENDAR-URL denotes where
+`org-caldav-calendar-id' must be placed to generate a valid
+events URL for a calendar.")
+
+(defvar org-caldav-oauth2-client-id nil
+  "Client ID for OAuth2 authentication.")
+
+(defvar org-caldav-oauth2-client-secret nil
+  "Client secret for OAuth2 authentication.")
+
 ;; Internal variables
+(defvar org-caldav-oauth2-available
+  (condition-case nil (require 'oauth2) (error))
+  "Whether oauth2 library is available.")
 
 (defvar org-caldav-previous-calendar nil
   "The plist from org-caldav-calendars, which holds the last
@@ -192,6 +230,9 @@ and  action = {org->cal, cal->org, error:org->cal, error:cal->org}.")
 
 (defvar org-caldav-ics-buffer nil
   "Buffer holding the ICS data.")
+
+(defvar org-caldav-oauth2-token nil
+  "Token for OAuth2 authentication.")
 
 (defsubst org-caldav-add-event (uid md5 etag sequence status)
   "Add event with UID, MD5, ETAG and STATUS."
@@ -235,6 +276,9 @@ and  action = {org->cal, cal->org, error:org->cal, error:cal->org}.")
   "Set sequence number from EVENT to SEQNUM."
   (setcar (nthcdr 3 event) seqnum))
 
+(defsubst org-caldav-use-oauth2 ()
+  (symbolp org-caldav-url))
+
 (defun org-caldav-filter-events (status)
   "Return list of events with STATUS."
   (delq nil
@@ -249,9 +293,7 @@ and  action = {org->cal, cal->org, error:org->cal, error:cal->org}.")
 (defun org-caldav-check-dav (url)
   "Check if URL accepts DAV requests.
 Report an error with further details if that is not the case."
-  (let* ((url-request-method "OPTIONS")
-	 (url-request-data nil)
-	 (buffer (url-retrieve-synchronously url))
+  (let* ((buffer (org-caldav-url-retrieve-synchronously url "OPTIONS"))
 	 (header nil)
 	 (options nil))
     (when (not buffer)
@@ -273,6 +315,60 @@ Report an error with further details if that is not the case."
 	  (error "The URL %s does not accept DAV requests" url)))))
   t)
 
+(defun org-caldav-check-oauth2 (provider)
+  "Check if we have to do OAuth2 authentication.
+If that is the case, also check that everything is installed and
+configured correctly, and throw an user error otherwise."
+  (when (null (assoc provider org-caldav-oauth2-providers))
+    (user-error (concat "No OAuth2 provider found for %s in "
+			"`org-caldav-oauth2-providers'")
+		(symbol-name provider)))
+  (when (not org-caldav-oauth2-available)
+    (user-error (concat "Oauth2 library is missing "
+			"(install from GNU ELPA)")))
+  (when (or (null org-caldav-oauth2-client-id)
+	    (null org-caldav-oauth2-client-secret))
+    (user-error (concat "You need to set oauth2 client ID and secret "
+			"for OAuth2 authentication"))))
+
+(defun org-caldav-retrieve-oauth2-token (provider)
+  "Do OAuth2 authentication."
+  (unless org-caldav-oauth2-token
+    (let ((ids (assoc provider org-caldav-oauth2-providers)))
+      (setq org-caldav-oauth2-token
+	    (oauth2-auth-and-store (nth 1 ids) (nth 2 ids) (nth 3 ids)
+				   org-caldav-oauth2-client-id
+				   org-caldav-oauth2-client-secret))
+      (when (null org-caldav-oauth2-token)
+	(user-error "OAuth2 authentication failed")))))
+
+(defun org-caldav-url-retrieve-synchronously (url &optional
+					      request-method
+					      request-data
+					      extra-headers)
+  "Retrieve URL with REQUEST-METHOD, REQUEST-DATA and EXTRA-HEADERS.
+This will switch to OAuth2 if necessary."
+  (if (org-caldav-use-oauth2)
+      (oauth2-url-retrieve-synchronously org-caldav-oauth2-token
+					 url request-method request-data
+					 extra-headers)
+    (let ((url-request-method request-method)
+	  (url-request-data request-data)
+	  (url-request-extra-headers extra-headers))
+      (url-retrieve-synchronously url))))
+
+(defun org-caldav-url-dav-get-properties (url property)
+  "Retrieve PROPERTY from URL.
+Output is the same as `url-dav-get-properties'.  This switches to
+OAuth2 if necessary."
+  (let ((request-data (concat "<?xml version=\"1.0\" encoding=\"utf-8\" ?>\n"
+			      "<DAV:propfind xmlns:DAV='DAV:'>\n<DAV:prop>"
+			      "<DAV:" property "/></DAV:prop></DAV:propfind>\n"))
+	(extra '(("Depth" . "1") ("Content-type" . "text/xml"))))
+    (url-dav-process-response
+     (org-caldav-url-retrieve-synchronously url "PROPFIND" request-data extra)
+     url)))
+
 (defun org-caldav-check-connection ()
   "Check connection by doing a PROPFIND on CalDAV URL.
 Also sets `org-caldav-empty-calendar' if calendar is empty."
@@ -284,9 +380,8 @@ Also sets `org-caldav-empty-calendar' if calendar is empty."
      (org-caldav-debug-print
       1 "Got error while checking for DAV (will try again):" err)
      (org-caldav-check-dav (org-caldav-events-url))))
-  (let ((output (url-dav-get-properties
-		 (org-caldav-events-url)
-		 '(DAV:resourcetype) 1)))
+  (let ((output (org-caldav-url-dav-get-properties
+		 (org-caldav-events-url) "resourcetype")))
     (unless (member (plist-get (cdar output) 'DAV:status) '(200 207))
       (org-caldav-debug-print 1 "Got error status from PROPFIND: " output)
       (error "Could not query CalDAV URL %s." (org-caldav-events-url)))
@@ -317,9 +412,8 @@ Also sets `org-caldav-empty-calendar' if calendar is empty."
 Return list with elements (uid . etag)."
   (if org-caldav-empty-calendar
       nil
-    (let ((output (url-dav-get-properties
-		   (org-caldav-events-url)
-		   '(DAV:getetag) 1)))
+    (let ((output (org-caldav-url-dav-get-properties
+		   (org-caldav-events-url) "getetag")))
       (cond
        ((> (length output) 1)
 	;; Everything looks OK - we got a list of "things".
@@ -353,7 +447,7 @@ If retrieve fails, do `org-caldav-retry-attempts' retries."
     (while (and (not eventbuffer)
 		(< counter org-caldav-retry-attempts))
       (with-current-buffer
-	  (url-retrieve-synchronously
+	  (org-caldav-url-retrieve-synchronously
 	   (concat (org-caldav-events-url) (url-hexify-string uid) org-caldav-uuid-extension))
 	(goto-char (point-min))
 	(if (looking-at "HTTP.*2[0-9][0-9]")
@@ -403,6 +497,11 @@ The filename will be derived from the UID."
 	 (concat (org-caldav-events-url) uid org-caldav-uuid-extension)
 	 (encode-coding-string (buffer-string) 'utf-8))))))
 
+(defun org-caldav-url-dav-delete-file (url)
+  "Delete URL.
+Will switch to OAuth2 if necessary."
+  (org-caldav-url-retrieve-synchronously url "DELETE"))
+
 (defun org-caldav-delete-event (uid)
   "Delete event UID from calendar.
 Returns t on success and nil if an error occurs.  The error will
@@ -410,7 +509,8 @@ be caught and a message displayed instead."
   (org-caldav-debug-print 1 (format "Deleting event UID %s." uid))
   (condition-case err
       (progn
-	(url-dav-delete-file (concat (org-caldav-events-url) uid org-caldav-uuid-extension))
+	(org-caldav-url-dav-delete-file
+	 (concat (org-caldav-events-url) uid org-caldav-uuid-extension))
 	t)
     (error
      (progn
@@ -446,9 +546,17 @@ Are you really sure? ")))
 
 (defun org-caldav-events-url ()
   "Return URL for events."
-  (if (string-match "google\\.com" org-caldav-url)
-      (concat org-caldav-url "/" org-caldav-calendar-id "/events/")
-    (concat org-caldav-url "/" org-caldav-calendar-id "/")))
+  (let* ((url
+	  (if (org-caldav-use-oauth2)
+	      (nth 4 (assoc org-caldav-url org-caldav-oauth2-providers))
+	    org-caldav-url))
+	 (eventsurl
+	  (if (string-match ".*%s.*" url)
+	      (format url org-caldav-calendar-id)
+	    (concat url "/" org-caldav-calendar-id "/"))))
+    (if (string-match ".*/$" eventsurl)
+	eventsurl
+      (concat eventsurl "/"))))
 
 (defun org-caldav-update-eventdb-from-org (buf)
   "With combined ics file in BUF, update the event database."
@@ -567,15 +675,22 @@ The format of CALENDAR is described in `org-caldav-calendars'.
 If CALENDAR is not provided, the default values will be used.
 If RESUME is non-nil, try to resume."
   (setq org-caldav-previous-calendar calendar)
-  (let (calkeys calvalues)
+  (let (calkeys calvalues oauth-enable)
+    ;; Extrace keys and values from 'calendar' for progv binding.
     (dolist (i (number-sequence 0 (1- (length calendar)) 2))
       (setq calkeys (append calkeys (list (nth i calendar)))
 	    calvalues (append calvalues (list (nth (1+ i) calendar)))))
-    (progv (mapcar 'org-caldav-var-for-key calkeys) calvalues
+      (progv (mapcar 'org-caldav-var-for-key calkeys) calvalues
       (dolist (filename (append org-caldav-files
 				(list (org-caldav-inbox-file org-caldav-inbox))))
 	(when (not (file-exists-p filename))
 	  (user-error "File %s does not exist" filename)))
+      ;; Check if we need to do OAuth2
+      (when (org-caldav-use-oauth2)
+	;; We need to do oauth2. Check if it is available.
+	(org-caldav-check-oauth2 org-caldav-url)
+	;; Retrieve token
+	(org-caldav-retrieve-oauth2-token org-caldav-url))
       (org-caldav-check-connection)
       (unless resume
 	(setq org-caldav-ics-buffer (org-caldav-generate-ics))
@@ -605,10 +720,10 @@ If RESUME is non-nil, try to resume."
     (user-error "You have to use at least Emacs 24.3"))
   (org-caldav-debug-print 1 "========== Started sync.")
   (if (and org-caldav-event-list
-        (not (eq org-caldav-resume-aborted 'never))
-        (or (eq org-caldav-resume-aborted 'always)
-          (and (eq org-caldav-resume-aborted 'ask))
-          (y-or-n-p "Last sync seems to have been aborted. \
+	   (not (eq org-caldav-resume-aborted 'never))
+	   (or (eq org-caldav-resume-aborted 'always)
+	       (and (eq org-caldav-resume-aborted 'ask))
+	       (y-or-n-p "Last sync seems to have been aborted. \
 Should I try to resume? ")))
       (org-caldav-sync-calendar org-caldav-previous-calendar t)
     (setq org-caldav-sync-result nil)
@@ -1346,17 +1461,16 @@ which can be fed into `org-caldav-insert-org-entry'."
 ;; This does more error checking on the headers and retries
 ;; in case of an error.
 (defun org-caldav-save-resource (url obj)
-  "Save string OBJ as URL using WebDAV."
-  (let* ((url-request-extra-headers
-	  '(("Content-type" . "text/calendar; charset=UTF-8")))
-	 (url-request-method "PUT")
-	 (url-request-data obj)
-	 (counter 0)
+  "Save string OBJ as URL using WebDAV.
+This witches to OAuth2 if necessary."
+  (let* ((counter 0)
 	 errormessage buffer)
     (while (and (not buffer)
 		(< counter org-caldav-retry-attempts))
       (with-current-buffer
-	  (url-retrieve-synchronously url)
+	  (org-caldav-url-retrieve-synchronously
+	   url "PUT" obj
+	   '(("Content-type" . "text/calendar; charset=UTF-8")))
 	(goto-char (point-min))
 	(if (looking-at "HTTP.*2[0-9][0-9]")
 	    (setq buffer (current-buffer))
