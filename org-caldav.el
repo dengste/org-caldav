@@ -380,16 +380,25 @@ Also sets `org-caldav-empty-calendar' if calendar is empty."
      (org-caldav-debug-print
       1 "Got error while checking for DAV (will try again):" err)
      (org-caldav-check-dav (org-caldav-events-url))))
-  (let ((output (org-caldav-url-dav-get-properties
-		 (org-caldav-events-url) "resourcetype")))
-    (unless (member (plist-get (cdar output) 'DAV:status) '(200 207))
+  (let* ((output (org-caldav-url-dav-get-properties
+		  (org-caldav-events-url) "resourcetype"))
+	 (status (plist-get (cdar output) 'DAV:status)))
+    ;; We accept any 2xx status. Since some CalDAV servers return 404
+    ;; for a newly created and not yet used calendar, we accept it as
+    ;; well.
+    (unless (or (= (/ status 100) 2)
+		(= status 404))
       (org-caldav-debug-print 1 "Got error status from PROPFIND: " output)
       (error "Could not query CalDAV URL %s." (org-caldav-events-url)))
-    (when (= (length output) 1)
-      ;; This is an empty calendar; fetching etags might return 404.
-      (org-caldav-debug-print 1 "This is an empty calendar. Setting flag.")
-      (setq org-caldav-empty-calendar t)))
-  t)
+    (if (= status 404)
+	(progn
+	  (org-caldav-debug-print 1 "Got 404 status - assuming calendar is new and empty.")
+	  (setq org-caldav-empty-calendar t))
+      (when (= (length output) 1)
+	;; This is an empty calendar; fetching etags might return 404.
+	(org-caldav-debug-print 1 "This is an empty calendar. Setting flag.")
+	(setq org-caldav-empty-calendar t)))
+    t))
 
 ;; This defun is partly taken out of url-dav.el, written by Bill Perry.
 (defun org-caldav-get-icsfiles-etags-from-properties (properties)
