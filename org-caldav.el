@@ -37,9 +37,7 @@
 (require 'org-id)
 (require 'icalendar)
 (require 'url-util)
-
-(eval-when-compile
-  (require 'cl))
+(require 'cl-lib)
 
 (defvar org-caldav-url "https://my.calendarserver.invalid/caldav"
   "Base URL for CalDAV access.
@@ -666,7 +664,7 @@ Are you really sure? ")))
 
 (defun org-caldav-var-for-key (key)
   "Return associated global org-caldav variable for key KEY."
-  (case key
+  (cl-case key
     (:url 'org-caldav-url)
     (:calendar-id 'org-caldav-calendar-id)
     (:files 'org-caldav-files)
@@ -689,7 +687,7 @@ If RESUME is non-nil, try to resume."
     (dolist (i (number-sequence 0 (1- (length calendar)) 2))
       (setq calkeys (append calkeys (list (nth i calendar)))
 	    calvalues (append calvalues (list (nth (1+ i) calendar)))))
-      (progv (mapcar 'org-caldav-var-for-key calkeys) calvalues
+    (cl-progv (mapcar 'org-caldav-var-for-key calkeys) calvalues
       (dolist (filename (append org-caldav-files
 				(list (org-caldav-inbox-file org-caldav-inbox))))
 	(when (not (file-exists-p filename))
