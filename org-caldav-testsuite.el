@@ -525,3 +525,27 @@ moose
   (org-caldav-test-cleanup)
   )
 
+;; Make sure setting org-caldav-files to 'nil' does not
+;; do anything weird.
+(ert-deftest org-caldav-06-org-caldav-files-nil ()
+  (message "Setting up temporary files")
+  (org-caldav-test-setup-temp-files)
+  (setq org-caldav-calendar-id (car org-caldav-test-calendar-names))
+  ;; Set org-caldav-files to nil
+  (setq org-caldav-files nil)
+  (setq org-caldav-inbox org-caldav-test-inbox)
+  (setq org-caldav-debug-level 2)
+  (message "Setting up upstream calendar")
+  (org-caldav-test-set-up)
+  (message "Putting events")
+  (org-caldav-test-put-events)
+  (org-caldav-sync)
+  ;; Events must still be in calendar
+  (should (org-caldav-get-event "orgcaldavtest@cal1"))
+  (should (org-caldav-get-event "orgcaldavtest-cal2"))
+  ;; Sync result
+  (should (equal
+	   '(("test1" "orgcaldavtest@cal1" new-in-cal cal->org)
+	     ("test1" "orgcaldavtest-cal2" new-in-cal cal->org))
+	   org-caldav-sync-result))
+  (org-caldav-test-cleanup))
