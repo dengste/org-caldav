@@ -9,6 +9,7 @@
 (require 'ert)
 (require 'org)
 (require 'org-caldav)
+(require 'cl-lib)
 
 (when (org-caldav-use-oauth2)
   (org-caldav-check-oauth2 org-caldav-url)
@@ -549,3 +550,40 @@ moose
 	     ("test1" "orgcaldavtest-cal2" new-in-cal cal->org))
 	   org-caldav-sync-result))
   (org-caldav-test-cleanup))
+
+;; Check that we are able to detect when an Org file was removed from
+;; org-caldav-files between syncs.
+(ert-deftest org-caldav-07-detect-removed-file ()
+  (message "Setting up temporary files")
+  (org-caldav-test-setup-temp-files)
+  (with-current-buffer (find-file-noselect org-caldav-test-orgfile)
+    (insert org-caldav-test-org1)
+    (save-buffer))
+  (with-current-buffer (find-file-noselect org-caldav-test-second-orgfile)
+    (insert org-caldav-test-org2)
+    (save-buffer))
+  (setq org-caldav-calendar-id (car org-caldav-test-calendar-names))
+  ;; Set org-caldav-files to nil
+  (setq org-caldav-files (list org-caldav-test-orgfile org-caldav-test-second-orgfile))
+  (setq org-caldav-inbox org-caldav-test-inbox)
+  (setq org-caldav-debug-level 2)
+  (message "Setting up upstream calendar")
+  (org-caldav-test-set-up)
+  (message "Putting events")
+  (org-caldav-test-put-events)
+  (message "1st sync")
+  (org-caldav-sync)
+  ;; Remove one of the files
+  (setq org-caldav-files (list org-caldav-test-second-orgfile))
+  ;; Sync again, binding yes-or-no-p to our test
+  (setq org-caldav-test-seen-prompt nil)
+  (let (octest-seen-prompt)
+    (cl-letf (((symbol-function 'yes-or-no-p)
+	       (lambda (prompt)
+		 (setq octest-seen-prompt prompt) nil)))
+      (message "2nd sync")
+      (should-error (org-caldav-sync))
+      (should (string-match "WARNING: Previously synced"
+			    octest-seen-prompt))))
+  (org-caldav-test-cleanup))
+

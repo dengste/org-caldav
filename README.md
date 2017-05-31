@@ -98,7 +98,7 @@ to the symbol 'google, and look up the org-caldav-calendar-id as
 described above.
 
 On first connection, the oauth2 library should redirect you to the
-Google OAuth2 authentication site. This requires a javacript enabled
+Google OAuth2 authentication site. This requires a javascript enabled
 browser, so make sure that browse-url-browser-function is set to
 something like browse-url-firefox (the internal shr or w3m browser
 will **not** work). After authentication, you will be given a key that
@@ -213,7 +213,13 @@ case, but changed with the new exporters).
 #### Syncing deletions
 
 If you delete entries in your Org files, the corresponding iCalendar
-entries will simply get deleted.
+entries will by default get deleted. For this reason, you must be
+careful to not simply remove previously synced files from
+org-caldav-files, as org-caldav would view all the entries from those
+files as deleted and hence also delete them from the calendar.
+However, org-caldav should be able to detect this situation and warn
+you with the message 'Previously synced file(s) are missing', asking
+you whether to continue nonetheless.
 
 If you delete events in your calendar, you will by default get asked
 if you'd like to delete the corresponding Org event. You can change

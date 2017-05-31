@@ -232,6 +232,9 @@ and  action = {org->cal, cal->org, error:org->cal, error:cal->org}.")
 (defvar org-caldav-oauth2-token nil
   "Token for OAuth2 authentication.")
 
+(defvar org-caldav-previous-files nil
+  "Files that were synced during previous run.")
+
 (defsubst org-caldav-add-event (uid md5 etag sequence status)
   "Add event with UID, MD5, ETAG and STATUS."
   (setq org-caldav-event-list
@@ -701,8 +704,20 @@ If RESUME is non-nil, try to resume."
       (org-caldav-check-connection)
       (unless resume
 	(setq org-caldav-ics-buffer (org-caldav-generate-ics))
-	(setq org-caldav-event-list nil)
+	(setq org-caldav-event-list nil
+	      org-caldav-previous-files nil)
 	(org-caldav-load-sync-state)
+	;; Check if org files were removed.
+	(when org-caldav-previous-files
+	  (let ((missing (cl-set-difference org-caldav-previous-files
+					    org-caldav-files
+					    :test #'string=)))
+	    (when (and missing
+		       (not (yes-or-no-p
+			     (concat "WARNING: Previously synced file(s) are missing: "
+				     (string-join missing ",")
+				     "%s. Are you sure you want to sync? "))))
+	      (user-error "Sync aborted"))))
 	;; Remove status in event list
 	(dolist (cur org-caldav-event-list)
 	  (org-caldav-event-set-status cur nil))
@@ -1268,6 +1283,9 @@ See also `org-caldav-save-directory'."
     (goto-char (point-min))
     (while (re-search-forward ")[^)]" nil t)
       (insert "\n"))
+    ;; Save the current value of org-caldav-files
+    (insert "(setq org-caldav-previous-files '"
+	    (prin1-to-string org-caldav-files) ")\n")
     ;; Save it.
     (write-region (point-min) (point-max)
 		  (org-caldav-sync-state-filename org-caldav-calendar-id))))
