@@ -46,7 +46,7 @@ calendar:
       the shown path is the calendar-id. This should *usually* be the
       same as the name of the calendar, but not necessarily: Owncloud
       might replace certain characters (upper- to lowercase, for
-      instance), or it might even be entirely different it the
+      instance), or it might even be entirely different if the
       calendar was created by another CalDAV application.
     - Google: Click on 'calendar settings' and the id will be shown
       next to "Calendar Address". It is of the form
