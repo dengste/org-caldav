@@ -135,6 +135,14 @@ ask = Ask for before deletion (default)
 never = Never delete Org entries
 always = Always delete")
 
+(defvar org-caldav-delete-calendar-entries 'always
+  "Whether entries deleted in Org may be deleted in calendar.
+Can be one of the following symbols:
+
+always = Always delete without asking (default)
+ask = Ask for before deletion
+never = Never delete calendar entries")
+
 (defvar org-caldav-skip-conditions nil
   "Conditions for skipping entries during icalendar export.
 This must be a list of conditions, which are described in the
@@ -809,18 +817,23 @@ ICSBUF is the buffer containing the exported iCalendar file."
 			(org-caldav-event-status cur) 'org->cal)
 		  org-caldav-sync-result)))))
     ;; Remove events that were deleted in org
-    (let ((events (org-caldav-filter-events 'deleted-in-org))
-	  (url-show-status nil)
-	  (counter 0))
-      (dolist (cur events)
-	(setq counter (1+ counter))
-	(message "Deleting event %d from %d" counter (length events))
-	(org-caldav-delete-event (car cur))
-	(push (list org-caldav-calendar-id (car cur)
-		    'deleted-in-org 'removed-from-cal)
-	      org-caldav-sync-result)
-	(setq org-caldav-event-list
-	      (delete cur org-caldav-event-list))))
+    (unless (eq org-caldav-delete-calendar-entries 'never)
+      (let ((events (org-caldav-filter-events 'deleted-in-org))
+	    (url-show-status nil)
+	    (counter 0))
+	(dolist (cur events)
+	  (setq counter (1+ counter))
+	  (when (or (eq org-caldav-delete-calendar-entries 'always)
+		    (y-or-n-p (format "Delete event '%s' from calendar?"
+				       (org-caldav-get-calendar-summary-from-uid
+					(car cur)))))
+	    (message "Deleting event %d from %d" counter (length events))
+	    (org-caldav-delete-event (car cur))
+	    (push (list org-caldav-calendar-id (car cur)
+			'deleted-in-org 'removed-from-cal)
+		  org-caldav-sync-result)
+	    (setq org-caldav-event-list
+		  (delete cur org-caldav-event-list))))))
     ;; Remove events that could not be put
     (dolist (cur (org-caldav-filter-events 'error))
       (setq org-caldav-event-list
@@ -1394,6 +1407,17 @@ If COMPLEMENT is non-nil, return all item without errors."
     (beginning-of-line)
     (looking-at "UID: \\(.+\\)$")
     (org-id-goto (match-string 1))))
+
+(defun org-caldav-get-calendar-summary-from-uid (uid)
+  "Get summary from UID from calendar."
+  (let ((buf (org-caldav-get-event uid))
+	(heading ""))
+    (when buf
+      (with-current-buffer buf
+	(goto-char (point-min))
+	(when (re-search-forward "^SUMMARY:\\(.*\\)$" nil t)
+	  (setq heading (match-string 1)))))
+    heading))
 
 ;; The following is taken from icalendar.el, written by Ulf Jasper.
 

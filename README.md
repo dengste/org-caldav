@@ -217,13 +217,16 @@ case, but changed with the new exporters).
 #### Syncing deletions
 
 If you delete entries in your Org files, the corresponding iCalendar
-entries will by default get deleted. For this reason, you must be
-careful to not simply remove previously synced files from
+entries will by default get deleted. You can change that behavior with
+org-caldav-delete-calendar-entries to never delete, or to ask before
+deletion.
+
+You must be careful to not simply remove previously synced files from
 org-caldav-files, as org-caldav would view all the entries from those
-files as deleted and hence also delete them from the calendar.
-However, org-caldav should be able to detect this situation and warn
-you with the message 'Previously synced file(s) are missing', asking
-you whether to continue nonetheless.
+files as deleted and hence by default also delete them from the
+calendar.  However, org-caldav should be able to detect this situation
+and warn you with the message 'Previously synced file(s) are missing',
+asking you whether to continue nonetheless.
 
 If you delete events in your calendar, you will by default get asked
 if you'd like to delete the corresponding Org event. You can change
