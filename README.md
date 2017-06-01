@@ -40,7 +40,11 @@ way to uniquely identify Org entries.
     - Google: Set to symbol 'google. See below for further documentation.
 
 * Set org-caldav-calendar-id to the calendar-id of your new calendar:
-    - OwnCloud: Simply the name of the calendar.
+    - Own/NextCloud: Usually simply the name of the calendar. **BUT**:
+      You should additionally check the link of the calendar (click on
+      symbol next to calendar name), to make sure the name really is
+      identical there. For instance, Owncloud might replace some
+      unsafe characters, change upper to lowercase, etc.
     - Google: Click on 'calendar settings' and the id will be shown
       next to "Calendar Address". It is of the form
       ID@group.calendar.google.com. Do *not* omit the domain!
