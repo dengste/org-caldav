@@ -34,12 +34,12 @@ way to uniquely identify Org entries.
 
 * Create a new calendar; the name does not matter.
 
-* Set org-caldav-url to the base address of your CalDAV server:
+* Set `org-caldav-url` to the base address of your CalDAV server:
     - Owncloud/Nextcloud (9.x and above): https://OWNCLOUD-SERVER-URL/remote.php/dav/calendars/USERID
     - Owncloud 8.x and below: https://OWNCLOUD-SERVER-URL/remote.php/caldav/calendars/USERID
     - Google: Set to symbol 'google. See below for further documentation.
 
-* Set org-caldav-calendar-id to the calendar-id of your new calendar:
+* Set `org-caldav-calendar-id` to the calendar-id of your new calendar:
     - Own/NextCloud: Usually simply the name of the calendar. **BUT**:
       You should additionally check the link of the calendar (click on
       symbol next to calendar name), to make sure the name really is
@@ -47,17 +47,17 @@ way to uniquely identify Org entries.
       unsafe characters, change upper to lowercase, etc.
     - Google: Click on 'calendar settings' and the id will be shown
       next to "Calendar Address". It is of the form
-      ID@group.calendar.google.com. Do *not* omit the domain!
+      `ID@group.calendar.google.com`. Do *not* omit the domain!
 
-* Set org-caldav-inbox to an org filename where new entries from the
+* Set `org-caldav-inbox` to an org filename where new entries from the
   calendar should be stored. Just to be safe, I suggest using an
   empty, dedicated Org file for that.
 
-* Set org-caldav-files to the list of org files you would like to
-  sync. The above org-caldav-inbox will be automatically added, so you
+* Set `org-caldav-files` to the list of org files you would like to
+  sync. The above `org-caldav-inbox` will be automatically added, so you
   don't have to add it here.
 
-* It is usually a good idea to manually set org-icalendar-timezone to
+* It is usually a good idea to manually set `org-icalendar-timezone` to
   the timezone of your remote calendar. It should be a simple string
   like "Europe/Berlin". If that doesn't work and your events are
   shifted by a few hours, try the setting "UTC" (the SOGo calendar
@@ -67,24 +67,24 @@ Please note that org-caldav does not directly control how and which
 entries are exported, it just uses the org-icalendar
 exporter. Therefore, you should also take a look at the options from
 the org-icalendar exporter. Most importantly, take a look at
-org-icalendar-alarm-time to add a reminder to your entries, and
-org-icalendar-use-deadline and org-icalendar-use-scheduled to control
+`org-icalendar-alarm-time` to add a reminder to your entries, and
+`org-icalendar-use-deadline` and `org-icalendar-use-scheduled` to control
 which timestamps should be used.
 
-Call org-caldav-sync to start the sync. The URL package will ask you
+Call `org-caldav-sync` to start the sync. The URL package will ask you
 for username/password for accessing the calendar. (See below on how to
 store that password in an authinfo file.)
 
 The first sync can easily take several minutes, depending on the
 number of calendar items. Especially Google's CalDAV interface is
 pretty slow. If you have to abort the initial sync for some reason,
-just start org-caldav-sync again in the same Emacs session and you
+just start `org-caldav-sync` again in the same Emacs session and you
 should get asked if you'd like to resume.
 
 The same goes for sync errors you might get. Especially when using
 Google Calendar, it is not unusual to get stuff like '409' errors
 during the initial sync. Only Google knows why. Just run
-org-caldav-sync again until all events are uploaded.
+`org-caldav-sync` again until all events are uploaded.
 
 ### Syncing to Google Calendar
 
@@ -96,15 +96,15 @@ this, follow the Google documentation at
 
 https://developers.google.com/google-apps/calendar/caldav/v2/guide#creating_your_client_id
 
-Put the client ID and secret into org-caldav-oauth2-client-id and
-org-caldav-oauth2-client-secret, respectively. Then set org-caldav-url
-to the symbol 'google, and look up the org-caldav-calendar-id as
+Put the client ID and secret into `org-caldav-oauth2-client-id` and
+`org-caldav-oauth2-client-secret`, respectively. Then set `org-caldav-url`
+to the symbol 'google, and look up the `org-caldav-calendar-id` as
 described above.
 
 On first connection, the oauth2 library should redirect you to the
 Google OAuth2 authentication site. This requires a javascript enabled
-browser, so make sure that browse-url-browser-function is set to
-something like browse-url-firefox (the internal shr or w3m browser
+browser, so make sure that `browse-url-browser-function` is set to
+something like `browse-url-firefox` (the internal shr or w3m browser
 will **not** work). After authentication, you will be given a key that
 you have to paste into the Emacs prompt. The oauth2 library will save
 this key in Emacs' secure plist store, which is encrypted with
@@ -118,7 +118,7 @@ Compared to earlier versions of this package from 2012, it now does
 proper two-way syncing, that means it does not matter where and how
 you change an entry. You can also move Org entries freely from one
 file to another, as long as they are all listed in
-org-caldav-files. The org-icalendar package will put a unique ID on
+`org-caldav-files`. The org-icalendar package will put a unique ID on
 each entry with an active timestamp, so that org-caldav can find
 it. It will also sync deletions, but more on that later.
 
@@ -145,7 +145,7 @@ If you create a new iCalendar entry in your calendar, you'll get an
 Org entry with SUMMARY as heading, DESCRIPTION as body and the
 timestamp. However, if you *change* an existing entry in the calendar,
 things get more complicated and the variable
-org-caldav-sync-changes-to-org comes into play. Its default is the
+`org-caldav-sync-changes-to-org` comes into play. Its default is the
 symbol "title-and-timestamp", which means that only the entry's
 heading is synced (with SUMMARY) and the timestamp gets updated, but
 *not* the entry's body with DESCRIPTION.  The simple reason is that
@@ -156,7 +156,7 @@ gets generated from the calendar's event. You can also limit syncing
 to heading and/or timestamp only.
 
 To be extra safe, org-caldav will by default backup entries it
-changes. See the variable org-caldav-backup-file for details.
+changes. See the variable `org-caldav-backup-file` for details.
 
 * Org sexp entries
 
@@ -192,7 +192,7 @@ you *change* them in the *calendar*, this will *not* get synced
 back. Org-caldav just cannot find those entires, so this will generate
 a one-time sync error instead (again: those are not critical, just
 FIY). If you don't want those entries to be exported at all, just set
-org-icalendar-include-sexps to nil.
+`org-icalendar-include-sexps` to nil.
 
 #### Filtering entries
 
@@ -200,17 +200,17 @@ There are several possibilities to choose which entries should be
 synced and which not:
 
 * If you only want to sync manually marked entries, use
-  org-caldav-select-tags, which is directly mapped to
-  org-export-select-tags, so see its doc-string on how it works.
+  `org-caldav-select-tags`, which is directly mapped to
+  `org-export-select-tags`, so see its doc-string on how it works.
 
-* If you want to exclude certain tags, use org-caldav-exclude-tags,
-  which is mapped to org-icalendar-exclude tags.
+* If you want to exclude certain tags, use `org-caldav-exclude-tags`,
+  which is mapped to `org-icalendar-exclude` tags.
 
 * If you want more fine grained control, use
-  org-caldav-skip-conditions. The syntax of the conditions is
-  described in the doc-string of org-agenda-skip-if.
+  `org-caldav-skip-conditions`. The syntax of the conditions is
+  described in the doc-string of `org-agenda-skip-if`.
 
-Note however that the normal org-agenda-skip-function(-global) will
+Note however that the normal `org-agenda-skip-function(-global)` will
 **not** have any effect on the icalendar exporter (this used to be the
 case, but changed with the new exporters).
 
@@ -218,11 +218,11 @@ case, but changed with the new exporters).
 
 If you delete entries in your Org files, the corresponding iCalendar
 entries will by default get deleted. You can change that behavior with
-org-caldav-delete-calendar-entries to never delete, or to ask before
+`org-caldav-delete-calendar-entries` to never delete, or to ask before
 deletion.
 
 You must be careful to not simply remove previously synced files from
-org-caldav-files, as org-caldav would view all the entries from those
+`org-caldav-files`, as org-caldav would view all the entries from those
 files as deleted and hence by default also delete them from the
 calendar.  However, org-caldav should be able to detect this situation
 and warn you with the message 'Previously synced file(s) are missing',
@@ -230,10 +230,10 @@ asking you whether to continue nonetheless.
 
 If you delete events in your calendar, you will by default get asked
 if you'd like to delete the corresponding Org event. You can change
-that behavior through org-caldav-delete-org-entries.
+that behavior through `org-caldav-delete-org-entries`.
 
 If you answer a deletion request with "no", the event should get
-re-synced to the calendar next time you call org-caldav-sync.
+re-synced to the calendar next time you call `org-caldav-sync`.
 
 #### Conflict handling
 
@@ -264,14 +264,14 @@ for org-caldav.
 
 #### Storage of sync information and sync from different computers
 
-The current sync state is stored in a file org-caldav-SOMEID.el in
+The current sync state is stored in a file `org-caldav-SOMEID.el` in
 the ~/.emacs.d directory. You can change the location through the
-variable org-caldav-save-directory. SOMEID directly depends on the
+variable `org-caldav-save-directory`. SOMEID directly depends on the
 calendar id (it's a snipped MD5).
 
 If you sync your Org files across different machines and want to use
 org-caldav on all of them, don't forget to sync the org sync state,
-too. Probably your best bet is to set org-caldav-save-directory to the
+too. Probably your best bet is to set `org-caldav-save-directory` to the
 path you have your Org files in, so that it gets copied alongside with
 them.
 
@@ -284,9 +284,10 @@ doing
 
 The function has to be called with a prefix so that you don't call it
 by accident. This will delete everything in the calendar along with
-the current sync state. You can then call org-caldav-sync afterwards
+the current sync state. You can then call `org-caldav-sync` afterwards
 and it will completely put all Org events into the now empty
-calendar. Needless to say, don't do that if you have new events in your calendar which are not synced yet...
+calendar. Needless to say, don't do that if you have new events in
+your calendar which are not synced yet...
 
 Deleting many events can be slow, though; in that case, just delete
 the calendar and re-create it, delete the sync state file in
@@ -294,11 +295,11 @@ the calendar and re-create it, delete the sync state file in
 
 #### Syncing with more than one calendar
 
-This can be done by setting the variable org-caldav-calendars. It
+This can be done by setting the variable `org-caldav-calendars`. It
 should be a list of plists (a 'plist' is simply a list with alternating
 :key's and values). Through these plists, you can override the global
-values of variables like org-caldav-calendar-id, and calling
-org-caldav-sync will go through these plists in order.
+values of variables like `org-caldav-calendar-id`, and calling
+`org-caldav-sync` will go through these plists in order.
 
 Example:
 
@@ -307,7 +308,7 @@ Example:
          :inbox "~/org/fromwork.org")
         (:calendar-id "stuff@mystuff"
          :files ("~/org/sports.org" "~/org/play.org")
-	 :skip-conditions (regexp "soccer")
+         :skip-conditions (regexp "soccer")
          :inbox "~/org/fromstuff.org")) )
 
 This means that you have two calendars with IDs "work@whatever" and
@@ -317,26 +318,23 @@ org-caldav-url, since the key :url isn't specified. The calendar
 'fromwork.org', while "stuff@mystuff" with 'sports.org' and
 'play.org', *unless* there's the string 'soccer' in the heading, and
 and inbox is 'fromstuff.org'. See the doc-string of
-org-caldav-calendars for more details on which keys you can use.
+`org-caldav-calendars` for more details on which keys you can use.
 
 #### Additional stuff
 
-See the doc-string of org-caldav-inbox if you want more flexibility in
+See the doc-string of `org-caldav-inbox` if you want more flexibility in
 where new items should be put. Instead of simply providing a file, you
 can also choose an existing entry or headline.
-
-Also, you can use org-caldav-select-tags to filter the tags that
-should be exported.
 
 #### Timezone problems
 
 Timezone handling is plain horrible, and it seems every CalDAV server
 does it slightly differently, also using non-standard headers like
 X-WR-TIMEZONE. If you see items being shifted by a few hours, make
-really really sure you have properly set org-icalendar-timezone, and
+really really sure you have properly set `org-icalendar-timezone`, and
 that your calendar is configured to use the same one.
 
-If it still does not work, you can try setting org-icalendar-timezone
+If it still does not work, you can try setting `org-icalendar-timezone`
 to the string "UTC". This will put all events using UTC times and the
 server should transpose the time to the timezone you have set in your
 calendar preferences. For some servers (like SOGo) this might work
@@ -370,7 +368,7 @@ helpful to see what's going wrong. If Emacs throws an error, do
 and try to replicate the error to get a backtrace.
 
 You can also turn on excessive debugging by setting the variable
-org-caldav-debug-level to 2. This will also output the *contents* of
+`org-caldav-debug-level` to 2. This will also output the *contents* of
 the events into the debug buffer. If you send such a buffer in a bug
 report, please make very sure you have removed personal information
 from those events.
