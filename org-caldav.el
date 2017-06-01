@@ -715,7 +715,7 @@ If RESUME is non-nil, try to resume."
 	    (when (and missing
 		       (not (yes-or-no-p
 			     (concat "WARNING: Previously synced file(s) are missing: "
-				     (string-join missing ",")
+				     (mapconcat 'identity missing ",")
 				     "%s. Are you sure you want to sync? "))))
 	      (user-error "Sync aborted"))))
 	;; Remove status in event list
