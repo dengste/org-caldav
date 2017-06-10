@@ -2,29 +2,31 @@
 
 Caldav sync for Emacs Orgmode
 
-Minimum Emacs version needed: 24.3
+* Minimum Emacs version needed: 24.3
 
-Tested CalDAV servers: Owncloud, Nextcloud
+* **Regularly tested CalDAV servers**: Owncloud, Nextcloud
 
-Google Calendar should work, but you need to register an application
-with the Google Developer Console for OAuth2 authentication (see
-below).
+* **Google Calendar**: Should work, but you need to register an
+application with the Google Developer Console for OAuth2
+authentication (see below).
+
+* **Radicale** and **Baikal**: Should work. If you get problems with
+'Digest' authentication, switch back to 'Basic' (make sure to use
+https, though!). If you get asked for password repeatedly, put it in
+.authinfo file (see below).
 
 Also reported to be working: SOGo, Kolab (https://kolabnow.com/clients/emacs)
-
-Reported to be **not** working: Baikal, Radicale (the latter might
-work if you use a recent Emacs 26.0.x snapshot, see issue #86).
 
 Note that current Emacs releases do not correctly handle https over a
 proxy connection
 (https://debbugs.gnu.org/cgi/bugreport.cgi?bug=11788). If you need
 that, you'll have to use a recent Emacs 26.0.x snapshot.
 
-*IMPORTANT*: Before using this code, please make sure you have backups
+**IMPORTANT**: Before using this code, please make sure you have backups
 of your precious Org files. Also, I strongly suggest to create a new,
 empty calendar on your server for using this package.
 
-*ALSO IMPORTANT*: When using this package, possibly all Org entries
+**ALSO IMPORTANT**: When using this package, possibly all Org entries
 will get an UID property (see doc-string of org-icalendar-store-UID
 for further details). If you don't want this, then *do not use this
 package*; there is just no way around that. It is the only reliable
