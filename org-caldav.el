@@ -398,12 +398,7 @@ OAuth2 if necessary."
 Also sets `org-caldav-empty-calendar' if calendar is empty."
   (org-caldav-debug-print 1 (format "Check connection for %s."
 				    (org-caldav-events-url)))
-  (condition-case err
-      (org-caldav-check-dav (org-caldav-events-url))
-    (error
-     (org-caldav-debug-print
-      1 "Got error while checking for DAV (will try again):" err)
-     (org-caldav-check-dav (org-caldav-events-url))))
+  (org-caldav-check-dav (org-caldav-events-url))
   (let* ((output (org-caldav-url-dav-get-properties
 		  (org-caldav-events-url) "resourcetype"))
 	 (status (plist-get (cdar output) 'DAV:status)))
@@ -724,7 +719,20 @@ If RESUME is non-nil, try to resume."
 	(org-caldav-check-oauth2 org-caldav-url)
 	;; Retrieve token
 	(org-caldav-retrieve-oauth2-token org-caldav-url))
-      (org-caldav-check-connection)
+      (let ((numretry 0)
+	    success)
+	(while (null success)
+	  (condition-case err
+	      (progn
+		(org-caldav-check-connection)
+		(setq success t))
+	    (error
+	     (when (= numretry org-caldav-retry-attempts)
+	       ;; Giving up
+	       (signal (car err) (cdr err)))
+	     (org-caldav-debug-print
+	      1 "Got error while checking connection (will try again):" err)
+	     (cl-incf numretry)))))
       (unless resume
 	(setq org-caldav-ics-buffer (org-caldav-generate-ics))
 	(setq org-caldav-event-list nil
