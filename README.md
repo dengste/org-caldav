@@ -2,9 +2,11 @@
 
 Caldav sync for Emacs Orgmode
 
-* Minimum Emacs version needed: 24.3
+**Minimum Emacs version needed**: 24.3
 
-* **Regularly tested CalDAV servers**: Owncloud, Nextcloud
+CalDAV servers:
+
+* **Owncloud** and **Nextcloud**: Regularly tested.
 
 * **Google Calendar**: Should work, but you need to register an
 application with the Google Developer Console for OAuth2
@@ -15,7 +17,8 @@ authentication (see below).
 https, though!). If you get asked for password repeatedly, put it in
 .authinfo file (see below).
 
-Also reported to be working: SOGo, Kolab (https://kolabnow.com/clients/emacs)
+* **SOGo** and **Kolab**: Reported to be working
+    (https://kolabnow.com/clients/emacs)
 
 Note that current Emacs releases do not correctly handle https over a
 proxy connection
