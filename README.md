@@ -120,6 +120,11 @@ GnuPG. If you have not yet used a secure plist store, you will be
 asked for its encryption passphrase. In the future, you should only
 need to enter that passphrase again to connect with Google Calendar.
 
+By default, plstore will **not** cache your entered password, so it
+will possibly ask you **many** times. To activate caching, use
+
+    (setq plstore-cache-passphrase-for-symmetric-encryption t)
+
 ### DETAILS
 
 Compared to earlier versions of this package from 2012, it now does
