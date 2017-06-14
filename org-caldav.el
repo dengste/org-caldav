@@ -237,8 +237,8 @@ and  action = {org->cal, cal->org, error:org->cal, error:cal->org}.")
 (defvar org-caldav-ics-buffer nil
   "Buffer holding the ICS data.")
 
-(defvar org-caldav-oauth2-token nil
-  "Token for OAuth2 authentication.")
+(defvar org-caldav-oauth2-tokens nil
+  "Tokens for OAuth2 authentication.")
 
 (defvar org-caldav-previous-files nil
   "Files that were synced during previous run.")
@@ -340,16 +340,25 @@ configured correctly, and throw an user error otherwise."
     (user-error (concat "You need to set oauth2 client ID and secret "
 			"for OAuth2 authentication"))))
 
-(defun org-caldav-retrieve-oauth2-token (provider)
-  "Do OAuth2 authentication."
-  (unless org-caldav-oauth2-token
-    (let ((ids (assoc provider org-caldav-oauth2-providers)))
-      (setq org-caldav-oauth2-token
-	    (oauth2-auth-and-store (nth 1 ids) (nth 2 ids) (nth 3 ids)
-				   org-caldav-oauth2-client-id
-				   org-caldav-oauth2-client-secret))
-      (when (null org-caldav-oauth2-token)
-	(user-error "OAuth2 authentication failed")))))
+(defun org-caldav-retrieve-oauth2-token (provider calendar-id)
+  "Do OAuth2 authentication for PROVIDER with CALENDAR-ID."
+  (let ((cached-token
+	 (assoc
+	  (concat (symbol-name provider) "__" calendar-id)
+	  org-caldav-oauth2-tokens)))
+    (if cached-token
+	(cdr cached-token)
+      (let* ((ids (assoc provider org-caldav-oauth2-providers))
+	     (token (oauth2-auth-and-store (nth 1 ids) (nth 2 ids) (nth 3 ids)
+					   org-caldav-oauth2-client-id
+					   org-caldav-oauth2-client-secret)))
+	(when (null token)
+	  (user-error "OAuth2 authentication failed"))
+	(setq org-caldav-oauth2-tokens
+	      (append org-caldav-oauth2-tokens
+		      (list (cons (concat (symbol-name provider) "__" calendar-id)
+				  token))))
+	token))))
 
 (defun org-caldav-url-retrieve-synchronously (url &optional
 					      request-method
@@ -358,9 +367,10 @@ configured correctly, and throw an user error otherwise."
   "Retrieve URL with REQUEST-METHOD, REQUEST-DATA and EXTRA-HEADERS.
 This will switch to OAuth2 if necessary."
   (if (org-caldav-use-oauth2)
-      (oauth2-url-retrieve-synchronously org-caldav-oauth2-token
-					 url request-method request-data
-					 extra-headers)
+      (oauth2-url-retrieve-synchronously
+       (org-caldav-retrieve-oauth2-token org-caldav-url org-caldav-calendar-id)
+       url request-method request-data
+       extra-headers)
     (let ((url-request-method request-method)
 	  (url-request-data request-data)
 	  (url-request-extra-headers extra-headers))
@@ -718,7 +728,7 @@ If RESUME is non-nil, try to resume."
 	;; We need to do oauth2. Check if it is available.
 	(org-caldav-check-oauth2 org-caldav-url)
 	;; Retrieve token
-	(org-caldav-retrieve-oauth2-token org-caldav-url))
+	(org-caldav-retrieve-oauth2-token org-caldav-url org-caldav-calendar-id))
       (let ((numretry 0)
 	    success)
 	(while (null success)
@@ -727,12 +737,11 @@ If RESUME is non-nil, try to resume."
 		(org-caldav-check-connection)
 		(setq success t))
 	    (error
-	     (when (= numretry org-caldav-retry-attempts)
-	       ;; Giving up
-	       (signal (car err) (cdr err)))
-	     (org-caldav-debug-print
-	      1 "Got error while checking connection (will try again):" err)
-	     (cl-incf numretry)))))
+	     (if (= numretry (1- org-caldav-retry-attempts))
+		 (org-caldav-check-connection)
+	       (org-caldav-debug-print
+		1 "Got error while checking connection (will try again):" err)
+	       (cl-incf numretry))))))
       (unless resume
 	(setq org-caldav-ics-buffer (org-caldav-generate-ics))
 	(setq org-caldav-event-list nil
