@@ -384,7 +384,7 @@ default namespace."
     (with-current-buffer buffer
       (save-excursion
 	(goto-char (point-min))
-	(when (re-search-forward "<.* \\(xmlns=\"DAV:\"\\)" nil t)
+	(when (re-search-forward "<[^>]* \\(xmlns=\"DAV:\"\\)" nil t)
 	  (replace-match "xmlns:DAV=\"DAV:\"" nil nil nil 1)
 	  (goto-char (match-beginning 0))
 	  (while (re-search-forward "</?" nil t)
