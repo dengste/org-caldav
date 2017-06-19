@@ -160,6 +160,13 @@ might loose information in your Org items (take a look at
           (const timestamp-only :tag "Sync only the timestamp")
           (const all :tag "Sync everything")))
 
+(defcustom org-caldav-days-in-past nil
+  "Number of days before today to skip in the exported calendar.
+This makes it very easy to keep the remote calendar clean.
+
+nil means include all entries (default)
+any number set will cut the dates older than N days in the past. ")
+
 (defcustom org-caldav-delete-org-entries 'ask
   "Whether entries deleted in calendar may be deleted in Org.
 Can be one of the following symbols:
@@ -1254,8 +1261,11 @@ is on s-expression."
   (when (eq backend 'icalendar)
     (org-map-entries
      (lambda ()
-       (let ((pt (save-excursion (apply 'org-agenda-skip-entry-if org-caldav-skip-conditions))))
-		 (when pt (delete-region (point) (- pt 1))))))))
+       (let ((pt (save-excursion (apply 'org-agenda-skip-entry-if org-caldav-skip-conditions)))
+             (ts (when org-caldav-days-in-past (* (abs org-caldav-days-in-past) -1)))
+             (stamp (org-entry-get nil "TIMESTAMP" t)))
+         (when (or pt (and stamp (> ts (org-time-stamp-to-now stamp))))
+           (delete-region (point) (org-end-of-subtree t))))))))
 
 
 (defun org-caldav-create-uid (file &optional bell)
@@ -1295,7 +1305,8 @@ Returns buffer containing the ICS file."
 	(icalendar-uid-format "orgsexp-%h")
 	(org-export-before-parsing-hook
 	 (append org-export-before-parsing-hook
-		 (when org-caldav-skip-conditions '(org-caldav-skip-function))))
+           (when (or org-caldav-skip-conditions
+                     org-caldav-days-in-past) '(org-caldav-skip-function))))
 	(org-icalendar-date-time-format
 	 (cond
 	  ((and org-icalendar-timezone
