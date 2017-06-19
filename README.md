@@ -223,6 +223,11 @@ synced and which not:
   `org-caldav-skip-conditions`. The syntax of the conditions is
   described in the doc-string of `org-agenda-skip-if`.
 
+* In case you just want to keep your remote calendar clean, set
+  `org-caldav-days-in-past` to the number of days you want to keep in
+  the past on the remote calendar.  This does not affect your org files,
+  it works just as a filter for entries older than N days.
+
 Note however that the normal `org-agenda-skip-function(-global)` will
 **not** have any effect on the icalendar exporter (this used to be the
 case, but changed with the new exporters).

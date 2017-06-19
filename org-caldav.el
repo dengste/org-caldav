@@ -150,6 +150,14 @@ doc-string of `org-agenda-skip-if'.  Any entry that matches will
 not be exported.  Note that the normal `org-agenda-skip-function'
 has no effect on the icalendar exporter.")
 
+(defvar org-caldav-days-in-past nil
+  "Number of days before today to skip in the exported calendar.
+This makes it very easy to keep the remote calendar clean.
+
+nil means include all entries (default)
+any number set will cut the dates older than N days in the past.
+")
+
 (defvar org-caldav-backup-file
   (expand-file-name "org-caldav-backup.org" user-emacs-directory)
   "Name of the file where org-caldav should backup entries.
@@ -1121,9 +1129,11 @@ is on s-expression."
   (when (eq backend 'icalendar)
     (org-map-entries
      (lambda ()
-       (let ((pt (apply 'org-agenda-skip-entry-if org-caldav-skip-conditions)))
-	 (when pt
-	   (delete-region (point) pt)))))))
+       (let ((pt (apply 'org-agenda-skip-entry-if org-caldav-skip-conditions))
+              (ts (when org-caldav-days-in-past (* (abs org-caldav-days-in-past) -1)))
+              (stamp (org-entry-get nil "TIMESTAMP" t)))
+	 (when (or pt (and stamp (> ts (org-time-stamp-to-now stamp))))
+	   (delete-region (point) (or pt (org-end-of-subtree t)))))))))
 
 (defun org-caldav-generate-ics ()
   "Generate ICS file from `org-caldav-files'.
@@ -1146,7 +1156,8 @@ Returns buffer containing the ICS file."
 	(icalendar-uid-format "orgsexp-%h")
 	(org-export-before-parsing-hook
 	 (append org-export-before-parsing-hook
-		 (when org-caldav-skip-conditions '(org-caldav-skip-function))))
+           (when (or org-caldav-skip-conditions
+                   org-caldav-days-in-past) '(org-caldav-skip-function))))
 	(org-icalendar-date-time-format
 	 (cond
 	  ((and org-icalendar-timezone
