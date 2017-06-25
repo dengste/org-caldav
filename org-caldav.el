@@ -1282,7 +1282,7 @@ is on s-expression."
      (lambda ()
        (let ((pt (apply 'org-agenda-skip-entry-if org-caldav-skip-conditions))
               (ts (when org-caldav-days-in-past (* (abs org-caldav-days-in-past) -1)))
-              (stamp (org-entry-get nil "TIMESTAMP" t)))
+              (stamp (or (org-entry-get nil "TIMESTAMP" t) (org-entry-get nil "CLOSED" t))))
 	 (when (or pt (and stamp (> ts (org-time-stamp-to-now stamp))))
 	   (delete-region (point) (or pt (org-end-of-subtree t)))))))))
 
