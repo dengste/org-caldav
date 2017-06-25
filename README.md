@@ -386,6 +386,35 @@ the events into the debug buffer. If you send such a buffer in a bug
 report, please make very sure you have removed personal information
 from those events.
 
+#### Syncing TODO
+
+This section is experimental.  So please make sure you have backups before you
+use this.  Create issues if it doesn't work for you.  This was developed with a
+nextcloud 12 server, and it is not sure if it works somewhere else.  Please
+report if you have another setup, so we can fix that.
+
+To enable this, just use
+
+    (setq org-icalendar-include-todo 'all
+        org-caldav-sync-todo t)
+
+The first will include your todos to the exporter (org->cal) the second controls
+the use of downloaded vtodo events to import it to the `inbox`.
+
+It is also a good idea to set
+
+    (setq org-icalendar-categories '(local-tags))
+    
+so the tags on the nextcloud will not include the local category.  If you need
+that, leave a message.  On cal->org this would add it to the tags.
+
+See the variables `org-caldav-todo-priority` and
+`org-caldav-todo-percent-states` for some customization.
+
+I would recommend you to test this and report issues, because I also want to
+have a stable todo handling.
+
+
 #### Known Bugs
 
 * Recurring events created or changed on the calendar side cannot be
