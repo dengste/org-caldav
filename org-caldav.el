@@ -270,6 +270,10 @@ Some people work with the NEXT keyword, to have better filtering
 for entries, the ical way would be to set priorities for that.  I
 use the NEXT with a percent-state of 1, setting STARTED to 2.")
 
+(defcustom org-caldav-todo-deadline-schedule-warning-days nil
+  "When set to `t' this will use `org-deadline-warning-days' to
+  schedule the todo entries.")
+
 (defcustom org-caldav-debug-level 1
   "Level of debug output in `org-caldav-debug-buffer'.
 0 or nil: no debug output.  1: Normal debugging.  2: Excessive
@@ -515,6 +519,8 @@ OAuth2 if necessary."
         (extra '(("Depth" . "1") ("Content-type" . "text/xml"))))
     (let ((resultbuf (org-caldav-url-retrieve-synchronously
                       url "PROPFIND" request-data extra)))
+      (when (= 0 (buffer-size resultbuf))
+        (org-caldav-debug-print 1 (format "org-caldav-url-dav-get-properties: could not get data from url: %s" url)))
       ;; Check if we got a valid result for PROPFIND
       (with-current-buffer resultbuf
 	(goto-char (point-min))
@@ -1077,7 +1083,8 @@ The ics must be in the current buffer."
       (when seq
         (setq seq (1+ seq))
         (goto-char (point-min))
-        (re-search-forward "^SEQUENCE:")
+        (unless (re-search-forward "^SEQUENCE:" nil t)
+          (org-caldav-debug-print 2 (format "UID %s: SEQUENCE not in Buffer %s" (car event) (buffer-name))))
         (delete-region (point-at-bol) (+ 1 (point-at-eol)))
         (beginning-of-line)
         (insert "SEQUENCE:" (number-to-string seq) "\n")
@@ -1648,13 +1655,13 @@ If UID is nil, no UID: property is written.
 If LEVEL is nil, it defaults to 1.
 
 Returns MD5 from entry."
-  (let* ((nprio (string-to-number priority))
+  (let* ((nprio (string-to-number (or priority "0")))
           (r nil)
           (vprio (dolist (p org-caldav-todo-priority r)
                    (when (>= nprio (car p))
                      (setq r (car (cdr p))))))
           (prio (if vprio (concat "[#" vprio "] ") ""))
-          (npercent (string-to-number percent-complete))
+          (npercent (string-to-number (or percent-complete "0")))
           (todostate (dolist (to org-caldav-todo-percent-states tstate)
                        (when (>= npercent (car to))
                          (setq tstate (car (cdr to)))))))
@@ -1673,7 +1680,7 @@ Returns MD5 from entry."
 ;;  (forward-line -1)
   (when uid
     (org-set-property "ID" (url-unhex-string uid)))
- ;; (org-set-tags-to org-caldav-select-tags)
+  (org-set-tags-to org-caldav-select-tags)
   (md5 (buffer-substring-no-properties
          (org-entry-beginning-position)
          (org-entry-end-position))))
@@ -1731,23 +1738,23 @@ This will not update description (at the moment)."
       ;; heading
       (org-caldav-change-heading (nth 6 tododata))
       ;; priority
-      (let* ((nprio (string-to-number (nth 4 tododata)))
+      (let* ((nprio (string-to-number (or (nth 4 tododata) "0")))
               (r nil)
               (vprio (dolist (p org-caldav-todo-priority r)
-                   (when (>= nprio (car p))
-                     (setq r (car (cdr p)))))))
+                       (when (>= nprio (car p))
+                         (setq r (car (cdr p)))))))
         (when vprio
           (org-priority (string-to-char vprio))))
       ;; todo-state
       (let* ((npercent (string-to-number (nth 5 tododata)))
               (todostate (dolist (to org-caldav-todo-percent-states tstate)
-                       (when (>= npercent (car to))
-                         (setq tstate (car (cdr to)))))))
+                           (when (>= npercent (car to))
+                             (setq tstate (car (cdr to)))))))
         (org-todo todostate))
       ;; scheduled, deadline
       (when (nth 0 tododata)
-    (org--deadline-or-schedule nil 'scheduled
-      (org-caldav-convert-to-org-time (nth 0 tododata) (nth 1 tododata))))
+        (org--deadline-or-schedule nil 'scheduled
+          (org-caldav-convert-to-org-time (nth 0 tododata) (nth 1 tododata))))
       (when (nth 2 tododata)
         (org--deadline-or-schedule nil 'deadline (org-caldav-convert-to-org-time (nth 2 tododata) (nth 3 tododata))))
       (when (nth 8 tododata)
@@ -1760,6 +1767,22 @@ This will not update description (at the moment)."
               (if (eq timesync 'orgsexp)
                 'error:changed-orgsexp 'cal->org))
         org-caldav-sync-result))))
+
+;; unused at the moment
+(defun org-caldav-generate-scheduled-from-deadline ()
+  "Create a scheduled entry from deadline."
+  (save-excursion
+    (org-back-to-heading)
+    (let* ((sched (org-element-property :scheduled (org-at-point)))
+            (ts (org-element-property :deadline (org-element-at-point)))
+            (wu (org-element-property :warning-unit ts))
+            (wv (org-element-property :warning-value ts))
+            nt)
+      (unless sched
+        (when wv
+          (org-setq nt (time-subtract))
+          )))))
+
 
 (defun org-caldav-set-org-tags (tags)
   "Set tags to the headline, where tags is a coma-seperated
@@ -1907,20 +1930,20 @@ See also `org-caldav-save-directory'."
   "Return items from sync results with errors.
 If COMPLEMENT is non-nil, return all item without errors."
   (delq nil
-        (mapcar
-         (lambda (x)
-           (if (string-match "^error" (symbol-name (car (last x))))
-               (unless complement x)
-             (when complement x)))
-         org-caldav-sync-result)))
+    (mapcar
+      (lambda (x)
+        (if (string-match "^error" (symbol-name (car (last x))))
+          (unless complement x)
+          (when complement x)))
+      org-caldav-sync-result)))
 
 (defun org-caldav-sync-result-print-entries (entries)
   "Helper function to print ENTRIES."
   (if (null entries)
-      (insert "None.\n")
+    (insert "None.\n")
     (dolist (entry entries)
       (let ((deleted (or (eq (nth 2 entry) 'deleted-in-org)
-                         (eq (nth 2 entry) 'deleted-in-cal))))
+                       (eq (nth 2 entry) 'deleted-in-cal))))
         (insert "UID: ")
         (let ((start (point)))
           (insert (nth 1 entry))
@@ -1930,14 +1953,14 @@ If COMPLEMENT is non-nil, return all item without errors."
                        (org-caldav-goto-uid))
              'follow-link t)))
         (when (and (eq org-caldav-show-sync-results 'with-headings)
-                   (not deleted))
+                (not deleted))
           (insert "\n   Title: "
-                  (or (org-caldav-get-heading-from-uid (nth 1 entry))
-                      "(no title)")))
+            (or (org-caldav-get-heading-from-uid (nth 1 entry))
+              "(no title)")))
         (insert "\n   Status: "
-                (symbol-name (nth 2 entry))
-                "  Action: "
-                (symbol-name (nth 3 entry)))
+          (symbol-name (nth 2 entry))
+          "  Action: "
+          (symbol-name (nth 3 entry)))
         (when org-caldav-calendars
           (insert "\n   Calendar: " (car entry)))
         (insert "\n\n")))))
@@ -1946,16 +1969,16 @@ If COMPLEMENT is non-nil, return all item without errors."
   "Get org heading from entry with UID."
   (let ((marker (org-id-find uid t)))
     (if (null marker)
-        "(Could not find UID)"
+      "(Could not find UID)"
       (with-current-buffer (marker-buffer marker)
         (goto-char (marker-position marker))
         (org-narrow-to-subtree)
         (goto-char (point-min))
         (org-show-subtree)
         (prog1
-            (if (re-search-forward org-complex-heading-regexp nil t)
-                (match-string 4)
-              "(Could not find heading)")
+          (if (re-search-forward org-complex-heading-regexp nil t)
+            (match-string 4)
+            "(Could not find heading)")
           (widen))))))
 
 (defun org-caldav-goto-uid ()
@@ -1968,7 +1991,7 @@ If COMPLEMENT is non-nil, return all item without errors."
 (defun org-caldav-get-calendar-summary-from-uid (uid)
   "Get summary from UID from calendar."
   (let ((buf (org-caldav-get-event uid))
-        (heading ""))
+         (heading ""))
     (when buf
       (with-current-buffer buf
         (goto-char (point-min))
@@ -1989,33 +2012,33 @@ which can be fed into `org-caldav-insert-org-entry'."
     (insert decoded))
   (goto-char (point-min))
   (let* ((calendar-date-style 'european)
-         (ical-list (icalendar--read-element nil nil))
-         (e (car (icalendar--all-events ical-list)))
-         (zone-map (icalendar--convert-all-timezones ical-list))
-         (dtstart (icalendar--get-event-property e 'DTSTART))
-         (dtstart-zone (icalendar--find-time-zone
+          (ical-list (icalendar--read-element nil nil))
+          (e (car (icalendar--all-events ical-list)))
+          (zone-map (icalendar--convert-all-timezones ical-list))
+          (dtstart (icalendar--get-event-property e 'DTSTART))
+          (dtstart-zone (icalendar--find-time-zone
+                          (icalendar--get-event-property-attributes
+                            e 'DTSTART)
+                          zone-map))
+          (dtstart-dec (icalendar--decode-isodatetime dtstart nil
+                         dtstart-zone))
+          (start-d (icalendar--datetime-to-diary-date
+                     dtstart-dec))
+          (start-t (if dtstart-dec (icalendar--datetime-to-colontime dtstart-dec) nil))
+          (dtend (icalendar--get-event-property e 'DTEND))
+          (dtend-zone (icalendar--find-time-zone
                         (icalendar--get-event-property-attributes
-                         e 'DTSTART)
+                          e 'DTEND)
                         zone-map))
-         (dtstart-dec (icalendar--decode-isodatetime dtstart nil
-                                                     dtstart-zone))
-         (start-d (icalendar--datetime-to-diary-date
-                   dtstart-dec))
-         (start-t (if dtstart-dec (icalendar--datetime-to-colontime dtstart-dec) nil))
-         (dtend (icalendar--get-event-property e 'DTEND))
-         (dtend-zone (icalendar--find-time-zone
-                      (icalendar--get-event-property-attributes
-                       e 'DTEND)
-                      zone-map))
-         (dtend-dec (icalendar--decode-isodatetime dtend
-                                                   nil dtend-zone))
-         (dtend-1-dec (icalendar--decode-isodatetime dtend -1
-                                                     dtend-zone))
-         end-d
-         end-1-d
-         end-t
-         (summary (icalendar--convert-string-for-import
-                   (or (icalendar--get-event-property e 'SUMMARY)
+          (dtend-dec (icalendar--decode-isodatetime dtend
+                       nil dtend-zone))
+          (dtend-1-dec (icalendar--decode-isodatetime dtend -1
+                         dtend-zone))
+          end-d
+          end-1-d
+          end-t
+          (summary (icalendar--convert-string-for-import
+                     (or (icalendar--get-event-property e 'SUMMARY)
                        "No Title")))
      e-type
          (description (icalendar--convert-string-for-import
@@ -2032,39 +2055,39 @@ which can be fed into `org-caldav-insert-org-entry'."
           (setq e-type (match-string 1 summary))
           (setq summary (match-string 2 summary))))
     ;; check whether start-time is missing
-    (if	(and dtstart
-             (string=
-              (cadr (icalendar--get-event-property-attributes
-                     e 'DTSTART))
-              "DATE"))
-        (setq start-t nil))
+    (if (and dtstart
+          (string=
+            (cadr (icalendar--get-event-property-attributes
+                    e 'DTSTART))
+            "DATE"))
+      (setq start-t nil))
     (when duration
       (let ((dtend-dec-d (icalendar--add-decoded-times
-                          dtstart-dec
-                          (icalendar--decode-isoduration duration)))
-            (dtend-1-dec-d (icalendar--add-decoded-times
-                            dtstart-dec
-                            (icalendar--decode-isoduration duration
-                                                           t))))
+                           dtstart-dec
+                           (icalendar--decode-isoduration duration)))
+             (dtend-1-dec-d (icalendar--add-decoded-times
+                              dtstart-dec
+                              (icalendar--decode-isoduration duration
+                                t))))
         (if (and dtend-dec (not (eq dtend-dec dtend-dec-d)))
-            (message "Inconsistent endtime and duration for %s"
-                     summary))
+          (message "Inconsistent endtime and duration for %s"
+            summary))
         (setq dtend-dec dtend-dec-d)
         (setq dtend-1-dec dtend-1-dec-d)))
     (setq end-d (if dtend-dec
-                    (icalendar--datetime-to-diary-date dtend-dec)
+                  (icalendar--datetime-to-diary-date dtend-dec)
                   start-d))
     (setq end-1-d (if dtend-1-dec
-                      (icalendar--datetime-to-diary-date dtend-1-dec)
+                    (icalendar--datetime-to-diary-date dtend-1-dec)
                     start-d))
     (setq end-t (if (and
-                     dtend-dec
-                     (not (string=
-                           (cadr
-                            (icalendar--get-event-property-attributes
-                             e 'DTEND))
-                           "DATE")))
-                    (icalendar--datetime-to-colontime dtend-dec)
+                      dtend-dec
+                      (not (string=
+                             (cadr
+                               (icalendar--get-event-property-attributes
+                                 e 'DTEND))
+                             "DATE")))
+                  (icalendar--datetime-to-colontime dtend-dec)
                   start-t))
     ;; Return result
     (list start-d start-t
@@ -2076,8 +2099,8 @@ which can be fed into `org-caldav-insert-org-entry'."
   (let ((result '()))
     (mapc (lambda (elt)
             (setq result (append (icalendar--get-children elt 'VTODO)
-                                 result)))
-          (nreverse icalendar))
+                           result)))
+      (nreverse icalendar))
     result))
 
 
@@ -2094,71 +2117,79 @@ which can be fed into `org-caldav-insert-org-todo'."
     (insert decoded))
   (goto-char (point-min))
   (let* ((calendar-date-style 'european)
-         (ical-list (icalendar--read-element nil nil))
-         (e (car (org-caldav--icalendar--all-todos ical-list)))
-         (zone-map (icalendar--convert-all-timezones ical-list))
-         (dtstart (icalendar--get-event-property e 'DTSTART))
-         (dtstart-zone (icalendar--find-time-zone
+          (ical-list (icalendar--read-element nil nil))
+          (e (car (org-caldav--icalendar--all-todos ical-list)))
+          (zone-map (icalendar--convert-all-timezones ical-list))
+          (dtstart (icalendar--get-event-property e 'DTSTART))
+          (dtstart-zone (icalendar--find-time-zone
+                          (icalendar--get-event-property-attributes
+                            e 'DTSTART)
+                          zone-map))
+          (dtstart-dec (icalendar--decode-isodatetime dtstart nil
+                         dtstart-zone))
+          (start-d (icalendar--datetime-to-diary-date
+                     dtstart-dec))
+          (start-t (if dtstart-dec (icalendar--datetime-to-colontime dtstart-dec) nil))
+          (dtdue (icalendar--get-event-property e 'DUE))
+          (dtdue-zone (icalendar--find-time-zone
                         (icalendar--get-event-property-attributes
-                         e 'DTSTART)
+                          e 'DUE)
                         zone-map))
-         (dtstart-dec (icalendar--decode-isodatetime dtstart nil
-                                                     dtstart-zone))
-         (start-d (icalendar--datetime-to-diary-date
-                   dtstart-dec))
-         (start-t (if dtstart-dec (icalendar--datetime-to-colontime dtstart-dec) nil))
-         (dtdue (icalendar--get-event-property e 'DUE))
-         (dtdue-zone (icalendar--find-time-zone
-                      (icalendar--get-event-property-attributes
-                       e 'DUE)
-                      zone-map))
-         (dtdue-dec (icalendar--decode-isodatetime dtdue
-                                                   nil dtdue-zone))
+          (dtdue-dec (icalendar--decode-isodatetime dtdue
+                       nil dtdue-zone))
           (due-d (icalendar--datetime-to-diary-date
-                  dtdue-dec))
-         (due-t (if dtdue-dec (icalendar--datetime-to-colontime dtdue-dec) nil))
-         (dtcompleted (icalendar--get-event-property e 'COMPLETED))
-         (dtcompleted-zone (icalendar--find-time-zone
-                      (icalendar--get-event-property-attributes
-                       e 'COMPLETED)
-                      zone-map))
-         (dtcompleted-dec (icalendar--decode-isodatetime dtcompleted
-                                                   nil dtcompleted-zone))
+                   dtdue-dec))
+          (due-t (if dtdue-dec (icalendar--datetime-to-colontime dtdue-dec) nil))
+          (dtcompleted (icalendar--get-event-property e 'COMPLETED))
+          (dtcompleted-zone (icalendar--find-time-zone
+                              (icalendar--get-event-property-attributes
+                                e 'COMPLETED)
+                              zone-map))
+          (dtcompleted-dec (icalendar--decode-isodatetime dtcompleted
+                             nil dtcompleted-zone))
           (completed-d (icalendar--datetime-to-diary-date
-                  dtcompleted-dec))
-         (completed-t (if dtcompleted-dec (icalendar--datetime-to-colontime dtcompleted-dec) nil))
-         (summary (icalendar--convert-string-for-import
-                   (or (icalendar--get-event-property e 'SUMMARY)
+                         dtcompleted-dec))
+          (completed-t (if dtcompleted-dec (icalendar--datetime-to-colontime dtcompleted-dec) nil))
+          (summary (icalendar--convert-string-for-import
+                     (or (icalendar--get-event-property e 'SUMMARY)
                        "No Title")))
-         (description (icalendar--convert-string-for-import
-                       (or (icalendar--get-event-property e 'DESCRIPTION)
-                         "")))
+          (description (icalendar--convert-string-for-import
+                         (or (icalendar--get-event-property e 'DESCRIPTION)
+                           "")))
           (categories (icalendar--convert-string-for-import
                         (or (icalendar--get-event-property e 'CATEGORIES)
                           "")))
           (priority (icalendar--get-event-property e 'PRIORITY))
-          (percent-complete (icalendar--get-event-property e 'PERCENT-COMPLETE)))
+          (percent-complete (icalendar--get-event-property e 'PERCENT-COMPLETE))
+          (stat (icalendar--get-event-property e 'STATUS)))
     ;; check wether start-time is missing
-    (if	(and dtstart
-             (string=
-              (cadr (icalendar--get-event-property-attributes
-                     e 'DTSTART))
-              "DATE"))
-        (setq start-t nil))
+    (if (and dtstart
+          (string=
+            (cadr (icalendar--get-event-property-attributes
+                    e 'DTSTART))
+            "DATE"))
+      (setq start-t nil))
     ;; same for due-time
-    (if	(and dtdue
-             (string=
-              (cadr (icalendar--get-event-property-attributes
-                     e 'DUE))
-              "DATE"))
-        (setq due-t nil))
+    (if (and dtdue
+          (string=
+            (cadr (icalendar--get-event-property-attributes
+                    e 'DUE))
+            "DATE"))
+      (setq due-t nil))
     ;; and completed
-    (if	(and dtcompleted
-             (string=
-              (cadr (icalendar--get-event-property-attributes
-                     e 'COMPLETED))
-              "DATE"))
-        (setq completed-t nil))
+    (if (and dtcompleted
+          (string=
+            (cadr (icalendar--get-event-property-attributes
+                    e 'COMPLETED))
+            "DATE"))
+      (setq completed-t nil))
+    (unless percent-complete
+      (setq percent-complete
+        (cond
+          ((string= stat "NEEDS-ACTION") "0")
+          ((string= stat "IN-PROCESS") "50")
+          ((string= stat "COMPLETED") "100")
+          (t "0"))))
     (list start-d start-t
       due-d due-t
       priority percent-complete
