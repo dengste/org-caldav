@@ -428,9 +428,12 @@ that, leave a message.  On cal->org this would add it to the tags.
 See the variables `org-caldav-todo-priority` and
 `org-caldav-todo-percent-states` for some customization.
 
+There is also `org-caldav-todo-deadline-schedule-warning-days` which can be set
+to `t` if you want to include a scheduled date.  Some apps like OpenTasks will
+move tasks out of the widget if there is a scheduled, until it actually starts.
+
 I would recommend you to test this and report issues, because I also want to
 have a stable todo handling.
-
 
 #### Known Bugs
 
