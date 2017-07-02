@@ -224,8 +224,16 @@ for entries, the ical way would be to set priorities for that.  I
 use the NEXT with a percent-state of 1, setting STARTED to 2.")
 
 (defvar org-caldav-todo-deadline-schedule-warning-days nil
-  "When set to `t' this will use `org-deadline-warning-days' to
-  schedule the todo entries.")
+  "When set to `t' this will make sure to set a scheduled time when a deadline
+is given.
+
+This uses the warning string like DEADLINE: <2017-07-05 Wed -3d> to a SCHEDULED
+<2017-07-02 Sun>.  If the warning days (here -3d) is not given its taken from
+`org-deadline-warning-days'.  Which is also used in the org agenda.
+
+This makes sense if you use the OpenTasks Widget, which also
+shows up entries which have a deadline years in the future, but
+if a scheduled is set it dissapears.")
 
 (defvar org-caldav-debug-level 1
   "Level of debug output in `org-caldav-debug-buffer'.
@@ -1079,7 +1087,10 @@ TODO: save percent-complete also as a property in org"
 vtodo.  For nextcloud this behaviour is undesired, because
 dtstart is used for the beginning of the task, which is in the
 SCHEDULED of the org entry.  Lets see if the org entry has a
-scheduled time and remove dtstart if it doesn't."
+scheduled time and remove dtstart if it doesn't.
+
+If `org-caldav-todo-deadline-schedule-warning-days' is set, this will
+also look if there is a deadline."
   (save-excursion
     (goto-char (point-min))
     (when (search-forward "BEGIN:VTODO" nil t)
@@ -1089,7 +1100,9 @@ scheduled time and remove dtstart if it doesn't."
           (save-excursion
             (goto-char (point-min))
             (org-id-goto (org-caldav-get-uid))
-            (org-get-scheduled-time nil))
+            (if org-caldav-todo-deadline-schedule-warning-days
+              (or (org-get-scheduled-time nil) (org-get-deadline-time nil))
+              (org-get-scheduled-time nil)))
           (delete-region (point-at-bol) (+ 1 (point-at-eol))))))))
 
 (defun org-caldav-inbox-file (inbox)
@@ -1356,6 +1369,9 @@ Returns buffer containing the ICS file."
          (append org-export-before-parsing-hook
            (when (or org-caldav-skip-conditions
                    org-caldav-days-in-past) '(org-caldav-skip-function))))
+         (org-export-before-parsing-hook
+           (append org-export-before-parsing-hook
+           (when org-caldav-todo-deadline-schedule-warning-days '(org-caldav-scheduled-from-deadline))))
         (org-icalendar-date-time-format
          (cond
           ((and org-icalendar-timezone
@@ -1621,20 +1637,29 @@ This will not update description (at the moment)."
                 'error:changed-orgsexp 'cal->org))
         org-caldav-sync-result))))
 
-;; unused at the moment
-(defun org-caldav-generate-scheduled-from-deadline ()
+(defun org-caldav-scheduled-from-deadline (backend)
   "Create a scheduled entry from deadline."
-  (save-excursion
-    (org-back-to-heading)
-    (let* ((sched (org-element-property :scheduled (org-at-point)))
-            (ts (org-element-property :deadline (org-element-at-point)))
-            (wu (org-element-property :warning-unit ts))
-            (wv (org-element-property :warning-value ts))
-            nt)
-      (unless sched
-        (when wv
-          (org-setq nt (time-subtract))
-          )))))
+  (when (eq backend 'icalendar)
+    (org-map-entries
+      (lambda ()
+        (let* ((sched (org-element-property :scheduled (org-element-at-point)))
+                (ts (org-element-property :deadline (org-element-at-point)))
+                (raw (org-element-property :raw-value ts))
+                (wu (org-element-property :warning-unit ts))
+                (wv (org-element-property :warning-value ts)))
+          (when (and ts (not sched))
+            (org--deadline-or-schedule nil 'scheduled raw)
+            (search-forward "SCHEDULED: ")
+            (forward-char)
+            (if wv
+              (progn
+                (cond ((eq wu 'week) (setq wu 'day wv (* wv 7)))
+                  ((eq wu 'hour) (setq wu 'minute wv (* wv 60))))
+                (org-timestamp-change (* wv -1) wu))
+              (org-timestamp-change (* org-deadline-warning-days -1) 'day)))
+          (org-back-to-heading)
+          (org-caldav-debug-print 2 (format "scheduled: %s" (org-entry-get nil
+                                                              "SCHEDULED" t))))))))
 
 
 (defun org-caldav-set-org-tags (tags)
