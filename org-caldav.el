@@ -463,9 +463,13 @@ OAuth2 if necessary."
                               "<DAV:" property "/></DAV:prop></DAV:propfind>\n"))
         (extra '(("Depth" . "1") ("Content-type" . "text/xml"))))
     (let ((resultbuf (org-caldav-url-retrieve-synchronously
-                      url "PROPFIND" request-data extra)))
-      (when (= 0 (buffer-size resultbuf))
-        (org-caldav-debug-print 1 (format "org-caldav-url-dav-get-properties: could not get data from url: %s" url)))
+                       url "PROPFIND" request-data extra))
+           (retr 1))
+      (while (and (= 0 (buffer-size resultbuf)) (< retr org-caldav-retry-attempts))
+        (org-caldav-debug-print 1 (format "org-caldav-url-dav-get-properties: could not get data from url: %s\n trying again..." url))
+        (setq resultbuf (org-caldav-url-retrieve-synchronously
+                          url "PROPFIND" request-data extra))
+        (setq retr (1+ retr)))
       (org-caldav-namespace-bug-workaround resultbuf)
       (url-dav-process-response resultbuf url))))
 
