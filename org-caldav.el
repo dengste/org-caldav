@@ -1646,17 +1646,21 @@ This will not update description (at the moment)."
                 (ts (org-element-property :deadline (org-element-at-point)))
                 (raw (org-element-property :raw-value ts))
                 (wu (org-element-property :warning-unit ts))
-                (wv (org-element-property :warning-value ts)))
-          (when (and ts (not sched))
-            (org--deadline-or-schedule nil 'scheduled raw)
-            (search-forward "SCHEDULED: ")
-            (forward-char)
-            (if wv
-              (progn
-                (cond ((eq wu 'week) (setq wu 'day wv (* wv 7)))
-                  ((eq wu 'hour) (setq wu 'minute wv (* wv 60))))
-                (org-timestamp-change (* wv -1) wu))
-              (org-timestamp-change (* org-deadline-warning-days -1) 'day)))
+                (wv (org-element-property :warning-value ts))
+                (dip (when org-caldav-days-in-past (* (abs org-caldav-days-in-past) -1)))
+                (stamp (org-entry-get nil "DEADLINE")))
+          ;; skip if to old:
+          (unless (and dip stamp (> dip (org-time-stamp-to-now stamp)))
+            (when (and ts (not sched))
+              (org--deadline-or-schedule nil 'scheduled raw)
+              (search-forward "SCHEDULED: ")
+              (forward-char)
+              (if wv
+                (progn
+                  (cond ((eq wu 'week) (setq wu 'day wv (* wv 7)))
+                    ((eq wu 'hour) (setq wu 'minute wv (* wv 60))))
+                  (org-timestamp-change (* wv -1) wu))
+                (org-timestamp-change (* org-deadline-warning-days -1) 'day))))
           (org-back-to-heading)
           (org-caldav-debug-print 2 (format "scheduled: %s" (org-entry-get nil
                                                               "SCHEDULED" t))))))))
