@@ -886,8 +886,8 @@ The ics must be in the current buffer."
 	(when (null retrieve)
 	  ;; Retrieving the event failed... so let's just use '1' and
 	  ;; hope it works.
-	  (org-caldav-debug-print 1 "UID %s: Failed to retrieve item from server." (car event))
-	  (org-caldav-debug-print 1 "UID %s: Use sequence number 1 and hope for the best." (car event))
+	  (org-caldav-debug-print 1 (format "UID %s: Failed to retrieve item from server." (car event)))
+	  (org-caldav-debug-print 1 (format "UID %s: Use sequence number 1 and hope for the best." (car event)))
 	  (setq seq 1))
 	(unless seq
 	  (with-current-buffer (org-caldav-get-event (car event))
@@ -896,7 +896,7 @@ The ics must be in the current buffer."
 	      (org-caldav-event-set-sequence
 	       event (string-to-number (match-string 1))))
 	    (setq seq (org-caldav-event-sequence event))
-	    (org-caldav-debug-print 1 "UID %s: Got sequence number %d" (car event) seq))))
+	    (org-caldav-debug-print 1 (format "UID %s: Got sequence number %d" (car event) seq)))))
       (when seq
 	(setq seq (1+ seq))
 	(goto-char (point-min))
@@ -1566,8 +1566,8 @@ This witches to OAuth2 if necessary."
 	(kill-buffer buffer)
       (org-caldav-debug-print
        1
-       "Failed to put URL %s after %d tries with error %s"
-       url org-caldav-retry-attempts errormessage))
+       (format "Failed to put URL %s after %d tries with error %s"
+               url org-caldav-retry-attempts errormessage)))
     (< counter org-caldav-retry-attempts)))
 
 ;;;###autoload
