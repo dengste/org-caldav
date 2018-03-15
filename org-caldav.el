@@ -786,9 +786,9 @@ If RESUME is non-nil, try to resume."
   (if (and org-caldav-event-list
 	   (not (eq org-caldav-resume-aborted 'never))
 	   (or (eq org-caldav-resume-aborted 'always)
-	       (and (eq org-caldav-resume-aborted 'ask))
-	       (y-or-n-p "Last sync seems to have been aborted. \
-Should I try to resume? ")))
+	       (and (eq org-caldav-resume-aborted 'ask)
+	            (y-or-n-p "Last sync seems to have been aborted. \
+Should I try to resume? "))))
       (org-caldav-sync-calendar org-caldav-previous-calendar t)
     (setq org-caldav-sync-result nil)
     (if (null org-caldav-calendars)
