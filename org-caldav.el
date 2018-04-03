@@ -1116,7 +1116,8 @@ is on s-expression."
   (goto-char (point-min))
   (if (search-forward "<%%(" nil t)
       'orgsexp
-    (when (re-search-forward org-maybe-keyword-time-regexp nil t)
+    (when (or (re-search-forward org-tr-regexp nil t)
+              (re-search-forward org-maybe-keyword-time-regexp nil t))
       (replace-match newtime nil t))
     (widen)))
 
