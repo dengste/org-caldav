@@ -1029,13 +1029,15 @@ which can only be synced to calendar. Ignoring." uid))
 	      (when (or (eq org-caldav-sync-changes-to-org 'title-only)
 			(eq org-caldav-sync-changes-to-org 'title-and-timestamp))
 		;; Sync title
-		(org-caldav-change-heading (nth 4 eventdata)))
+		(org-caldav-change-heading (nth 4 eventdata))
+		;; and location
+		(org-caldav-change-location (nth 6 eventdata)))
 	      (when (or (eq org-caldav-sync-changes-to-org 'timestamp-only)
 			(eq org-caldav-sync-changes-to-org 'title-and-timestamp))
 		;; Sync timestamp
 		(setq timesync
 		      (org-caldav-change-timestamp
-		       (apply 'org-caldav-create-time-range (butlast eventdata 2)))))
+		       (apply 'org-caldav-create-time-range (butlast eventdata 3)))))
 	      (when (eq org-caldav-sync-changes-to-org 'all)
 		;; Sync everything, so first remove the old one.
 		(let ((level (org-current-level)))
@@ -1095,6 +1097,14 @@ which can only be synced to calendar. Ignoring." uid))
       (goto-char start)
       (insert newheading)))
   (widen))
+
+(defun org-caldav-change-location (newlocation)
+  "Change the LOCATION property from ORG item under point to
+NEWLOCATION. If newlocation is \"\", removes the location
+property."
+  (if (> (length newlocation) 0)
+      (org-set-property "LOCATION" newlocation)
+    (org-delete-property "LOCATION")))
 
 (defun org-caldav-change-timestamp (newtime)
   "Change timestamp from Org item under point to NEWTIME.
@@ -1252,25 +1262,29 @@ Do nothing if LEVEL is larger than `org-caldav-debug-level'."
 		      (point-min))))
 
 (defun org-caldav-insert-org-entry (start-d start-t end-d end-t
-                                            summary description
+                                            summary description location
                                             &optional uid level)
   "Insert org block from given data at current position.
 START/END-D: Start/End date.  START/END-T: Start/End time.
-SUMMARY, DESCRIPTION, UID: obvious.
+SUMMARY, DESCRIPTION, LOCATION, UID: obvious.
 Dates must be given in a format `org-read-date' can parse.
 
+If LOCATION is \"\", no LOCATION: property is written.
 If UID is nil, no UID: property is written.
 If LEVEL is nil, it defaults to 1.
 
 Returns MD5 from entry."
   (insert (make-string (or level 1) ?*) " " summary "\n")
-  (insert "  "
+  (insert (if org-adapt-indentation "  " "")
    (org-caldav-create-time-range start-d start-t end-d end-t) "\n")
   (when (> (length description) 0)
     (insert "  " description "\n"))
   (forward-line -1)
   (when uid
     (org-set-property "ID" (url-unhex-string uid)))
+  (if (> (length location) 0)
+      (org-set-property "LOCATION" location)
+    (org-delete-property "LOCATION"))
   (org-set-tags-to org-caldav-select-tags)
   (md5 (buffer-substring-no-properties
 	(org-entry-beginning-position)
@@ -1452,10 +1466,10 @@ If COMPLEMENT is non-nil, return all item without errors."
     heading))
 
 ;; The following is taken from icalendar.el, written by Ulf Jasper.
-
+;; The LOCATION property is added the extracted list
 (defun org-caldav-convert-event ()
   "Convert icalendar event in current buffer.
-Returns a list '(start-d start-t end-d end-t summary description)'
+Returns a list '(start-d start-t end-d end-t summary description location)'
 which can be fed into `org-caldav-insert-org-entry'."
   (let ((decoded (decode-coding-region (point-min) (point-max) 'utf-8 t)))
     (erase-buffer)
@@ -1495,6 +1509,9 @@ which can be fed into `org-caldav-insert-org-entry'."
 	 (description (icalendar--convert-string-for-import
 		       (or (icalendar--get-event-property e 'DESCRIPTION)
 			   "")))
+	 (location (icalendar--convert-string-for-import
+                    (or (icalendar--get-event-property e 'LOCATION)
+                        "")))
 	 (rrule (icalendar--get-event-property e 'RRULE))
 	 (rdate (icalendar--get-event-property e 'RDATE))
 	 (duration (icalendar--get-event-property e 'DURATION)))
@@ -1536,7 +1553,7 @@ which can be fed into `org-caldav-insert-org-entry'."
     ;; Return result
     (list start-d start-t
 	  (if end-t end-d end-1-d)
-	  end-t summary description)))
+	  end-t summary description location)))
 
 ;; This is adapted from url-dav.el, written by Bill Perry.
 ;; This does more error checking on the headers and retries
