@@ -712,6 +712,7 @@ Are you really sure? ")))
 The format of CALENDAR is described in `org-caldav-calendars'.
 If CALENDAR is not provided, the default values will be used.
 If RESUME is non-nil, try to resume."
+  (setq org-caldav-empty-calendar nil)
   (setq org-caldav-previous-calendar calendar)
   (let (calkeys calvalues oauth-enable)
     ;; Extrace keys and values from 'calendar' for progv binding.
