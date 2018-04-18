@@ -1456,7 +1456,7 @@ time, and we ask the user to fix that."
         (when (and sched deadl)
           (when (and (org-caldav-timestamp-has-time-p sched)
                   (not (org-caldav-timestamp-has-time-p deadl)))
-            (org-id-goto (org-entry-get nil "ID"))
+            (org-id-goto (org-id-get-create))
             (setq kchoice (read-char-choice "Scheduled and Deadline
             set.  For syncing you need to (s) set time on
             DEADLINE, or (d) delete SCHEDULED time."
