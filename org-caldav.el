@@ -979,6 +979,10 @@ returned as a cons (POINT . LEVEL)."
 	  ;; Get sequence number
 	  (goto-char (point-min))
 	  (save-excursion
+	    (when (re-search-forward "^BEGIN:VTODO$" nil t)
+	      (message "Skipping TODO entry.")
+	      (throw 'next nil)))
+	  (save-excursion
 	    (when (re-search-forward "^SEQUENCE:\\s-*\\([0-9]+\\)" nil t)
 	      (org-caldav-event-set-sequence
 	       cur (string-to-number (match-string 1)))))
