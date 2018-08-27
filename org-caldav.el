@@ -801,6 +801,43 @@ Should I try to resume? ")))
     (org-caldav-display-sync-results))
   (message "Finished sync."))
 
+(defun org-caldav-sync-google ()
+  "Sync Org with retries to handle google calendar unpredictable errors."
+  (interactive)
+  (let ((message-log-max))
+    (message "Synchronizing calendars..."))
+  (let ((remaining-retries 3))
+    (while (> remaining-retries 0)
+      (condition-case ex                  ;
+          (progn
+            (org-caldav-sync)
+            (setq remaining-retries 0)) ;; all done
+        ('error
+         (progn 
+           (if (string-match-p "https://apidata.googleusercontent.com/caldav/v2.*401 Unauthorized"
+                               (error-message-string ex))
+               (progn
+                 (org-caldav-kill-matching-buffers-no-ask
+                  "^ \\*http apidata\\.googleusercontent\\.com:443\\*.*" t)
+                 (let ((message-log-max))
+                   (message "Retrying to synchronize calenders..."))
+                 ;; There was a synchronization error, most likely due to an
+                 ;; expired oauth2 access token. Trying again should work fine.
+                 (sleep-for 1)
+                 (setq remaining-retries (- remaining-retries 1)))
+             (error "%s" (error-message-string ex)))))))))
+
+(defun org-caldav-kill-matching-buffers-no-ask (regexp &optional internal-too)
+  "Kill buffers whose name matches the specified REGEXP without asking for confirmation.
+The optional second argument indicates whether to kill internal buffers too."
+  (interactive "sKill buffers matching this regular expression: \nP")
+  (dolist (buffer (buffer-list))
+    (let ((name (buffer-name buffer)))
+      (when (and name (not (string-equal name ""))
+                 (or internal-too (/= (aref name 0) ?\s))
+                 (string-match regexp name))
+        (kill-buffer buffer)))))
+
 (defun org-caldav-update-events-in-cal (icsbuf)
   "Update events in calendar.
 ICSBUF is the buffer containing the exported iCalendar file."
