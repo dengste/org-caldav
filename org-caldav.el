@@ -557,8 +557,8 @@ be caught and a message displayed instead."
        nil))))
 
 (defun org-caldav-delete-everything (prefix)
-  "Delete all events from Calendar and removes state file.
-Again: This deletes all events in your calendar.  So only do this
+  "Delete all events from Calendar(s) and removes state file(s).
+Again: This deletes all events in your calendar(s).  So only do this
 if you're really sure.  This has to be called with a prefix, just
 so you don't do it by accident."
   (interactive "P")
@@ -567,17 +567,33 @@ so you don't do it by accident."
     (unless (or org-caldav-empty-calendar
 		(not (y-or-n-p "This will delete EVERYTHING in your calendar. \
 Are you really sure? ")))
-      (let ((events (org-caldav-get-event-etag-list))
-	    (counter 0)
-	    (url-show-status nil))
-	(dolist (cur events)
-	  (setq counter (1+ counter))
-	  (message "Deleting event %d of %d" counter (length events))
-	  (org-caldav-delete-event (car cur)))
-	(setq org-caldav-empty-calendar t))
-      (when (file-exists-p
-	     (org-caldav-sync-state-filename org-caldav-calendar-id))
-	(delete-file (org-caldav-sync-state-filename org-caldav-calendar-id)))
+      ;; Should we loop over all calendars or just one?
+      (let ((calendars (or org-caldav-calendars
+                           (list (list ':calendar-id org-caldav-calendar-id)))))
+        (dolist (i (number-sequence 0 (1- (length calendars))))
+          (let* ((cal (nth i calendars))
+                 (cal-id (plist-get cal ':calendar-id))
+                 (cal-name (plist-get cal ':name)))
+            (setq org-caldav-calendar-id cal-id)
+            (let ((events (org-caldav-get-event-etag-list))
+                  (counter 0)
+                  (url-show-status nil))
+              (dolist (cur events)
+                (setq counter (1+ counter))
+                (if (= 1 (length calendars))
+                    (message "Deleting event %d of %d..." counter (length
+                                                                   events))
+                  (if cal-name
+                      (message "Deleting event %d/%d of calendar %d/%d (%s)..."
+                               counter (length events) (1+ i) (length calendars)
+                               cal-name)
+                    (message "Deleting event %d/%d of calendar %d/%d..." counter
+                             (length events) i (length calendars))))
+                (org-caldav-delete-event (car cur))))
+            (when (file-exists-p
+                   (org-caldav-sync-state-filename cal-id))
+              (delete-file (org-caldav-sync-state-filename cal-id))))))
+      (setq org-caldav-empty-calendar t)
       (setq org-caldav-event-list nil)
       (setq org-caldav-sync-result nil)
       (message "Done"))))
