@@ -305,6 +305,13 @@ the org-caldav-empty-calendar variable is set."
     (setcar (nthcdr i org-caldav-calendars)
             (plist-put (nth i org-caldav-calendars) ':calendar-empty val))))
 
+(defun org-caldav-calendar-name-from-id (id)
+  "Return the calendar name, if any, associated with the calendar id ID."
+  (unless (null org-caldav-calendars)
+    (plist-get (seq-find (lambda (c) (string= (plist-get c ':calendar-id) id))
+                         org-caldav-calendars)
+               ':name)))
+
 (defun org-caldav-filter-events (status)
   "Return list of events with STATUS."
   (delq nil
@@ -1518,7 +1525,10 @@ If COMPLEMENT is non-nil, return all item without errors."
 		"  Action: "
 		(symbol-name (nth 3 entry)))
 	(when org-caldav-calendars
-	  (insert "\n   Calendar: " (car entry)))
+          (let ((cal-name (org-caldav-calendar-name-from-id (car entry))))
+            (if cal-name
+            (insert "\n   Calendar: " cal-name " (" (car entry)")")
+            (insert "\n   Calendar: " (car entry)))))
 	(insert "\n\n")))))
 
 (defun org-caldav-get-heading-from-uid (uid)
