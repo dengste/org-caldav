@@ -57,7 +57,7 @@ In general, if this variable is a symbol, do OAuth2
 authentication with access URIs set in
 `org-caldav-oauth2-providers'.")
 
-(defvar org-caldav-calendar-id "mycalendar"
+(defvar global-org-caldav-calendar-id "mycalendar"
   "ID of your calendar.")
 
 (defvar org-caldav-uuid-extension ".ics"
@@ -231,7 +231,7 @@ Contains an alist with entries
 with status = {new,changed,deleted}-in-{org,cal}
 and  action = {org->cal, cal->org, error:org->cal, error:cal->org}.")
 
-(defvar org-caldav-empty-calendar nil
+(defvar global-org-caldav-calendar-empty nil
   "Flag if we have an empty calendar in the beginning.")
 
 (defvar org-caldav-ics-buffer nil
@@ -288,6 +288,23 @@ and  action = {org->cal, cal->org, error:org->cal, error:cal->org}.")
 (defsubst org-caldav-use-oauth2 ()
   (symbolp org-caldav-url))
 
+(defun org-caldav-get-calendars ()
+  "Return the active calendars as a plist, independently of whether the
+calendar(s) is(are) defined by global-org-caldav-calendar-id or 
+org-caldav-calendars."
+  (if (null org-caldav-calendars)
+      (list (list ':calendar-id global-org-caldav-calendar-id
+                  ':calendar-empty global-org-caldav-calendar-empty))
+    org-caldav-calendars))
+
+(defun org-caldav-update-global-calendars (calendars)
+  "Update the global calendar status, either global-org-caldav-calendar-empty
+or org-caldav-calendars."
+  (if (null org-caldav-calendars)
+      (setq global-org-caldav-calendar-empty (plist-get (cdar calendars)
+                                                        ':calendar-empty))
+    (setq org-caldav-calendars calendars)))
+
 (defun org-caldav-filter-events (status)
   "Return list of events with STATUS."
   (delq nil
@@ -299,10 +316,10 @@ and  action = {org->cal, cal->org, error:org->cal, error:cal->org}.")
 
 ;; Since not being able to access an URL via DAV is the most reported
 ;; error, let's be very verbose about checking for DAV availability.
-(defun org-caldav-check-dav (url)
+(defun org-caldav-check-dav (url calendar)
   "Check if URL accepts DAV requests.
 Report an error with further details if that is not the case."
-  (let* ((buffer (org-caldav-url-retrieve-synchronously url "OPTIONS"))
+  (let* ((buffer (org-caldav-url-retrieve-synchronously url calendar "OPTIONS"))
 	 (header nil)
 	 (options nil))
     (when (not buffer)
@@ -360,15 +377,16 @@ configured correctly, and throw an user error otherwise."
 				  token))))
 	token))))
 
-(defun org-caldav-url-retrieve-synchronously (url &optional
+(defun org-caldav-url-retrieve-synchronously (url calendar &optional
 					      request-method
 					      request-data
 					      extra-headers)
-  "Retrieve URL with REQUEST-METHOD, REQUEST-DATA and EXTRA-HEADERS.
-This will switch to OAuth2 if necessary."
+  "Retrieve URL from CALENDAR with REQUEST-METHOD, REQUEST-DATA and
+EXTRA-HEADERS. This will switch to OAuth2 if necessary."
   (if (org-caldav-use-oauth2)
       (oauth2-url-retrieve-synchronously
-       (org-caldav-retrieve-oauth2-token org-caldav-url org-caldav-calendar-id)
+       (org-caldav-retrieve-oauth2-token org-caldav-url
+                                         (plist-get calendar ':calendar-id))
        url request-method request-data
        extra-headers)
     (let ((url-request-method request-method)
@@ -399,18 +417,18 @@ OAuth2 if necessary."
 			      "<DAV:" property "/></DAV:prop></DAV:propfind>\n"))
 	(extra '(("Depth" . "1") ("Content-type" . "text/xml"))))
     (let ((resultbuf (org-caldav-url-retrieve-synchronously
-		      url "PROPFIND" request-data extra)))
+		      url calendar "PROPFIND" request-data extra)))
       (org-caldav-namespace-bug-workaround resultbuf)
       (url-dav-process-response resultbuf url))))
 
-(defun org-caldav-check-connection ()
-  "Check connection by doing a PROPFIND on CalDAV URL.
-Also sets `org-caldav-empty-calendar' if calendar is empty."
+(defun org-caldav-check-connection (calendar)
+  "Check connection by doing a PROPFIND on CALENDAR URL.
+Also sets `org-caldav-calendar-empty' if calendar is empty."
   (org-caldav-debug-print 1 (format "Check connection for %s."
-				    (org-caldav-events-url)))
-  (org-caldav-check-dav (org-caldav-events-url))
+				    (org-caldav-events-url calendar)))
+  (org-caldav-check-dav (org-caldav-events-url calendar))
   (let* ((output (org-caldav-url-dav-get-properties
-		  (org-caldav-events-url) "resourcetype"))
+		  (org-caldav-events-url calendar) "resourcetype"))
 	 (status (plist-get (cdar output) 'DAV:status)))
     ;; We accept any 2xx status. Since some CalDAV servers return 404
     ;; for a newly created and not yet used calendar, we accept it as
@@ -418,15 +436,15 @@ Also sets `org-caldav-empty-calendar' if calendar is empty."
     (unless (or (= (/ status 100) 2)
 		(= status 404))
       (org-caldav-debug-print 1 "Got error status from PROPFIND: " output)
-      (error "Could not query CalDAV URL %s." (org-caldav-events-url)))
+      (error "Could not query CalDAV URL %s." (org-caldav-events-url calendar)))
     (if (= status 404)
 	(progn
 	  (org-caldav-debug-print 1 "Got 404 status - assuming calendar is new and empty.")
-	  (setq org-caldav-empty-calendar t))
+	  (setq org-caldav-calendar-empty t))
       (when (= (length output) 1)
 	;; This is an empty calendar; fetching etags might return 404.
 	(org-caldav-debug-print 1 "This is an empty calendar. Setting flag.")
-	(setq org-caldav-empty-calendar t)))
+	(setq org-caldav-calendar-empty t)))
     t))
 
 ;; This defun is partly taken out of url-dav.el, written by Bill Perry.
@@ -445,13 +463,13 @@ Also sets `org-caldav-empty-calendar' if calendar is empty."
 	(push (cons (url-unhex-string url) etag) files))))
     files))
 
-(defun org-caldav-get-event-etag-list ()
-  "Return list of events with associated etag from remote calendar.
+(defun org-caldav-get-event-etag-list (calendar)
+  "Return list of events with associated etag from remote CALENDAR.
 Return list with elements (uid . etag)."
-  (if org-caldav-empty-calendar
+  (if (plist-get calendar ':calendar-empty)
       nil
     (let ((output (org-caldav-url-dav-get-properties
-		   (org-caldav-events-url) "getetag")))
+		   (org-caldav-events-url calendar) "getetag")))
       (cond
        ((> (length output) 1)
 	;; Everything looks OK - we got a list of "things".
@@ -460,18 +478,28 @@ Return list with elements (uid . etag)."
        ((or (null output)
 	    (zerop (length output)))
 	;; This is definitely an error.
-	(error "Error while getting eventlist from %s." (org-caldav-events-url)))
+	(error "Error while getting eventlist from %s."
+               (org-caldav-events-url calendar)))
        ((and (= (length output) 1)
 	     (stringp (car-safe (car output))))
 	(let ((status (plist-get (cdar output) 'DAV:status)))
-	  (if (eq status 200)
-	      ;; This is an empty directory
-	      'empty
-	    (if status
-		(error "Error while getting eventlist from %s. Got status code: %d."
-		       (org-caldav-events-url) status)
-	      (error "Error while getting eventlist from %s."
-		     (org-caldav-events-url))))))))))
+          (cond ((= (/ status 100) 2)
+                 (org-caldav-debug-print 1 (format
+                                            "Got %d status with empty list."
+                                            status))
+                 nil)
+                ((= status 404)
+                 (org-caldav-debug-print
+                  1 (format "Got %d status - assuming calendar is empty."
+                            status))
+                 nil)
+                (status
+                 (error
+                  "Error while getting eventlist from %s. Got status code: %d."
+                  (org-caldav-events-url calendar) status))
+                (t
+                 (error "Error while getting eventlist from %s."
+                        (org-caldav-events-url calendar))))))))))
 
 (defun org-caldav-get-event (uid &optional with-headers)
   "Get event with UID from calendar.
@@ -486,7 +514,8 @@ If retrieve fails, do `org-caldav-retry-attempts' retries."
 		(< counter org-caldav-retry-attempts))
       (with-current-buffer
 	  (org-caldav-url-retrieve-synchronously
-	   (concat (org-caldav-events-url) (url-hexify-string uid) org-caldav-uuid-extension))
+	   (concat (org-caldav-events-url calendar) (url-hexify-string uid) org-caldav-uuid-extension)
+           calendar)
 	(goto-char (point-min))
 	(if (looking-at "HTTP.*2[0-9][0-9]")
 	    (setq eventbuffer (current-buffer))
@@ -526,88 +555,99 @@ The filename will be derived from the UID."
       (insert org-caldav-calendar-preamble event "END:VCALENDAR\n")
       (goto-char (point-min))
       (let* ((uid (org-caldav-get-uid))
-	     (url (concat (org-caldav-events-url) (url-hexify-string uid) org-caldav-uuid-extension)))
+	     (url (concat (org-caldav-events-url calendar) (url-hexify-string uid) org-caldav-uuid-extension)))
 	(org-caldav-debug-print 1 (format "Putting event UID %s." uid))
 	(org-caldav-debug-print 2 (format "Content of event UID %s: " uid)
 				(buffer-string))
-	(setq org-caldav-empty-calendar nil)
+	(setq org-caldav-calendar-empty nil)
 	(org-caldav-save-resource
-	 (concat (org-caldav-events-url) uid org-caldav-uuid-extension)
+	 (concat (org-caldav-events-url calendar) uid org-caldav-uuid-extension)
 	 (encode-coding-string (buffer-string) 'utf-8))))))
 
-(defun org-caldav-url-dav-delete-file (url)
+(defun org-caldav-url-dav-delete-file (url calendar)
   "Delete URL.
 Will switch to OAuth2 if necessary."
-  (org-caldav-url-retrieve-synchronously url "DELETE"))
+  (org-caldav-url-retrieve-synchronously url calendar "DELETE"))
 
-(defun org-caldav-delete-event (uid)
-  "Delete event UID from calendar.
+(defun org-caldav-delete-event (calendar uid)
+  "Delete event UID from CALENDAR.
 Returns t on success and nil if an error occurs.  The error will
 be caught and a message displayed instead."
-  (org-caldav-debug-print 1 (format "Deleting event UID %s." uid))
-  (condition-case err
-      (progn
-	(org-caldav-url-dav-delete-file
-	 (concat (org-caldav-events-url) uid org-caldav-uuid-extension))
-	t)
-    (error
-     (progn
-       (message "Could not delete URI %s." uid)
-       (org-caldav-debug-print 1 "Got error while removing UID:" err)
-       nil))))
+  (let ((cal-id (plist-get calendar ':calendar-id))
+        (cal-name (plist-get calendar ':name)))
+    (org-caldav-debug-print
+     1 (if cal-name
+           (format "Deleting event UID %s from calendar %s (%s)."
+                   uid cal-id cal-name)
+         (format "Deleting event UID %s from calendar %s." uid cal-id)))
+    (condition-case err
+        (progn
+          (org-caldav-url-dav-delete-file
+           (concat (org-caldav-events-url calendar) uid
+                   org-caldav-uuid-extension)
+           calendar)
+          t)
+      (error
+       (progn
+         (message "Could not delete URI %s from calendar %s." uid cal-id)
+         (org-caldav-debug-print 1 "Got error while removing UID:" err)
+         nil)))))
 
+;;; TODO
 (defun org-caldav-delete-everything (prefix)
   "Delete all events from Calendar(s) and removes state file(s).
 Again: This deletes all events in your calendar(s).  So only do this
 if you're really sure.  This has to be called with a prefix, just
 so you don't do it by accident."
   (interactive "P")
-  (if (not prefix)
-      (message "This function has to be called with a prefix.")
-    (unless (or org-caldav-empty-calendar
-		(not (y-or-n-p "This will delete EVERYTHING in your calendar. \
-Are you really sure? ")))
-      ;; Should we loop over all calendars or just one?
-      (let ((calendars (or org-caldav-calendars
-                           (list (list ':calendar-id org-caldav-calendar-id)))))
-        (dolist (i (number-sequence 0 (1- (length calendars))))
-          (let* ((cal (nth i calendars))
-                 (cal-id (plist-get cal ':calendar-id))
-                 (cal-name (plist-get cal ':name)))
-            (setq org-caldav-calendar-id cal-id)
-            (let ((events (org-caldav-get-event-etag-list))
-                  (counter 0)
-                  (url-show-status nil))
-              (dolist (cur events)
-                (setq counter (1+ counter))
-                (if (= 1 (length calendars))
-                    (message "Deleting event %d of %d..." counter (length
-                                                                   events))
-                  (if cal-name
-                      (message "Deleting event %d/%d of calendar %d/%d (%s)..."
-                               counter (length events) (1+ i) (length calendars)
-                               cal-name)
-                    (message "Deleting event %d/%d of calendar %d/%d..." counter
-                             (length events) i (length calendars))))
-                (org-caldav-delete-event (car cur))))
-            (when (file-exists-p
-                   (org-caldav-sync-state-filename cal-id))
-              (delete-file (org-caldav-sync-state-filename cal-id))))))
-      (setq org-caldav-empty-calendar t)
-      (setq org-caldav-event-list nil)
-      (setq org-caldav-sync-result nil)
-      (message "Done"))))
+  (let* ((calendars (org-caldav-get-calendars))
+         (num-cals (length calendars)))
+    (cond ((not prefix)
+           (message "This function has to be called with a prefix."))
+          ((cl-reduce (lambda (acc x) (and acc x))
+                      (mapcar #'(lambda (c) (plist-get c ':calendar-empty))
+                              calendars)
+                      :initial-value t)
+           (message "All calendars are empty."))
+          ((y-or-n-p "This will delete EVERYTHING in your calendar(s). \
+Are you really sure? ")
+           (let ((i 0))
+             (dolist (calendar calendars)
+               (setq i (1+ i))
+               (let* ((cal-id (plist-get calendar ':calendar-id))
+                      (cal-name (plist-get calendar ':name))
+                      (events (org-caldav-get-event-etag-list calendar))
+                      (num-events (length events))
+                      (j 0))
+                 (dolist (cur events)
+                   (setq j (1+ j))
+                   (cond ((= 1 num-cals)
+                          (message "Deleting event %d of %d..." j num-events))
+                         (cal-name
+                          (message "Deleting event %d/%d of calendar %d/%d (%s)..."
+                                   j num-events i num-cals cal-name))
+                         (t
+                          (message "Deleting event %d/%d of calendar %d/%d..."
+                                   j num-events i num-cals)))
+                   (org-caldav-delete-event calendar (car cur)))
+                 (when (file-exists-p (org-caldav-sync-state-filename cal-id))
+                   (delete-file (org-caldav-sync-state-filename cal-id)))
+                 (setq calendar (plist-put calendar ':calendar-empty t)))
+               (org-caldav-update-global-calendars calendars))
+             (setq org-caldav-event-list nil)
+             (setq org-caldav-sync-result nil)
+             (message "Done"))))))
 
-(defun org-caldav-events-url ()
-  "Return URL for events."
+(defun org-caldav-events-url (calendar)
+  "Return URL for events in CALENDAR."
   (let* ((url
 	  (if (org-caldav-use-oauth2)
 	      (nth 4 (assoc org-caldav-url org-caldav-oauth2-providers))
 	    org-caldav-url))
 	 (eventsurl
 	  (if (string-match ".*%s.*" url)
-	      (format url org-caldav-calendar-id)
-	    (concat url "/" org-caldav-calendar-id "/"))))
+	      (format url (plist-get calendar ':calendar-id))
+	    (concat url "/" (plist-get calendar ':calendar-id) "/"))))
     (if (string-match ".*/$" eventsurl)
 	eventsurl
       (concat eventsurl "/"))))
@@ -723,15 +763,12 @@ Are you really sure? ")))
 	(concat "org-"
 		(substring (symbol-name key) 1))))))
 
-(defun org-caldav-sync-calendar (&optional calendar resume)
-  "Sync one calendar, optionally provided through plist CALENDAR.
-The format of CALENDAR is described in `org-caldav-calendars'.
-If CALENDAR is not provided, the default values will be used.
+(defun org-caldav-sync-calendar (calendar &optional resume)
+  "Sync CALENDAR. The format of CALENDAR is described in `org-caldav-calendars'.
 If RESUME is non-nil, try to resume."
-  (setq org-caldav-empty-calendar nil)
   (setq org-caldav-previous-calendar calendar)
   (let (calkeys calvalues oauth-enable)
-    ;; Extrace keys and values from 'calendar' for progv binding.
+    ;; Extract keys and values from 'calendar' for progv binding.
     (dolist (i (number-sequence 0 (1- (length calendar)) 2))
       (setq calkeys (append calkeys (list (nth i calendar)))
 	    calvalues (append calvalues (list (nth (1+ i) calendar)))))
@@ -747,7 +784,8 @@ If RESUME is non-nil, try to resume."
 	;; We need to do oauth2. Check if it is available.
 	(org-caldav-check-oauth2 org-caldav-url)
 	;; Retrieve token
-	(org-caldav-retrieve-oauth2-token org-caldav-url org-caldav-calendar-id))
+	(org-caldav-retrieve-oauth2-token org-caldav-url
+                                          (plist-get calendar ':calendar-id)))
       (let ((numretry 0)
 	    success)
 	(while (null success)
@@ -916,7 +954,7 @@ ICSBUF is the buffer containing the exported iCalendar file."
 				       (org-caldav-get-calendar-summary-from-uid
 					(car cur)))))
 	    (message "Deleting event %d from %d" counter (length events))
-	    (org-caldav-delete-event (car cur))
+	    (org-caldav-delete-event calendar (car cur))
 	    (push (list org-caldav-calendar-id (car cur)
 			'deleted-in-org 'removed-from-cal)
 		  org-caldav-sync-result)
@@ -1624,7 +1662,7 @@ This witches to OAuth2 if necessary."
 		(< counter org-caldav-retry-attempts))
       (with-current-buffer
 	  (org-caldav-url-retrieve-synchronously
-	   url "PUT" obj
+	   url calendar "PUT" obj
 	   '(("Content-type" . "text/calendar; charset=UTF-8")))
 	(goto-char (point-min))
 	(if (looking-at "HTTP.*2[0-9][0-9]")
