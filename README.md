@@ -2,13 +2,15 @@
 
 Caldav sync for Emacs Orgmode
 
-**Minimum Emacs version needed**: 24.3
+**org-caldav version**: (no version number given), date 2018-08-30.
+
+**Minimum Emacs version needed**: 24.3.
 
 CalDAV servers:
 
 * **Owncloud** and **Nextcloud**: Regularly tested.
 
-* **Google Calendar**: Should work, but you need to register an
+* **Google Calendar**: Reported to work, but you need to register an
 application with the Google Developer Console for OAuth2
 authentication (see below).
 
@@ -44,8 +46,7 @@ way to uniquely identify Org entries.
     - Owncloud 8.x and below: https://OWNCLOUD-SERVER-URL/remote.php/caldav/calendars/USERID
     - Google: Set to symbol 'google. See below for further documentation.
 
-* Set `org-caldav-calendar-id` to the calendar-id of your new
-calendar:
+* If you want to sync with a single calendar, set `org-caldav-calendar-id` to the calendar-id of your new calendar:
     - Own/NextCloud: Click on that little symbol next to the calendar
       name and inspect the link of the calendar; the last element of
       the shown path is the calendar-id. This should *usually* be the
@@ -56,6 +57,9 @@ calendar:
     - Google: Click on 'calendar settings' and the id will be shown
       next to "Calendar Address". It is of the form
       `ID@group.calendar.google.com`. Do *not* omit the domain!
+
+* If you want to sync with many calendars, see **Syncing with more than
+  one calendar** below.
 
 * Set `org-caldav-inbox` to an org filename where new entries from the
   calendar should be stored. Just to be safe, I suggest using an
@@ -124,6 +128,14 @@ By default, plstore will **not** cache your entered password, so it
 will possibly ask you **many** times. To activate caching, use
 
     (setq plstore-cache-passphrase-for-symmetric-encryption t)
+
+#### GPG-agent warning!
+
+If the above setting does not seem to work, there has been reports
+that on some Ubuntu systems, there might be interference with
+GPG-agent. Fixes include unsetting the environment variable
+`GPG_AGENT_INFO` before starting `emacs` or adding `(setenv
+"GPG_AGENT_INFO")` to `.emacs`.
 
 ### DETAILS
 
@@ -286,7 +298,7 @@ If you sync your Org files across different machines and want to use
 org-caldav on all of them, don't forget to sync the org sync state,
 too. Probably your best bet is to set `org-caldav-save-directory` to the
 path you have your Org files in, so that it gets copied alongside with
-them.
+them. You may have to exclude `oauth2.plstore` from that list.
 
 #### Starting from scratch
 
@@ -330,8 +342,70 @@ org-caldav-url, since the key :url isn't specified. The calendar
 "work@whatever" will be synced with the file 'work.org' and inbox
 'fromwork.org', while "stuff@mystuff" with 'sports.org' and
 'play.org', *unless* there's the string 'soccer' in the heading, and
-and inbox is 'fromstuff.org'. See the doc-string of
-`org-caldav-calendars` for more details on which keys you can use.
+and inbox is 'fromstuff.org'.
+
+For google calendar, the `calendar-id` is occupied by a
+machine-generated unique identifier. If you want to add a readable
+name, use the `:name` property. In the below example, the content of
+multiple files are distributed over multiple calendars by tags.
+
+    ;; List of files with caldav schedule items, one per project.
+    (setq my-caldav-org-files
+          '("~/org/caldav/caldav-dv0.org" "~/org/caldav/caldav-mca.org"
+            "~/org/caldav/caldav-dbt.org"))
+            
+    ;; List with all inbox files from org-caldav, one per remote calendar.
+    (setq my-caldav-org-from-files
+          '("~/org/caldav/caldav-fixed-from.org"
+            "~/org/caldav/caldav-messy-from.org"
+            "~/org/caldav/caldav-info-from.org"))
+
+    ;; Agenda should know all caldav items.
+    (setq org-agenda-files (append my-caldav-org-files my-caldav-org-from-files))
+
+    ;; Set up filtering.
+    (setq org-caldav-calendars
+          `(
+            ;; "Fixed" calendar
+            (:calendar-id "akcdloidkdkighl5012934jdxx@group.calendar.google.com"
+                          :files ,my-caldav-org-files
+                          :name "fixed"
+                          :select-tags ("fixed" "me")
+                          :exclude-tags ("ignored")
+                          :inbox "~/org/caldav/caldav-fixed-from.org")
+            ;; "Messy" calendar
+            (:calendar-id "xoksu9850kdi120k18kdxxxxxx@group.calendar.google.com"
+                          :files ,my-caldav-org-files
+                          :name "messy"
+                          :select-tags ("messy")
+                          :exclude-tags ("fixed" "me" "ignored")
+                          :inbox "~/org/caldav/caldav-messy-from.org")
+            ;; "Info" calendar
+            (:calendar-id "kulhso26kuhsoa2156kdhjxaoa@group.calendar.google.com"
+                          :files ,my-caldav-org-files
+                          :name "info"
+                          :select-tags ("info")
+                          :exclude-tags ("fixed" "me" "messy" "ignored")
+                          :inbox "~/org/caldav/caldav-info-from.org")
+            ))
+
+In the example, items in either file thar are tagged "fixed", "messy"
+or "info" are synced to their respective calendars (with "me" as a
+shorter alias to "fixed"). Items tagged "ignored" are not synced to
+google calendar. Items can have multiple tags but will only appear in
+one remote calendar, decided by the priority order "fixed", "messy",
+and "info". This allows an org structure like
+
+    * Main events                        :info:
+    ** Welcome presentation             :me:pj:
+    ** Followup customer meeting           :pj:
+    ** Strategy meeting                 :messy:
+
+where all Main events end up in the "info" calendar unless they have a
+higher-priority tag.
+
+See the doc-string of `org-caldav-calendars` for more details on which
+keys you can use.
 
 #### Additional stuff
 
@@ -396,7 +470,8 @@ from those events.
   synchronously.
 
 * Pretty much everything besides SUMMARY, DESCRIPTION and time is
-  ignored in iCalendar (like 'LOCATION', for instance).
+  ignored in iCalendar (like 'LOCATION', for instance). LOCATION works
+  for google calendar, though.
 
 #### How syncing happens (a.k.a. my little CalDAV rant)
 
@@ -406,16 +481,16 @@ CalDAV is a mess.
 
 First off, it is based on WebDAV, which has its own fair share of
 problems. The main design flaw of CalDAV however, is that UID and
-ressource name (the "filename", if you want) are two different
+resource name (the "filename", if you want) are two different
 things. I know that there are reasons for that (not everything has a
-UID, like timezones, and you can put several events in one ressource),
+UID, like timezones, and you can put several events in one resource),
 but this is typical over-engineering to allow some marginal use cases
 pretty much no one needs. Another problem is that you have to do
 additional round-trips to get Etag and sequence number, which makes
 CalDAV pretty slow.
 
-Org-caldav takes the easy route: it assumes that every ressource
-contains one event, and that UID and ressource name are identical. In
+Org-caldav takes the easy route: it assumes that every resource
+contains one event, and that UID and resource name are identical. In
 fact, Google's CalDAV interface even enforces the latter. And while
 Owncloud does not enforce it, at least it just does it if you create
 items in its web interface.
