@@ -2,7 +2,8 @@
 
 Caldav sync for Emacs Orgmode
 
-**org-caldav version**: (no version number given), date 2018-08-30.
+**org-caldav version**: (no official version number yet), date
+  2018-08-30.
 
 **Minimum Emacs version needed**: 24.3.
 
@@ -470,8 +471,8 @@ from those events.
   synchronously.
 
 * Pretty much everything besides SUMMARY, DESCRIPTION and time is
-  ignored in iCalendar (like 'LOCATION', for instance). LOCATION works
-  for google calendar, though.
+  ignored in iCalendar (like 'LOCATION', for instance). LOCATION has
+  been reported to work for google calendar, though.
 
 #### How syncing happens (a.k.a. my little CalDAV rant)
 
