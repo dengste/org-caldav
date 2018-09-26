@@ -1039,7 +1039,7 @@ which can only be synced to calendar. Ignoring." uid))
 		;; Sync timestamp
 		(setq timesync
 		      (org-caldav-change-timestamp
-		       (apply 'org-caldav-create-time-range (butlast eventdata 3)))))
+		       (apply 'org-caldav-create-time-range (seq-take eventdata 4)))))
 	      (when (eq org-caldav-sync-changes-to-org 'all)
 		;; Sync everything, so first remove the old one.
 		(let ((level (org-current-level)))
