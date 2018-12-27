@@ -2,6 +2,26 @@
 
 Caldav sync for Emacs Orgmode
 
+### This fork
+
+This is a fork of https://github.com/dengste/org-caldav, with a few fixes
+applied.
+
+In order to use this fork with spacemacs, instead of
+https://github.com/dengste/org-caldav (the one in MELPA), replace:
+`org-caldav`
+with:
+`(org-caldav :location (recipe :fetcher github :repo "knatsakis/org-caldav")`.
+
+E.g., use:
+```
+dotspacemacs-additional-packages '( 
+    (org-caldav :location
+        (recipe
+         :fetcher github
+         :repo "knatsakis/org-caldav")))
+```
+
 **Minimum Emacs version needed**: 24.3
 
 CalDAV servers:
