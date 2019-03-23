@@ -38,6 +38,7 @@
 (require 'icalendar)
 (require 'url-util)
 (require 'cl-lib)
+(require 'button)
 
 (defvar org-caldav-url "https://my.calendarserver.invalid/caldav"
   "Base URL for CalDAV access.
@@ -1368,8 +1369,8 @@ See also `org-caldav-save-directory'."
 
 (defvar org-caldav-sync-results-mode-map
   (let ((map (make-sparse-keymap)))
-    (define-key map [(return)] 'org-caldav-goto-uid)
-    (define-key map [(mouse-1)] 'org-caldav-goto-uid)
+    (define-key map [(tab)] 'forward-button)
+    (define-key map [(backtab)] 'forward-button)
     map)
   "Keymap for org-caldav result buffer.")
 
@@ -1417,8 +1418,10 @@ If COMPLEMENT is non-nil, return all item without errors."
 	(let ((start (point)))
 	  (insert (nth 1 entry))
 	  (unless deleted
-	    (put-text-property start (point)
-			       'face 'link)))
+	    (make-button start (point)
+             'action (lambda (&rest _ignore)
+                       (org-caldav-goto-uid))
+             'follow-link t)))
 	(when (and (eq org-caldav-show-sync-results 'with-headings)
 		   (not deleted))
 	  (insert "\n   Title: "
@@ -1449,10 +1452,8 @@ If COMPLEMENT is non-nil, return all item without errors."
 	  (widen))))))
 
 (defun org-caldav-goto-uid ()
-  "Jump to UID unter point."
-  (interactive)
-  (when (equal (plist-get (text-properties-at (point)) 'face)
-	       'link)
+  "Jump to UID under point."
+  (when (button-at (point))
     (beginning-of-line)
     (looking-at "UID: \\(.+\\)$")
     (org-id-goto (match-string 1))))
