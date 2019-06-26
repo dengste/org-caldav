@@ -1285,9 +1285,7 @@ Returns MD5 from entry."
   (forward-line -1)
   (when uid
     (org-set-property "ID" (url-unhex-string uid)))
-  (if (> (length location) 0)
-      (org-set-property "LOCATION" location)
-    (org-delete-property "LOCATION"))
+  (org-caldav-change-location location)
   (org-set-tags-to org-caldav-select-tags)
   (md5 (buffer-substring-no-properties
 	(org-entry-beginning-position)
