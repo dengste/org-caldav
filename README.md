@@ -396,7 +396,7 @@ from those events.
   synchronously.
 
 * Pretty much everything besides SUMMARY, DESCRIPTION and time is
-  ignored in iCalendar (like 'LOCATION', for instance).
+  ignored in iCalendar.
 
 #### How syncing happens (a.k.a. my little CalDAV rant)
 
