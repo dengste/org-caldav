@@ -39,7 +39,13 @@
 (require 'cl-lib)
 (require 'button)
 
-(defvar org-caldav-url "https://my.calendarserver.invalid/caldav"
+
+(defgroup org-caldav nil
+  "Sync org files with external calendar through CalDAV."
+  :prefix "org-caldav-"
+  :group 'calendar)
+
+(defcustom org-caldav-url "https://my.calendarserver.invalid/caldav"
   "Base URL for CalDAV access.
 By default, `org-caldav-calendar-id' will be appended to this to
 get an URL for calendar events.  If this default is not correct,
@@ -55,30 +61,36 @@ the OAuth2 library installed, and you will also have to set
 
 In general, if this variable is a symbol, do OAuth2
 authentication with access URIs set in
-`org-caldav-oauth2-providers'.")
+`org-caldav-oauth2-providers'."
+  :type 'string)
 
-(defvar org-caldav-calendar-id "mycalendar"
-  "ID of your calendar.")
+(defcustom org-caldav-calendar-id "mycalendar"
+  "ID of your calendar."
+  :type 'string)
 
-(defvar org-caldav-uuid-extension ".ics"
+(defcustom org-caldav-uuid-extension ".ics"
   "The file extension to add to uuids in webdav requests.
-This is usually .ics, but on some servers (davmail), it is .EML")
+This is usually .ics, but on some servers (davmail), it is .EML"
+  :type 'string)
 
-(defvar org-caldav-files '("~/org/appointments.org")
+(defcustom org-caldav-files '("~/org/appointments.org")
   "List of files which should end up in calendar.
 The file in `org-caldav-inbox' is implicitly included, so you
-don't have to add it here.")
+don't have to add it here."
+  :type '(repeat string))
 
-(defvar org-caldav-select-tags nil
+(defcustom org-caldav-select-tags nil
   "List of tags to filter the synced tasks.
 If any such tag is found in a buffer, all items that do not carry
-one of these tags will not be exported.")
+one of these tags will not be exported."
+  :type '(repeat string))
 
-(defvar org-caldav-exclude-tags nil
+(defcustom org-caldav-exclude-tags nil
   "List of tags to exclude from the synced tasks.
-All items that carry one of these tags will not be exported.")
+All items that carry one of these tags will not be exported."
+  :type '(repeat string))
 
-(defvar org-caldav-inbox "~/org/appointments.org"
+(defcustom org-caldav-inbox "~/org/appointments.org"
   "Where to put new entries obtained from calendar.
 
 This can be simply be a filename to an Org file where all new
@@ -87,9 +99,10 @@ can choose between the following options:
 
  - (file \"path/to/file\"), or
  - (id \"id of existing org entry\"), or
- - (file+headline \"path/to/file\" \"node headline\").")
+ - (file+headline \"path/to/file\" \"node headline\")."
+  :type 'file)
 
-(defvar org-caldav-sync-direction 'twoway
+(defcustom org-caldav-sync-direction 'twoway
   "Which kind of sync should be done between Org and calendar.
 
 Default is 'twoway, meaning that changes in Org are synced to the
@@ -97,9 +110,14 @@ calendar and changes in the calendar are synced back to
 Org. Other options are:
 
   'org->cal: Only sync Org to calendar
-  'cal->org: Only sync calendar to Org")
+  'cal->org: Only sync calendar to Org"
+  :type '(choice
+          (const twoway :tag "Two-way sync")
+          (const org->cal :tag "Only sync org to calendar")
+          (const cal->org :tag "Only sync calendar to Org")))
 
-(defvar org-caldav-calendars nil
+
+(defcustom org-caldav-calendars nil
   "A list of plists which define different calendars.
 Use this variable to sync with several different remote
 calendars.  By setting this, `org-caldav-sync' will run several
@@ -117,12 +135,14 @@ Example:
    :inbox \"~/org/fromwork.org\")
   (:calendar-id \"stuff@mystuff\"
    :files (\"~/org/sports.org\" \"~/org/play.org\")
-   :inbox \"~/org/fromstuff.org\"))")
+   :inbox \"~/org/fromstuff.org\"))"
+  :type '(repeat (plist)))
 
-(defvar org-caldav-save-directory user-emacs-directory
-  "Directory where org-caldav saves its sync state.")
+(defcustom org-caldav-save-directory user-emacs-directory
+  "Directory where org-caldav saves its sync state."
+  :type 'directory)
 
-(defvar org-caldav-sync-changes-to-org 'title-and-timestamp
+(defcustom org-caldav-sync-changes-to-org 'title-and-timestamp
   "What kind of changes should be synced from Calendar to Org.
 Can be one of the following symbols:
   title-and-timestamp: Sync title and timestamp (default).
@@ -133,70 +153,96 @@ Can be one of the following symbols:
 When choosing 'all', you should be aware of the fact that the
 iCalendar format is pretty limited in what it can store, so you
 might loose information in your Org items (take a look at
-`org-icalendar-include-body').")
+`org-icalendar-include-body')."
+  :type '(choice
+          (const title-and-timestamp :tag "Sync title and timestamp")
+          (const title-only :tag "Sync only the title")
+          (const timestamp-only :tag "Sync only the timestamp")
+          (const all :tag "Sync everything")))
 
-(defvar org-caldav-delete-org-entries 'ask
+(defcustom org-caldav-delete-org-entries 'ask
   "Whether entries deleted in calendar may be deleted in Org.
 Can be one of the following symbols:
 
 ask = Ask for before deletion (default)
 never = Never delete Org entries
-always = Always delete")
+always = Always delete"
+  :type '(choice
+          (const ask :tag "Ask before deletion")
+          (const never :tag "Never delete Org entries")
+          (const always :tag "Always delete")))
 
-(defvar org-caldav-delete-calendar-entries 'always
+(defcustom org-caldav-delete-calendar-entries 'always
   "Whether entries deleted in Org may be deleted in calendar.
 Can be one of the following symbols:
 
 always = Always delete without asking (default)
 ask = Ask for before deletion
-never = Never delete calendar entries")
+never = Never delete calendar entries"
+  :type '(choice
+          (const ask :tag "Ask before deletion")
+          (const never :tag "Never delete calendar entries")
+          (const always :tag "Always delete without asking")))
 
-(defvar org-caldav-skip-conditions nil
+(defcustom org-caldav-skip-conditions nil
   "Conditions for skipping entries during icalendar export.
 This must be a list of conditions, which are described in the
 doc-string of `org-agenda-skip-if'.  Any entry that matches will
 not be exported.  Note that the normal `org-agenda-skip-function'
-has no effect on the icalendar exporter.")
+has no effect on the icalendar exporter."
+  :type 'list)
 
-(defvar org-caldav-backup-file
+(defcustom org-caldav-backup-file
   (expand-file-name "org-caldav-backup.org" user-emacs-directory)
   "Name of the file where org-caldav should backup entries.
-Set this to nil if you don't want any backups.")
+Set this to nil if you don't want any backups."
+  :type 'file)
 
-(defvar org-caldav-show-sync-results 'with-headings
+(defcustom org-caldav-show-sync-results 'with-headings
   "Whether to show what was done after syncing.
 If this is the symbol 'with-headings, the results will also
-include headings from Org entries.")
+include headings from Org entries."
+  :type '(choice
+          (const with-headings :tag "Show what was done after syncing including headings")
+          (const nil :tag "Don't show what was done after syning")))
 
-(defvar org-caldav-retry-attempts 5
-  "Number of times trying to retrieve/put events.")
+(defcustom org-caldav-retry-attempts 5
+  "Number of times trying to retrieve/put events."
+  :type 'integer)
 
-(defvar org-caldav-calendar-preamble
+(defcustom org-caldav-calendar-preamble
   "BEGIN:VCALENDAR\nPRODID:\nVERSION:2.0\nCALSCALE:GREGORIAN\n"
   "Preamble used for iCalendar events.
 You usually should not have to touch this, but it might be
 necessary to add timezone information here in case your CalDAV
 server does not do that for you, or if you want to use a
-different timezone in your Org files.")
+different timezone in your Org files."
+  :type 'string)
 
-(defvar org-caldav-debug-level 1
+(defcustom org-caldav-debug-level 1
   "Level of debug output in `org-caldav-debug-buffer'.
 0 or nil: no debug output.  1: Normal debugging.  2: Excessive
 debugging (this will also output event content into the
-buffer).")
+buffer)."
+  :type 'integer)
 
-(defvar org-caldav-debug-buffer "*org-caldav-debug*"
-  "Name of the debug buffer.")
+(defcustom org-caldav-debug-buffer "*org-caldav-debug*"
+  "Name of the debug buffer."
+  :type 'string)
 
-(defvar org-caldav-resume-aborted 'ask
+(defcustom org-caldav-resume-aborted 'ask
   "Whether aborted sync attempts should be resumed.
 Can be one of the following symbols:
 
 ask = Ask for before resuming (default)
 never = Never resume
-always = Always resume")
+always = Always resume"
+  :type '(choice
+          (const ask :tag "Ask before resuming")
+          (const never :tag "Never resume")
+          (const always :tag "Always resume")))
 
-(defvar org-caldav-oauth2-providers
+(defcustom org-caldav-oauth2-providers
   '((google "https://accounts.google.com/o/oauth2/v2/auth"
 	    "https://www.googleapis.com/oauth2/v4/token"
 	    "https://www.googleapis.com/auth/calendar"
@@ -208,13 +254,20 @@ always = Always resume")
 where IDENTIFIER is a symbol that can be set in `org-caldav-url'
 and '%s' in the CALENDAR-URL denotes where
 `org-caldav-calendar-id' must be placed to generate a valid
-events URL for a calendar.")
+events URL for a calendar."
+  :type 'list)
 
-(defvar org-caldav-oauth2-client-id nil
-  "Client ID for OAuth2 authentication.")
+(defcustom org-caldav-oauth2-client-id nil
+  "Client ID for OAuth2 authentication."
+  :type 'string)
 
-(defvar org-caldav-oauth2-client-secret nil
-  "Client secret for OAuth2 authentication.")
+(defcustom org-caldav-oauth2-client-secret nil
+  "Client secret for OAuth2 authentication."
+  :type 'string)
+
+(defcustom org-caldav-location-newline-replacement ", "
+  "String to replace newlines in the LOCATION field with."
+  :type 'string)
 
 ;; Internal variables
 (defvar org-caldav-oauth2-available
@@ -251,9 +304,6 @@ and  action = {org->cal, cal->org, error:org->cal, error:cal->org}.")
 (defvar org-caldav-previous-files nil
   "Files that were synced during previous run.")
 
-(defcustom org-caldav-location-newline-replacement ", "
-  "String to replace newlines in the LOCATION field with."
-  :type 'string)
 
 (defsubst org-caldav-add-event (uid md5 etag sequence status)
   "Add event with UID, MD5, ETAG and STATUS."
