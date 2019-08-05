@@ -1134,9 +1134,9 @@ is on s-expression."
   (when (eq backend 'icalendar)
     (org-map-entries
      (lambda ()
-       (let ((pt (apply 'org-agenda-skip-entry-if org-caldav-skip-conditions)))
-	 (when pt
-	   (delete-region (point) pt)))))))
+       (let ((pt (save-excursion (apply 'org-agenda-skip-entry-if org-caldav-skip-conditions))))
+		 (when pt (delete-region (point) (- pt 1))))))))
+
 
 (defun org-caldav-generate-ics ()
   "Generate ICS file from `org-caldav-files'.
