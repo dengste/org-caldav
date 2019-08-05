@@ -244,6 +244,10 @@ and  action = {org->cal, cal->org, error:org->cal, error:cal->org}.")
 (defvar org-caldav-previous-files nil
   "Files that were synced during previous run.")
 
+(defcustom org-caldav-location-newline-replacement ", "
+  "String to replace newlines in the LOCATION field with."
+  :type 'string)
+
 (defsubst org-caldav-add-event (uid md5 etag sequence status)
   "Add event with UID, MD5, ETAG and STATUS."
   (setq org-caldav-event-list
@@ -1111,11 +1115,15 @@ which can only be synced to calendar. Ignoring." uid))
 
 (defun org-caldav-change-location (newlocation)
   "Change the LOCATION property from ORG item under point to
-NEWLOCATION. If newlocation is \"\", removes the location
-property."
-  (if (> (length newlocation) 0)
-      (org-set-property "LOCATION" newlocation)
-    (org-delete-property "LOCATION")))
+NEWLOCATION. If NEWLOCATION is \"\", removes the location property. If
+NEWLOCATION contains newlines, replace them with
+`org-caldav-location-newline-replacement'."
+  (let ((replacement org-caldav-location-newline-replacement))
+    (cl-assert (not (string-match-p "\n" replacement)))
+    (if (> (length newlocation) 0)
+	(org-set-property "LOCATION"
+			  (replace-regexp-in-string "\n" replacement newlocation))
+      (org-delete-property "LOCATION"))))
 
 (defun org-caldav-change-timestamp (newtime)
   "Change timestamp from Org item under point to NEWTIME.
@@ -1294,9 +1302,7 @@ Returns MD5 from entry."
   (forward-line -1)
   (when uid
     (org-set-property "ID" (url-unhex-string uid)))
-  (if (> (length location) 0)
-      (org-set-property "LOCATION" location)
-    (org-delete-property "LOCATION"))
+  (org-caldav-change-location location)
   (org-set-tags-to org-caldav-select-tags)
   (md5 (buffer-substring-no-properties
 	(org-entry-beginning-position)

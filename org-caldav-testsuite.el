@@ -587,3 +587,14 @@ moose
 			    octest-seen-prompt))))
   (org-caldav-test-cleanup))
 
+(ert-deftest org-caldav-test-multiline-location ()
+  (with-temp-buffer
+    (org-mode)
+    (insert org-caldav-test-org1)
+    (goto-char (point-min))
+    (let ((orig-id (alist-get "ID" (org-entry-properties) nil nil #'string=)))
+      (org-caldav-change-location "multi\nline")
+      (let ((props (org-entry-properties)))
+	(should (string= (alist-get "ID" props nil nil #'string=) orig-id))
+	(should (string-match-p "multi" (alist-get "LOCATION" props nil nil #'string=)))
+	(should (string-match-p "line" (alist-get "LOCATION" props nil nil #'string=)))))))
