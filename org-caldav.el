@@ -648,6 +648,8 @@ Are you really sure? ")))
 	(org-caldav-debug-print 1
 	 (format "Cal UID %s: New" (car cur)))
 	(org-caldav-add-event (car cur) nil (cdr cur) nil 'new-in-cal))
+       ((eq (org-caldav-event-status dbentry) 'ignored)
+	(org-caldav-debug-print 1 (format "Cal UID %s: Ignored." (car cur))))
        ((or (eq (org-caldav-event-status dbentry) 'changed-in-org)
 	    (eq (org-caldav-event-status dbentry) 'deleted-in-org))
 	(org-caldav-debug-print 1
@@ -762,7 +764,8 @@ If RESUME is non-nil, try to resume."
 	      (user-error "Sync aborted"))))
 	;; Remove status in event list
 	(dolist (cur org-caldav-event-list)
-	  (org-caldav-event-set-status cur nil))
+	  (unless (eq (org-caldav-event-status cur) 'ignored)
+	    (org-caldav-event-set-status cur nil)))
 	(org-caldav-update-eventdb-from-org org-caldav-ics-buffer)
 	(org-caldav-update-eventdb-from-cal))
       (org-caldav-update-events-in-cal org-caldav-ics-buffer)
@@ -978,6 +981,11 @@ returned as a cons (POINT . LEVEL)."
 	(with-current-buffer (org-caldav-get-event uid)
 	  ;; Get sequence number
 	  (goto-char (point-min))
+	  (save-excursion
+	    (when (re-search-forward "^BEGIN:VTODO$" nil t)
+	      (message "Skipping TODO entry.")
+	      (org-caldav-event-set-status cur 'ignored)
+	      (throw 'next nil)))
 	  (save-excursion
 	    (when (re-search-forward "^SEQUENCE:\\s-*\\([0-9]+\\)" nil t)
 	      (org-caldav-event-set-sequence
