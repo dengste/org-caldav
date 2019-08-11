@@ -421,7 +421,7 @@ moose
 
 (ert-deftest org-caldav-03-insert-org-entry ()
   "Make sure that `org-caldav-insert-org-entry' works fine."
-  (let ((entry '("01 01 2015" "19:00" "01 01 2015" "20:00" "The summary" "The description"))
+  (let ((entry '("01 01 2015" "19:00" "01 01 2015" "20:00" "The summary" "The description" "location"))
         (org-caldav-select-tags ""))
     (cl-flet ((write-entry (uid level)
                            (with-temp-buffer
@@ -430,12 +430,30 @@ moose
                              (apply #'org-caldav-insert-org-entry
                                     (append entry (list uid level)))
                              (setq foo (buffer-string)))))
-      (should (string-match "\\*\\s-+The summary\n\\s-*<2015-01-01 Thu 19:00-20:00>\n\\s-*The description\n"
-                       (write-entry nil nil)))
-      (should (string-match "\\*\\*\\s-+The summary\n\\s-*<2015-01-01 Thu 19:00-20:00>\n\\s-*The description\n"
-                       (write-entry nil 2)))
-      (should (string-match "\\*\\s-+The summary\n\\s-*:PROPERTIES:\n\\s-*:ID:\\s-*1\n\\s-*:END:\n\\s-*<2015-01-01 Thu 19:00-20:00>\n\\s-*The description\n"
-                       (write-entry "1" nil))))))
+      (should (string-match (concat
+			     "\\*\\s-+The summary\n"
+			     "\\s-*:PROPERTIES:\n"
+			     "\\s-*:LOCATION: location\n"
+			     "\\s-*:END:\n"
+			     "\\s-*<2015-01-01 Thu 19:00-20:00>\n"
+			     "\\s-*The description\n")
+			    (write-entry nil nil)))
+      (should (string-match (concat
+			     "\\*\\*\\s-+The summary\n"
+			     "\\s-*:PROPERTIES:\n"
+			     "\\s-*:LOCATION: location\n"
+			     "\\s-*:END:\n"
+			     "\\s-*<2015-01-01 Thu 19:00-20:00>\n"
+			     "\\s-*The description\n")
+			    (write-entry nil 2)))
+      (should (string-match (concat "\\*\\s-+The summary\n"
+				    "\\s-*:PROPERTIES:\n"
+				    "\\s-*:ID:\\s-*1\n"
+				    "\\s-*:LOCATION: location\n"
+				    "\\s-*:END:\n"
+				    "\\s-*<2015-01-01 Thu 19:00-20:00>\n"
+				    "\\s-*The description\n")
+			    (write-entry "1" nil))))))
 
 (ert-deftest org-caldav-04-multiple-calendars ()
   (org-caldav-test-setup-temp-files)
