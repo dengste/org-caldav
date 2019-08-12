@@ -2,7 +2,8 @@
 
 Caldav sync for Emacs Orgmode
 
-**Minimum Emacs version needed**: 24.3
+**Minimum Emacs version needed**: 26.x
+
 
 CalDAV servers:
 
@@ -20,10 +21,14 @@ https, though!). If you get asked for password repeatedly, put it in
 * **SOGo** and **Kolab**: Reported to be working
     (https://kolabnow.com/clients/emacs)
 
-Note that current Emacs releases do not correctly handle https over a
-proxy connection
-(https://debbugs.gnu.org/cgi/bugreport.cgi?bug=11788). If you need
-that, you'll have to use a recent Emacs 26.0.x snapshot.
+Note that current Emacs releases might not correctly handle https via
+TLSv1.3 (see https://debbugs.gnu.org/cgi/bugreport.cgi?bug=34341). If
+you see errors like "Bad request" or "No data received" you can either try to set
+
+    (setq gnutls-algorithm-priority "NORMAL:-VERS-TLS1.3")
+	
+or you upgrade to the latest preset Emacs 26.2.90 (which will become
+26.3).
 
 **IMPORTANT**: Before using this code, please make sure you have backups
 of your precious Org files. Also, I strongly suggest to create a new,
