@@ -313,6 +313,8 @@ Report an error with further details if that is not the case."
     (when (not buffer)
       (error "Retrieving URL %s failed." url))
     (with-current-buffer buffer
+      (when (zerop (buffer-size))
+	(error "Not data received for URL %s (maybe TLS problem)." url))
       (goto-char (point-min))
       (when (not (re-search-forward "^HTTP[^ ]* \\([0-9]+ .*\\)$"
 				    (point-at-eol) t))
