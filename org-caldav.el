@@ -1410,7 +1410,7 @@ See also `org-caldav-save-directory'."
 (defvar org-caldav-sync-results-mode-map
   (let ((map (make-sparse-keymap)))
     (define-key map [(tab)] 'forward-button)
-    (define-key map [(backtab)] 'forward-button)
+    (define-key map [(backtab)] 'backward-button)
     map)
   "Keymap for org-caldav result buffer.")
 
