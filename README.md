@@ -209,7 +209,7 @@ can delete and change them inside Org and this will be synced, but if
 you *change* them in the *calendar*, this will *not* get synced
 back. Org-caldav just cannot find those entires, so this will generate
 a one-time sync error instead (again: those are not critical, just
-FIY). If you don't want those entries to be exported at all, just set
+FYI). If you don't want those entries to be exported at all, just set
 `org-icalendar-include-sexps` to nil.
 
 #### Filtering entries
@@ -273,12 +273,9 @@ Note that you have to specify the port number in the URL and *also*
 specify 'https' for the port. This is not a bug. For more information,
 see (info "auth"), especially section "Help for users".
 
-Since you are storing your password in a file it makes sense to
-encrypt it using GnuPG. While Emacs supports this, there's a subtle
-bug which makes this feature unusable for the URL package (see bug
-11981). This was fixed in Emacs 24.2, so if you're using an older
-version, you'll have to upgrade if you want encrypted authinfo files
-for org-caldav.
+Since you are storing your password in a file you should encrypt it
+using GnuPG. Emacs will prompt you for a decryption key when it tries
+to read the file.
 
 #### Storage of sync information and sync from different computers
 
@@ -400,8 +397,8 @@ from those events.
 * Syncing is currently pretty slow since everything is done
   synchronously.
 
-* Pretty much everything besides SUMMARY, DESCRIPTION and time is
-  ignored in iCalendar.
+* Pretty much everything besides SUMMARY, DESCRIPTION, LOCATION and
+  time is ignored in iCalendar.
 
 #### How syncing happens (a.k.a. my little CalDAV rant)
 
