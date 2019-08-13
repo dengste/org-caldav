@@ -27,7 +27,7 @@ you see errors like "Bad request" or "No data received" you can either try to se
 
     (setq gnutls-algorithm-priority "NORMAL:-VERS-TLS1.3")
 	
-or you upgrade to the latest preset Emacs 26.2.90 (which will become
+or you upgrade to the latest pretest Emacs 26.2.90 (which will become
 26.3).
 
 **IMPORTANT**: Before using this code, please make sure you have backups
