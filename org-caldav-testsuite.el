@@ -616,3 +616,77 @@ moose
 	(should (string= (alist-get "ID" props nil nil #'string=) orig-id))
 	(should (string-match-p "multi" (alist-get "LOCATION" props nil nil #'string=)))
 	(should (string-match-p "line" (alist-get "LOCATION" props nil nil #'string=)))))))
+
+(ert-deftest org-caldav-08-test-setting-sync-direction ()
+  (org-caldav-test-setup-temp-files)
+  (with-current-buffer (find-file-noselect org-caldav-test-orgfile)
+    (insert org-caldav-test-org1)
+    (insert org-caldav-test-org2)
+    (insert org-caldav-test-org3)
+    (save-buffer))
+
+  ;; Delete calendar contents
+  (let ((org-caldav-calendar-id (car org-caldav-test-calendar-names)))
+    (org-caldav-test-set-up))
+  (let ((org-caldav-calendar-id (nth 1 org-caldav-test-calendar-names)))
+    (org-caldav-test-set-up))
+  (message "Starting sync")
+  (let
+      ((org-caldav-calendars
+	;; First only syncs Org to calendar
+	`((:calendar-id ,(car org-caldav-test-calendar-names)
+			:url ,org-caldav-url
+			:files (,org-caldav-test-orgfile)
+			:inbox nil ;; No inbox needed
+			:sync-direction org->cal)
+	  ;; Second only syncs Calendar to Org inbox
+	  (:calendar-id ,(nth 1 org-caldav-test-calendar-names)
+			:url ,org-caldav-url
+			:files nil ;; No files needed
+			:inbox ,org-caldav-test-inbox
+			:sync-direction cal->org))))
+    (org-caldav-sync)
+
+    ;; First calendar should sync everything
+    (let
+	((org-caldav-calendar-id (car org-caldav-test-calendar-names)))
+      (should (org-caldav-get-event "orgcaldavtest@org1"))
+      (should (org-caldav-get-event "orgcaldavtest-org2"))
+      (should (org-caldav-get-event "orgcaldavtest-org3")))
+
+    ;; Second calendar syncs nothing from org to cal
+    (let
+	((org-caldav-calendar-id (nth 1 org-caldav-test-calendar-names)))
+      (should-error (org-caldav-get-event "orgcaldavtest-org3"))
+      (should-error (org-caldav-get-event "orgcaldavtest@org1"))
+      (should-error (org-caldav-get-event "orgcaldavtest-org2")))
+
+    ;; Put calendar events in both calendars
+    (let ((org-caldav-calendar-id (car org-caldav-test-calendar-names)))
+      (org-caldav-test-put-events))
+    (let ((org-caldav-calendar-id (nth 1 org-caldav-test-calendar-names)))
+      (org-caldav-test-put-events))
+    ;; Sync again
+    (org-caldav-sync)
+
+    ;; Events are still there in first
+    (let
+	((org-caldav-calendar-id (car org-caldav-test-calendar-names)))
+      (should (org-caldav-get-event "orgcaldavtest@org1"))
+      (should (org-caldav-get-event "orgcaldavtest-org2"))
+      (should (org-caldav-get-event "orgcaldavtest-org3")))
+    ;; Events still not there in second
+    (let
+	((org-caldav-calendar-id (nth 1 org-caldav-test-calendar-names)))
+      (should-error (org-caldav-get-event "orgcaldavtest-org3"))
+      (should-error (org-caldav-get-event "orgcaldavtest@org1"))
+      (should-error (org-caldav-get-event "orgcaldavtest-org2")))
+    ;; But second should have new events in inbox
+    (with-current-buffer (find-file-noselect org-caldav-test-inbox)
+      (goto-char (point-min))
+      (should (re-search-forward org-caldav-test-ics1-org nil t))
+      (goto-char (point-min))
+      (should (re-search-forward org-caldav-test-ics2-org nil t))))
+
+  (org-caldav-test-cleanup)
+)

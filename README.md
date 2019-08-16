@@ -140,6 +140,13 @@ file to another, as long as they are all listed in
 each entry with an active timestamp, so that org-caldav can find
 it. It will also sync deletions, but more on that later.
 
+You can also return to the simpler version which only does one-way
+syncing. Simply set `org-caldav-sync-direction` to `'org->cal` or
+`'cal->org`, depending on which direction you'd like to have. If you
+choose `'org->cal`, then `org-caldav-inbox` won't matter and can be
+`nil`. Likewise, if you choose `'cal->org`, then `org-caldav-files`
+will be ignored and only the calendar will be imported into the inbox.
+
 #### Org and the iCalendar format
 
 An Org entry can store much more information than an iCalendar entry,

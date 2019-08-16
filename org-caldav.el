@@ -89,6 +89,16 @@ can choose between the following options:
  - (id \"id of existing org entry\"), or
  - (file+headline \"path/to/file\" \"node headline\").")
 
+(defvar org-caldav-sync-direction 'twoway
+  "Which kind of sync should be done between Org and calendar.
+
+Default is 'twoway, meaning that changes in Org are synced to the
+calendar and changes in the calendar are synced back to
+Org. Other options are:
+
+  'org->cal: Only sync Org to calendar
+  'cal->org: Only sync calendar to Org")
+
 (defvar org-caldav-calendars nil
   "A list of plists which define different calendars.
 Use this variable to sync with several different remote
@@ -711,9 +721,28 @@ Are you really sure? ")))
     (:exclude-tags 'org-caldav-exclude-tags)
     (:inbox 'org-caldav-inbox)
     (:skip-conditions 'org-caldav-skip-conditions)
+    (:sync-direction 'org-caldav-sync-direction)
     (t (intern
 	(concat "org-"
 		(substring (symbol-name key) 1))))))
+
+(defsubst org-caldav-sync-do-cal->org ()
+  "True if we have to sync from calendar to org."
+  (member org-caldav-sync-direction '(twoway cal->org)))
+
+(defsubst org-caldav-sync-do-org->cal ()
+  "True if we have to sync from org to calendar."
+  (member org-caldav-sync-direction '(twoway org->cal)))
+
+(defun org-caldav-get-org-files-for-sync ()
+  "Return list of all org files for syncing.
+This adds the inbox if necessary."
+  (let ((inbox (org-caldav-inbox-file org-caldav-inbox)))
+    (append org-caldav-files
+	    (when (and inbox
+		       (org-caldav-sync-do-org->cal)
+		       (not (member inbox org-caldav-files)))
+	      (list inbox)))))
 
 (defun org-caldav-sync-calendar (&optional calendar resume)
   "Sync one calendar, optionally provided through plist CALENDAR.
@@ -728,12 +757,12 @@ If RESUME is non-nil, try to resume."
       (setq calkeys (append calkeys (list (nth i calendar)))
 	    calvalues (append calvalues (list (nth (1+ i) calendar)))))
     (cl-progv (mapcar 'org-caldav-var-for-key calkeys) calvalues
-      (dolist (filename (append org-caldav-files
-				(list (org-caldav-inbox-file org-caldav-inbox))))
-        (when (not (file-exists-p filename))
-          (if (yes-or-no-p (format "File %s does not exist, create it?" filename))
-              (write-region "" nil filename)
-            (user-error "File %s does not exist" filename))))
+      (when (org-caldav-sync-do-org->cal)
+	(dolist (filename (org-caldav-get-org-files-for-sync))
+	  (when (not (file-exists-p filename))
+	    (if (yes-or-no-p (format "File %s does not exist, create it?" filename))
+		(write-region "" nil filename)
+	      (user-error "File %s does not exist" filename)))))
       ;; Check if we need to do OAuth2
       (when (org-caldav-use-oauth2)
 	;; We need to do oauth2. Check if it is available.
@@ -754,7 +783,6 @@ If RESUME is non-nil, try to resume."
 		1 "Got error while checking connection (will try again):" err)
 	       (cl-incf numretry))))))
       (unless resume
-	(setq org-caldav-ics-buffer (org-caldav-generate-ics))
 	(setq org-caldav-event-list nil
 	      org-caldav-previous-files nil)
 	(org-caldav-load-sync-state)
@@ -773,16 +801,25 @@ If RESUME is non-nil, try to resume."
 	(dolist (cur org-caldav-event-list)
 	  (unless (eq (org-caldav-event-status cur) 'ignored)
 	    (org-caldav-event-set-status cur nil)))
-	(org-caldav-update-eventdb-from-org org-caldav-ics-buffer)
-	(org-caldav-update-eventdb-from-cal))
-      (org-caldav-update-events-in-cal org-caldav-ics-buffer)
-      (org-caldav-update-events-in-org)
+	;; Update events for the org->cal direction
+	(when (org-caldav-sync-do-org->cal)
+	  ;; Export Org to icalendar format
+	  (setq org-caldav-ics-buffer (org-caldav-generate-ics))
+	  (org-caldav-update-eventdb-from-org org-caldav-ics-buffer))
+	;; Update events for the cal->org direction
+	(when (org-caldav-sync-do-cal->org)
+	  (org-caldav-update-eventdb-from-cal)))
+      (when (org-caldav-sync-do-org->cal)
+	(org-caldav-update-events-in-cal org-caldav-ics-buffer))
+      (when  (org-caldav-sync-do-cal->org)
+	(org-caldav-update-events-in-org))
       (org-caldav-save-sync-state)
       (setq org-caldav-event-list nil)
-      (with-current-buffer org-caldav-ics-buffer
-	(set-buffer-modified-p nil)
-	(kill-buffer))
-      (delete-file (buffer-file-name org-caldav-ics-buffer)))))
+      (when (org-caldav-sync-do-org->cal)
+	(with-current-buffer org-caldav-ics-buffer
+	  (set-buffer-modified-p nil)
+	  (kill-buffer))
+	(delete-file (buffer-file-name org-caldav-ics-buffer))))))
 
 ;;;###autoload
 (defun org-caldav-sync ()
@@ -1185,11 +1222,7 @@ Returns buffer containing the ICS file."
 	 (if (featurep 'ox-icalendar)
 	     'org-icalendar-combined-agenda-file
 	   'org-combined-agenda-icalendar-file))
-	(orgfiles (let ((inbox-file (org-caldav-inbox-file org-caldav-inbox)))
-		    (if (member inbox-file org-caldav-files)
-			org-caldav-files
-		      (append org-caldav-files
-			      (list inbox-file)))))
+	(orgfiles (org-caldav-get-org-files-for-sync))
 	(org-export-select-tags org-caldav-select-tags)
 	(org-icalendar-exclude-tags org-caldav-exclude-tags)
         ;; We create UIDs ourselves and do not rely on ox-icalendar.el
