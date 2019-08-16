@@ -102,17 +102,15 @@ Org. Other options are:
 (defvar org-caldav-calendars nil
   "A list of plists which define different calendars.
 Use this variable to sync with several different remote
-calendars.  If you set this, the global variables
-`org-caldav-url', `org-caldav-calendar-id', `org-caldav-files',
-`org-caldav-select-tags', `org-caldav-exclude-tags',
-`org-caldav-inbox' and `org-caldav-skip-conditions' will only
-serve as default values.  They can be overridden through the
-plist keys :url, :calendar-id, :files, :select-tags, :inbox,
-and :skip-conditions, resp.  If you specify any other key, it
-will be prefixed with \"org-\", meaning that if you use for
-instance :agenda-skip-function, it will override
-`org-agenda-skip-function'.  All provided calendars can then be
-synced in order by calling `org-caldav-sync' as usual.
+calendars.  By setting this, `org-caldav-sync' will run several
+times, and you can set the global variables like
+`org-caldav-calendar-id' for each run through plist keys.
+
+The available keys are: :url, :calendar-id, :files, :select-tags,
+:inbox, :skip-conditions, :sync-inbox, and :sync-direction. They
+override the corresponding global org-caldav-* variables. You can
+also use any other key, which will then override any org-*
+variable.
 
 Example:
 '((:calendar-id \"work@whatever\" :files (\"~/org/work.org\")
