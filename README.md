@@ -67,8 +67,9 @@ calendar:
   empty, dedicated Org file for that.
 
 * Set `org-caldav-files` to the list of org files you would like to
-  sync. The above `org-caldav-inbox` will be automatically added, so you
-  don't have to add it here.
+  sync. The above `org-caldav-inbox` will be automatically added, so
+  you don't have to add it here (you can disable this feature by
+  setting the variable `org-caldav-sync-inbox' to nil).
 
 * It is usually a good idea to manually set `org-icalendar-timezone` to
   the timezone of your remote calendar. It should be a simple string
