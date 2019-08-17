@@ -182,6 +182,7 @@ moose
 	  (set-buffer-modified-p nil)
 	  (kill-buffer)))))
   (setq org-id-locations nil)
+  (setq org-caldav-event-list nil)
   (when org-caldav-test-current-tempdir
     (delete-directory org-caldav-test-current-tempdir t)
     (setq org-caldav-test-current-tempdir nil)))
