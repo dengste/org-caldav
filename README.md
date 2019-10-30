@@ -214,7 +214,7 @@ they still will be exported, but they won't get an ID (since IDs are
 properties linked to Org entries). In practice, that means that you
 can delete and change them inside Org and this will be synced, but if
 you *change* them in the *calendar*, this will *not* get synced
-back. Org-caldav just cannot find those entires, so this will generate
+back. Org-caldav just cannot find those entries, so this will generate
 a one-time sync error instead (again: those are not critical, just
 FYI). If you don't want those entries to be exported at all, just set
 `org-icalendar-include-sexps` to nil.
@@ -415,16 +415,16 @@ CalDAV is a mess.
 
 First off, it is based on WebDAV, which has its own fair share of
 problems. The main design flaw of CalDAV however, is that UID and
-ressource name (the "filename", if you want) are two different
+resource name (the "filename", if you want) are two different
 things. I know that there are reasons for that (not everything has a
-UID, like timezones, and you can put several events in one ressource),
+UID, like timezones, and you can put several events in one resource),
 but this is typical over-engineering to allow some marginal use cases
 pretty much no one needs. Another problem is that you have to do
 additional round-trips to get Etag and sequence number, which makes
 CalDAV pretty slow.
 
-Org-caldav takes the easy route: it assumes that every ressource
-contains one event, and that UID and ressource name are identical. In
+Org-caldav takes the easy route: it assumes that every resource
+contains one event, and that UID and resource name are identical. In
 fact, Google's CalDAV interface even enforces the latter. And while
 Owncloud does not enforce it, at least it just does it if you create
 items in its web interface.
