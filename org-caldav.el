@@ -953,7 +953,7 @@ ICSBUF is the buffer containing the exported iCalendar file."
 	(dolist (cur events)
 	  (setq counter (1+ counter))
 	  (when (or (eq org-caldav-delete-calendar-entries 'always)
-		    (y-or-n-p (format "Delete event '%s' from calendar?"
+		    (y-or-n-p (format "Delete event '%s' from external calendar?"
 				       (org-caldav-get-calendar-summary-from-uid
 					(car cur)))))
 	    (message "Deleting event %d from %d" counter (length events))
@@ -1167,7 +1167,7 @@ which can only be synced to calendar. Ignoring." uid))
       (org-id-goto (car cur))
       (when (or (eq org-caldav-delete-org-entries 'always)
 		(and (eq org-caldav-delete-org-entries 'ask)
-		     (y-or-n-p "Delete this entry? ")))
+		     (y-or-n-p "Delete this entry locally? ")))
 	(delete-region (org-entry-beginning-position)
 		       (org-entry-end-position))
 	(setq org-caldav-event-list
