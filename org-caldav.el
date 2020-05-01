@@ -1090,7 +1090,7 @@ which can only be synced to calendar. Ignoring." uid))
 		;; Sync timestamp
 		(setq timesync
 		      (org-caldav-change-timestamp
-		       (apply 'org-caldav-create-time-range (seq-take eventdata 4)))))
+		       (apply 'org-caldav-create-time-range (append (seq-take eventdata 4) (list (nth 7 eventdata)))))))
 	      (when (eq org-caldav-sync-changes-to-org 'all)
 		;; Sync everything, so first remove the old one.
 		(let ((level (org-current-level)))
@@ -1339,7 +1339,7 @@ Do nothing if LEVEL is larger than `org-caldav-debug-level'."
 		      (point-min))))
 
 (defun org-caldav-insert-org-entry (start-d start-t end-d end-t
-                                            summary description location
+                                            summary description location e-type
                                             &optional uid level)
   "Insert org block from given data at current position.
 START/END-D: Start/End date.  START/END-T: Start/End time.
@@ -1353,7 +1353,7 @@ If LEVEL is nil, it defaults to 1.
 Returns MD5 from entry."
   (insert (make-string (or level 1) ?*) " " summary "\n")
   (insert (if org-adapt-indentation "  " "")
-   (org-caldav-create-time-range start-d start-t end-d end-t) "\n")
+   (org-caldav-create-time-range start-d start-t end-d end-t e-type) "\n")
   (when (> (length description) 0)
     (insert "  " description "\n"))
   (forward-line -1)
@@ -1366,9 +1366,13 @@ Returns MD5 from entry."
 	(org-entry-beginning-position)
 	(org-entry-end-position))))
 
-(defun org-caldav-create-time-range (start-d start-t end-d end-t)
+(defun org-caldav-create-time-range (start-d start-t end-d end-t e-type)
   "Creeate an Org timestamp range from START-D/T, END-D/T."
   (with-temp-buffer
+    (cond
+     ((string= "S" e-type) (insert "SCHEDULED: "))
+     ((string= "DL" e-type) (insert "DEADLINE: "))
+     )
     (org-caldav-insert-org-time-stamp start-d start-t)
     (if (and end-d
 	     (not (equal end-d start-d)))
@@ -1582,6 +1586,7 @@ which can be fed into `org-caldav-insert-org-entry'."
 	 (summary (icalendar--convert-string-for-import
 		   (or (icalendar--get-event-property e 'SUMMARY)
 		       "No Title")))
+     e-type
 	 (description (icalendar--convert-string-for-import
 		       (or (icalendar--get-event-property e 'DESCRIPTION)
 			   "")))
@@ -1591,6 +1596,10 @@ which can be fed into `org-caldav-insert-org-entry'."
 	 (rrule (icalendar--get-event-property e 'RRULE))
 	 (rdate (icalendar--get-event-property e 'RDATE))
 	 (duration (icalendar--get-event-property e 'DURATION)))
+    (if (string-match "^\\(?:\\(DL\\|S\\):\s+\\)?\\(.*\\)$" summary)
+        (progn
+          (setq e-type (match-string 1 summary))
+          (setq summary (match-string 2 summary))))
     ;; check whether start-time is missing
     (if	(and dtstart
 	     (string=
@@ -1629,7 +1638,7 @@ which can be fed into `org-caldav-insert-org-entry'."
     ;; Return result
     (list start-d start-t
 	  (if end-t end-d end-1-d)
-	  end-t summary description location)))
+	  end-t summary description location e-type)))
 
 ;; This is adapted from url-dav.el, written by Bill Perry.
 ;; This does more error checking on the headers and retries
