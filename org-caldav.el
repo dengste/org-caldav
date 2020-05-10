@@ -172,7 +172,7 @@ always = Always delete"
           (const never :tag "Never delete Org entries")
           (const always :tag "Always delete")))
 
-(defcustom org-caldav-delete-calendar-entries 'always
+(defcustom org-caldav-delete-calendar-entries 'ask
   "Whether entries deleted in Org may be deleted in calendar.
 Can be one of the following symbols:
 
