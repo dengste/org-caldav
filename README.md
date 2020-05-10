@@ -2,7 +2,7 @@
 
 Caldav sync for Emacs Orgmode
 
-**Minimum Emacs version needed**: 26.x
+**Minimum Emacs version needed**: 26.3
 
 
 CalDAV servers:
@@ -11,7 +11,11 @@ CalDAV servers:
 
 * **Google Calendar**: Should work, but you need to register an
 application with the Google Developer Console for OAuth2
-authentication (see below).
+authentication (see below), because Google explicitly forbids to put
+client id/secrets into open source software (see
+https://developers.google.com/terms, section 4b, paragraph 1). Instead
+of doing that though, I'd rather suggest you choose another service
+provider.
 
 * **Radicale** and **Baikal**: Should work. If you get problems with
 'Digest' authentication, switch back to 'Basic' (make sure to use
@@ -21,14 +25,14 @@ https, though!). If you get asked for password repeatedly, put it in
 * **SOGo** and **Kolab**: Reported to be working
     (https://kolabnow.com/clients/emacs)
 
-Note that current Emacs releases might not correctly handle https via
+Note that Emacs releases <26.3 might not correctly handle https via
 TLSv1.3 (see https://debbugs.gnu.org/cgi/bugreport.cgi?bug=34341). If
-you see errors like "Bad request" or "No data received" you can either try to set
+you see errors like "Bad request" or "No data received" you can either
+try to set
 
     (setq gnutls-algorithm-priority "NORMAL:-VERS-TLS1.3")
 	
-or you upgrade to the latest pretest Emacs 26.2.90 (which will become
-26.3).
+or you upgrade to Emacs 26.3.
 
 **IMPORTANT**: Before using this code, please make sure you have backups
 of your precious Org files. Also, I strongly suggest to create a new,
@@ -46,7 +50,6 @@ way to uniquely identify Org entries.
 
 * Set `org-caldav-url` to the base address of your CalDAV server:
     - Owncloud/Nextcloud (9.x and above): https://OWNCLOUD-SERVER-URL/remote.php/dav/calendars/USERID
-    - Owncloud 8.x and below: https://OWNCLOUD-SERVER-URL/remote.php/caldav/calendars/USERID
     - Google: Set to symbol 'google. See below for further documentation.
 
 * Set `org-caldav-calendar-id` to the calendar-id of your new
