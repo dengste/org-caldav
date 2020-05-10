@@ -464,6 +464,17 @@ OAuth2 if necessary."
 	(extra '(("Depth" . "1") ("Content-type" . "text/xml"))))
     (let ((resultbuf (org-caldav-url-retrieve-synchronously
 		      url "PROPFIND" request-data extra)))
+      ;; Check if we got a valid result for PROPFIND
+      (with-current-buffer resultbuf
+	(goto-char (point-min))
+	(when (not (re-search-forward "^HTTP[^ ]* \\([0-9]+ .*\\)$"
+				      (point-at-eol) t))
+	  (switch-to-buffer buffer)
+	  (error "No valid HTTP response from URL %s." url))
+	(let ((response (match-string 1)))
+	  (when (not (string-match "2[0-9][0-9].*" response))
+	    (switch-to-buffer resultbuf)
+	    (error "Error while doing PROPFIND for '%s' at URL %s: %s" property url response))))
       (org-caldav-namespace-bug-workaround resultbuf)
       (url-dav-process-response resultbuf url))))
 
