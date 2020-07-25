@@ -1281,7 +1281,8 @@ match org-caldav-skip-conditions."
 (defun org-caldav-generate-ics ()
   "Generate ICS file from `org-caldav-files'.
 Returns buffer containing the ICS file."
-  (let ((icalendar-file
+  (let ((calendar-date-style 'european)
+        (icalendar-file
 	 (if (featurep 'ox-icalendar)
 	     'org-icalendar-combined-agenda-file
 	   'org-combined-agenda-icalendar-file))
