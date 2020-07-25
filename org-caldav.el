@@ -1453,21 +1453,22 @@ Returns MD5 from entry."
 (defun org-caldav-insert-org-time-stamp (date &optional time)
   "Insert org time stamp using DATE and TIME at point.
 DATE is given as european date (DD MM YYYY)."
-  (let* ((stime (when time (mapcar 'string-to-number
-				   (split-string time ":"))))
-	 (hours (if time (car stime) 0))
-	 (minutes (if time (nth 1 stime) 0))
-	 (sdate (mapcar 'string-to-number (split-string date)))
-	 (day (car sdate))
-	 (month (nth 1 sdate))
-	 (year (nth 2 sdate))
-	 (internaltime (encode-time 0 minutes hours day month year)))
-    (insert
-     (concat "<"
-	     (if time
-		 (format-time-string "%Y-%m-%d %a %H:%M" internaltime)
-	       (format-time-string "%Y-%m-%d %a" internaltime))
-	     ">"))))
+  (cond ((string-match-p "^%%" date) (insert "<" date ">"))
+        (t (let* ((stime (when time (mapcar 'string-to-number
+				            (split-string time ":"))))
+	          (hours (if time (car stime) 0))
+	          (minutes (if time (nth 1 stime) 0))
+	          (sdate (mapcar 'string-to-number (split-string date)))
+	          (day (car sdate))
+	          (month (nth 1 sdate))
+	          (year (nth 2 sdate))
+	          (internaltime (encode-time 0 minutes hours day month year)))
+             (insert
+              (concat "<"
+	              (if time
+		          (format-time-string "%Y-%m-%d %a %H:%M" internaltime)
+	                (format-time-string "%Y-%m-%d %a" internaltime))
+	              ">"))))))
 
 (defun org-caldav-save-sync-state ()
   "Save org-caldav sync database to disk.
@@ -1700,6 +1701,12 @@ which can be fed into `org-caldav-insert-org-entry'."
 			   "DATE")))
 		    (icalendar--datetime-to-colontime dtend-dec)
 		  start-t))
+    (when rrule
+      (setq start-d (string-trim (icalendar--convert-recurring-to-diary e dtstart-dec start-t end-t))
+            end-1-d nil
+            end-d nil
+            end-t nil)
+      )
     ;; Return result
     (list start-d start-t
 	  (if end-t end-d end-1-d)
