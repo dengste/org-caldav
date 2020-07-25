@@ -1651,7 +1651,7 @@ which can be fed into `org-caldav-insert-org-entry'."
 	 (summary (icalendar--convert-string-for-import
 		   (or (icalendar--get-event-property e 'SUMMARY)
 		       "No Title")))
-     e-type
+         e-type
 	 (description (icalendar--convert-string-for-import
 		       (or (icalendar--get-event-property e 'DESCRIPTION)
 			   "")))
