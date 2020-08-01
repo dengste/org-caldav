@@ -38,6 +38,7 @@
 (require 'url-util)
 (require 'cl-lib)
 (require 'button)
+(require `subr-x)
 
 
 (defgroup org-caldav nil
