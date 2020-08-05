@@ -1023,7 +1023,7 @@ ICSBUF is the buffer containing the exported iCalendar file."
           (org-caldav-fix-categories)
           (org-caldav-fix-todo-dtstart)
           (org-caldav-convert-buffer-to-crlf)
-          (message "Putting event %d of %d" counter (length events))
+          (message "Putting event %d of %d Org --> Cal" counter (length events))
           (if (org-caldav-put-event icsbuf)
               (org-caldav-event-set-etag cur 'put)
             (org-caldav-debug-print 1
