@@ -211,7 +211,7 @@ If this is the symbol 'with-headings, the results will also
 include headings from Org entries."
   :type '(choice
           (const with-headings :tag "Show what was done after syncing including headings")
-          (const nil :tag "Don't show what was done after syning")))
+          (const nil :tag "Don't show what was done after syncing")))
 
 (defcustom org-caldav-retry-attempts 5
   "Number of times trying to retrieve/put events."
