@@ -2239,7 +2239,7 @@ which can be fed into `org-caldav-insert-org-todo'."
   "Save string OBJ as URL using WebDAV.
 This switches to OAuth2 if necessary."
   (let* ((counter 0)
-         errormessage buffer)
+         errormessage full-response buffer)
     (while (and (not buffer)
                 (< counter org-caldav-retry-attempts))
       (with-current-buffer
@@ -2250,6 +2250,8 @@ This switches to OAuth2 if necessary."
         (if (looking-at "HTTP.*2[0-9][0-9]")
             (setq buffer (current-buffer))
           ;; There was an error putting the resource, try again.
+          (when (> org-caldav-debug-level 1)
+              (setq full-response (buffer-string)))
           (setq errormessage (buffer-substring (point-min) (point-at-eol)))
           (setq counter (1+ counter))
 	  (org-caldav-debug-print
@@ -2260,8 +2262,11 @@ This switches to OAuth2 if necessary."
         (kill-buffer buffer)
       (org-caldav-debug-print
        1
-        (format "Failed to put URL %s after %d tries with error %s"
-          url org-caldav-retry-attempts errormessage)))
+       (format "Failed to put URL %s after %d tries with error %s"
+               url org-caldav-retry-attempts errormessage))
+      (org-caldav-debug-print
+       2
+        (format "Full error response:\n %s" full-response)))
     (< counter org-caldav-retry-attempts)))
 
 ;;;###autoload
