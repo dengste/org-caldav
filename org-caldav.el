@@ -1164,9 +1164,11 @@ TODO: save percent-complete also as a property in org"
              (percent (dolist (p org-caldav-todo-percent-states r)
                         (when (string= state (car (cdr p)))
                           (setq r (car p)))))
-             (status (cond ((= percent 0) "NEEDS-ACTION")
-                           ((= percent 100) "COMPLETED")
-                           (t "IN-PROCESS")))
+             (status (if r
+                         (cond ((= percent 0) "NEEDS-ACTION")
+                               ((= percent 100) "COMPLETED")
+                               (t "IN-PROCESS"))
+                       (error "Error setting percent state: '%s' not present in org-caldav-todo-percent-states" state)))
              (completed (save-excursion
                           (goto-char (point-min))
                           (org-id-goto (org-caldav-get-uid))
