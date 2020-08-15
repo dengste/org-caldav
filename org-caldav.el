@@ -1829,8 +1829,7 @@ This will not update description (at the moment)."
           (setq cleantags (cons
                             (replace-regexp-in-string " " "-" (string-trim i))
                             cleantags)))
-        (org-set-tags-to (reverse cleantags))
-        (org-set-tags t))
+        (org-set-tags (reverse cleantags)))
       (org-set-tags-to nil))))
 
 (defun org-caldav-create-time-range (start-d start-t end-d end-t e-type)
