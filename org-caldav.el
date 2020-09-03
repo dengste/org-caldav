@@ -1317,7 +1317,7 @@ returned as a cons (POINT . LEVEL)."
                       org-caldav-sync-result)
                 (setq buf (current-buffer)))
             (error
-             ;; inbox file/headline could not be found
+             ;; Failed to insert new event/todo
              (org-caldav-event-set-status cur 'error)
              (push (list org-caldav-calendar-id uid
                          (org-caldav-event-status cur) 'error:inbox-notfound)
