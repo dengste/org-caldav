@@ -1215,7 +1215,10 @@ also look if there is a deadline."
           (save-excursion
             (goto-char (point-min))
             (org-id-goto (org-caldav-get-uid))
-            (if org-caldav-todo-deadline-schedule-warning-days
+            (if (and org-caldav-todo-deadline-schedule-warning-days
+                     ;; has deadline warning days set too:
+                     (string-match "-\\([0-9]+\\)\\([hdwmy]\\)\\(\\'\\|>\\| \\)"
+                                   (or (org-entry-get nil "DEADLINE" nil) "")))
                 (or (org-get-scheduled-time nil) (org-get-deadline-time nil))
               (org-get-scheduled-time nil)))
           (delete-region (point-at-bol) (+ 1 (point-at-eol))))))))
