@@ -1134,10 +1134,12 @@ This is a bug in older Org versions."
                     (goto-char (point-min))
                     (org-id-goto (org-caldav-get-uid))
                     (if (re-search-forward org-priority-regexp nil t)
-                      (let ((prio (org-entry-get nil "PRIORITY")))
+                       (let* ((prio (org-entry-get nil "PRIORITY"))
+                              (r 0))
                         (dolist (pri org-caldav-todo-priority r)
                           (when (string= (car (cdr pri)) prio)
-                            (setq r (car pri)))))
+                             (setq r (car pri))))
+                         r)
                       0))))))))
 
 (defun org-caldav-fix-todo-status-percent-state ()
@@ -1304,7 +1306,7 @@ returned as a cons (POINT . LEVEL)."
         (cond
          ((eq (org-caldav-event-status cur) 'new-in-cal)
           ;; This is a new event.
-          (condition-case nil
+          (condition-case err
               (with-current-buffer (find-file-noselect
                                     (org-caldav-inbox-file org-caldav-inbox))
                 (let ((point-and-level (org-caldav-inbox-point-and-level org-caldav-inbox)))
