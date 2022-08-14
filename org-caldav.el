@@ -817,14 +817,14 @@ If RESUME is non-nil, try to resume."
 	    calvalues (append calvalues (list (nth (1+ i) calendar)))))
     (cl-progv (mapcar 'org-caldav-var-for-key calkeys) calvalues
       (when (org-caldav-sync-do-org->cal)
-        (let ((files-for-sync (org-caldav-get-org-files-for-sync)))
-          (dolist (filename files-for-sync)
+	(let ((files-for-sync (org-caldav-get-org-files-for-sync)))
+	  (dolist (filename files-for-sync)
 	    (when (not (file-exists-p filename))
 	      (if (yes-or-no-p (format "File %s does not exist, create it?" filename))
 		  (write-region "" nil filename)
-	        (user-error "File %s does not exist" filename))))
-          ;; prevent https://github.com/dengste/org-caldav/issues/230
-          (org-id-update-id-locations files-for-sync)))
+		(user-error "File %s does not exist" filename))))
+	  ;; prevent https://github.com/dengste/org-caldav/issues/230
+	  (org-id-update-id-locations files-for-sync)))
       ;; Check if we need to do OAuth2
       (when (org-caldav-use-oauth2)
 	;; We need to do oauth2. Check if it is available.
