@@ -1248,10 +1248,9 @@ is on s-expression."
   "Put current item in backup file."
   (let ((item (buffer-substring (org-entry-beginning-position)
 				(org-entry-end-position))))
-    (with-current-buffer (find-file-noselect org-caldav-backup-file)
-      (goto-char (point-max))
+    (with-temp-buffer
       (insert item "\n")
-      (save-buffer))))
+      (write-region (point-min) (point-max) org-caldav-backup-file t))))
 
 (defun org-caldav-skip-function (backend)
   (when (eq backend 'icalendar)
