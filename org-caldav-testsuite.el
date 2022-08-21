@@ -2,7 +2,7 @@
 ;; Copyright, authorship, license: see org-caldav.el.
 
 ;; Run it from the org-caldav directory like this:
-;;   emacs -Q -L . --eval '(setq org-caldav-url "CALDAV-URL")' -l org-caldav-testsuite.el -f ert
+;;   TZ="Europe/Berlin" emacs -Q -L . --eval '(setq org-caldav-url "CALDAV-URL")' -l org-caldav-testsuite.el -f ert
 ;; On the server, there must already exist two calendars "test1" and "test2".
 ;; These will completely wiped by running this test!
 
@@ -17,6 +17,7 @@
 
 (defvar org-caldav-test-calendar-names '("test1" "test2"))
 
+(setq org-caldav-delete-calendar-entries 'always)
 (setq org-caldav-backup-file nil)
 (setq org-caldav-test-preamble
       "BEGIN:VCALENDAR
@@ -123,6 +124,10 @@ moose
 ;; All events after sync.
 (setq org-caldav-test-allevents
       '("orgcaldavtest@org1" "orgcaldavtest-org2" "orgcaldavtest@cal1" "orgcaldavtest-cal2"))
+
+(setq org-caldav-test-sync-result
+      '(("test1" "orgcaldavtest@cal1" new-in-cal cal->org)
+	("test1" "orgcaldavtest-cal2" new-in-cal cal->org)))
 
 ;; Test files.
 (defun org-caldav-test-calendar-empty-p ()
@@ -422,7 +427,7 @@ moose
 
 (ert-deftest org-caldav-03-insert-org-entry ()
   "Make sure that `org-caldav-insert-org-entry' works fine."
-  (let ((entry '("01 01 2015" "19:00" "01 01 2015" "20:00" "The summary" "The description" "location"))
+  (let ((entry '("01 01 2015" "19:00" "01 01 2015" "20:00" "The summary" "The description" "location" nil))
         (org-caldav-select-tags ""))
     (cl-flet ((write-entry (uid level)
                            (with-temp-buffer
@@ -564,10 +569,10 @@ moose
   (should (org-caldav-get-event "orgcaldavtest@cal1"))
   (should (org-caldav-get-event "orgcaldavtest-cal2"))
   ;; Sync result
-  (should (equal
-	   '(("test1" "orgcaldavtest@cal1" new-in-cal cal->org)
-	     ("test1" "orgcaldavtest-cal2" new-in-cal cal->org))
-	   org-caldav-sync-result))
+  (should (or (equal org-caldav-test-sync-result
+	             org-caldav-sync-result)
+              (equal (reverse org-caldav-test-sync-result)
+	             org-caldav-sync-result)))
   (org-caldav-test-cleanup))
 
 ;; Check that we are able to detect when an Org file was removed from
