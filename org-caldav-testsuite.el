@@ -948,8 +948,9 @@ Org task 2
   (message "Deleting event in Org")
   (with-current-buffer (find-file-noselect org-caldav-test-orgfile)
     (goto-char (point-min))
+    (message (buffer-string))
     (should (search-forward
-	     "* DONE [#B] Changed Another test task from Org
+	     "* DONE [#B] Changed Another test task from Org                         :test:
 CLOSED: [2012-12-24 Mon 00:00] DEADLINE: <2012-12-23 Sun> SCHEDULED: <2012-12-19 Wed>
 :PROPERTIES:
 :ID:       orgcaldavtest-org5
