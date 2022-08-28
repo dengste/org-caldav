@@ -101,6 +101,49 @@ END:VEVENT
 \\s-*<2012-12-05 Wed 19:00-20:00>
 \\s-*A second test")
 
+;; First test task in calendar
+(setq org-caldav-test-ics3
+      "BEGIN:VTODO
+UID:orgcaldavtest@cal3
+DTSTAMP:20220828T161432Z
+DTSTART;VALUE=DATE:20121223
+SUMMARY:A test task from iCal
+DESCRIPTION:ical test task 1
+PRIORITY:0
+STATUS:NEEDS-ACTION
+END:VTODO
+")
+
+(setq org-caldav-test-ics3-org
+      "\\* TODO A test task from iCal
+\\s-*SCHEDULED: <2012-12-23 Sun>
+\\s-*:PROPERTIES:
+\\s-*:ID:       orgcaldavtest@cal3
+\\s-*:END:
+\\s-*ical test task 1")
+
+;; Second test task in calendar
+(setq org-caldav-test-ics4
+      "BEGIN:VTODO
+UID:orgcaldavtest-cal4
+DTSTAMP:20220828T161432Z
+DTSTART;VALUE=DATE:20121219
+DUE;VALUE=DATE:20121223
+SUMMARY:Another test task from iCal
+DESCRIPTION:ical test task 2
+PRIORITY:5
+STATUS:NEEDS-ACTION
+END:VTODO
+")
+
+(setq org-caldav-test-ics4-org
+      "\\* TODO \\[#B\\] Another test task from iCal
+\\s-*DEADLINE: <2012-12-23 Sun> SCHEDULED: <2012-12-19 Wed>
+\\s-*:PROPERTIES:
+\\s-*:ID:       orgcaldavtest-cal4
+\\s-*:END:
+\\s-*ical test task 2")
+
 ;; First test entry in Org which should end up in calendar
 (setq org-caldav-test-org1
       "* This is a test
@@ -130,9 +173,33 @@ Baz Bar Foo
 moose
 ")
 
+;; First test task in Org which should end up in calendar
+(setq org-caldav-test-org4
+      "* TODO A test task from Org
+SCHEDULED: <2012-12-23 Sun>
+:PROPERTIES:
+:ID:       orgcaldavtest@org4
+:END:
+Org task 1
+")
+
+;; Dto., second one
+(setq org-caldav-test-org5
+      "* TODO [#B] Another test task from Org
+DEADLINE: <2012-12-23 Sun> SCHEDULED: <2012-12-19 Wed>
+:PROPERTIES:
+:ID:       orgcaldavtest-org5
+:END:
+Org task 2
+")
+
 ;; All events after sync.
 (setq org-caldav-test-allevents
       '("orgcaldavtest@org1" "orgcaldavtest-org2" "orgcaldavtest@cal1" "orgcaldavtest-cal2"))
+
+(setq org-caldav-test-alltodos
+      '("orgcaldavtest@org4" "orgcaldavtest-org5" "orgcaldavtest@cal3" "orgcaldavtest-cal4"))
+
 
 (setq org-caldav-test-sync-result
       '(("test1" "orgcaldavtest@cal1" new-in-cal cal->org)
@@ -705,3 +772,224 @@ moose
 
   (org-caldav-test-cleanup)
 )
+
+;; Based on org-caldav-01-sync-test, but modified for todos
+(ert-deftest org-caldav-09-sync-test-todo ()
+  (let ((org-caldav-sync-todo t)
+        (org-icalendar-include-todo 'all))
+    (message "Setting up temporary files")
+    (org-caldav-test-setup-temp-files)
+    (setq org-caldav-calendar-id (car org-caldav-test-calendar-names))
+    ;; Set up data for org-caldav.
+    (setq org-caldav-files (list org-caldav-test-orgfile))
+    (setq org-caldav-inbox org-caldav-test-inbox)
+    (setq org-caldav-debug-level 2)
+
+    (message "Cleaning up upstream calendars")
+    (org-caldav-test-set-up)
+
+    ;; Set up orgfile.
+    (with-current-buffer (find-file-noselect org-caldav-test-orgfile)
+      (insert org-caldav-test-org4 "\n")
+      (insert org-caldav-test-org5 "\n")
+      (save-buffer))
+
+    (message "Putting events")
+    (let ((org-caldav-calendar-preamble org-caldav-test-preamble)
+          events)
+      (with-temp-buffer
+        (insert org-caldav-test-ics3)
+        (should (org-caldav-put-event (current-buffer)))
+        (erase-buffer)
+        (insert org-caldav-test-ics4)
+        (should (org-caldav-put-event (current-buffer))))
+      (let ((events (org-caldav-get-event-etag-list)))
+        (should (assoc "orgcaldavtest@cal3" events))
+        (should (assoc "orgcaldavtest-cal4" events))))
+
+    (message "1st SYNC")
+    ;; Do the sync.
+    (org-caldav-sync)
+    ;;;; Check result.
+    (should (= (length (org-caldav-get-event-etag-list)) 4))
+    (should (member `(,org-caldav-calendar-id "orgcaldavtest@cal3" new-in-cal cal->org)
+        	    org-caldav-sync-result))
+    (should (member `(,org-caldav-calendar-id "orgcaldavtest-cal4" new-in-cal cal->org)
+        	    org-caldav-sync-result))
+    (should (member `(,org-caldav-calendar-id "orgcaldavtest@org4" new-in-org org->cal)
+        	    org-caldav-sync-result))
+    (should (member `(,org-caldav-calendar-id "orgcaldavtest-org5" new-in-org org->cal)
+        	    org-caldav-sync-result))
+    ;; State file should exist now.
+    (should (file-exists-p
+	     (org-caldav-sync-state-filename org-caldav-calendar-id)))
+    (let ((calevents (org-caldav-get-event-etag-list)))
+      (should (= (length calevents) (length org-caldav-test-alltodos)))
+      ;; Org events should be in cal.
+      (dolist (cur org-caldav-test-alltodos)
+        (should (assoc cur calevents))))
+    ;; Cal events should be in Org.
+    (with-current-buffer (find-file-noselect org-caldav-test-inbox)
+      (goto-char (point-min))
+      (should (re-search-forward org-caldav-test-ics3-org nil t))
+      (goto-char (point-min))
+      (should (re-search-forward org-caldav-test-ics4-org nil t)))
+
+    (message "2nd SYNC")
+    ;; Sync again.
+    (org-caldav-sync)
+    ;; Nothing should have happened.
+    (should-not org-caldav-sync-result)
+
+  (message "Changing org events")
+  ;; Now change events in Org
+  (with-current-buffer (find-buffer-visiting org-caldav-test-orgfile)
+    (goto-char (point-min))
+    (search-forward "TODO A test task from Org")
+    (replace-match "DONE Finished test task from Org")
+    (search-forward "SCHEDULED:")
+    (replace-match "CLOSED: [2012-12-24 Mon 00:00] SCHEDULED:" t))
+  (with-current-buffer (find-buffer-visiting org-caldav-test-inbox)
+    (goto-char (point-min))
+    (search-forward "TODO [#B] Another test task from iCal")
+    (replace-match "DONE [#C] Another test task from iCal was finished!")
+    (search-forward "DEADLINE:")
+    (replace-match "CLOSED: [2012-12-20 Thu 00:00] DEADLINE:" t))
+
+  ;; And sync...
+  (message "3rd SYNC")
+  (org-caldav-sync)
+  (should (equal `((,org-caldav-calendar-id "orgcaldavtest-cal4" changed-in-org org->cal)
+		   (,org-caldav-calendar-id "orgcaldavtest@org4" changed-in-org org->cal))
+		 org-caldav-sync-result))
+
+  ;; Check if those events correctly end up in calendar.
+  (with-current-buffer (org-caldav-get-event "orgcaldavtest-cal4")
+    (goto-char (point-min))
+    (save-excursion
+      (should (search-forward "SUMMARY:Another test task from iCal was finished!")))
+    (save-excursion
+      (should (search-forward "PRIORITY:9")))
+    (save-excursion
+      (should (search-forward "STATUS:COMPLETED")))
+    (save-excursion
+      (should (re-search-forward "COMPLETED.*:20121220T000000"))))
+
+  (with-current-buffer (org-caldav-get-event "orgcaldavtest@org4")
+    (goto-char (point-min))
+    (save-excursion
+      (should (search-forward "SUMMARY:Finished test task from Org")))
+    (save-excursion
+      (should (search-forward "PRIORITY:0")))
+    (save-excursion
+      (should (search-forward "STATUS:COMPLETED")))
+    (save-excursion
+      (should (re-search-forward "COMPLETED.*:20121224T000000"))))
+
+  ;; Now change events in Cal
+  (message "Changing events in calendar")
+  (with-current-buffer (org-caldav-get-event "orgcaldavtest@cal3")
+    (goto-char (point-min))
+    (save-excursion
+      (search-forward "SUMMARY:A test task from iCal")
+      (replace-match "SUMMARY:Changed A test task from iCal"))
+    (save-excursion
+      (re-search-forward "DTSTART\\(;.*\\)?:\\(20121223\\)")
+      (replace-match "20121224" nil nil nil 2))
+    (save-excursion
+      (when (re-search-forward "SEQUENCE:\\s-*\\([0-9]+\\)" nil t)
+	(replace-match (number-to-string
+			(1+ (string-to-number (match-string 1))))
+		       nil t nil 1)))
+    (message "PUTting first changed event")
+    (should (org-caldav-save-resource
+	     (concat (org-caldav-events-url) (url-hexify-string "orgcaldavtest@cal3.ics"))
+	     (encode-coding-string (buffer-string) 'utf-8))))
+
+  (with-current-buffer (org-caldav-get-event "orgcaldavtest-org5")
+    (goto-char (point-min))
+    (save-excursion
+      (search-forward "SUMMARY:Another test task from Org")
+      (replace-match "SUMMARY:Changed Another test task from Org"))
+    (save-excursion
+      (search-forward "STATUS:NEEDS-ACTION")
+      (replace-match "STATUS:COMPLETED\nCOMPLETED:20121224T000000"))
+    (save-excursion
+      (search-forward "PERCENT-COMPLETE:0")
+      (replace-match "PERCENT-COMPLETE:100"))
+    (save-excursion
+      (when (re-search-forward "SEQUENCE:\\s-*\\([0-9]+\\)" nil t)
+        (replace-match (number-to-string
+        		(1+ (string-to-number (match-string 1))))
+        	       nil t nil 1)))
+    (message "PUTting second changed event")
+    (should (org-caldav-save-resource
+             (concat (org-caldav-events-url) "orgcaldavtest-org5.ics")
+             (encode-coding-string (buffer-string) 'utf-8))))
+
+  ;; Aaaand sync!
+  (message "4th SYNC")
+  (org-caldav-sync)
+
+  (should (equal `((,org-caldav-calendar-id "orgcaldavtest@cal3" changed-in-cal cal->org)
+		   (,org-caldav-calendar-id "orgcaldavtest-org5" changed-in-cal cal->org))
+		 org-caldav-sync-result))
+
+  (with-current-buffer (find-file-noselect org-caldav-test-inbox)
+    (goto-char (point-min))
+    (should (re-search-forward
+	     "* TODO Changed A test task from iCal
+\\s-*SCHEDULED: <2012-12-24 Mon>
+\\s-*:PROPERTIES:
+\\s-*:ID:\\s-*orgcaldavtest@cal3
+\\s-*:END:
+\\s-*ical test task 1")))
+
+  (message "Deleting event in Org")
+  (with-current-buffer (find-file-noselect org-caldav-test-orgfile)
+    (goto-char (point-min))
+    (should (search-forward
+	     "* DONE [#B] Changed Another test task from Org
+CLOSED: [2012-12-24 Mon 00:00] DEADLINE: <2012-12-23 Sun> SCHEDULED: <2012-12-19 Wed>
+:PROPERTIES:
+:ID:       orgcaldavtest-org5
+:END:
+Org task 2
+
+"))
+    ;; Delete this event in Org
+    (replace-match ""))
+
+  ;; Sync
+  (message "6th SYNC")
+  (org-caldav-sync)
+
+  ;; Event should be deleted in calendar
+  (let ((calevents (org-caldav-get-event-etag-list)))
+    (should (= (length calevents) 3))
+    (should-not (assoc '"orgcaldavtest-org5" calevents)))
+  (should
+   (equal org-caldav-sync-result
+	  `((,org-caldav-calendar-id "orgcaldavtest-org5" deleted-in-org removed-from-cal))))
+  (should-not
+   (assoc '"orgcaldavtest-org5" org-caldav-event-list))
+
+  ;; Delete event in calendar
+  (message "Delete event in calendar")
+  (should (org-caldav-delete-event "orgcaldavtest@org4"))
+  ;; Sync one last time
+  (message "7th SYNC")
+  (let ((org-caldav-delete-org-entries 'always))
+    (org-caldav-sync))
+
+  (should
+   (equal org-caldav-sync-result
+  	  `((,org-caldav-calendar-id "orgcaldavtest@org4" deleted-in-cal removed-from-org))))
+  ;; There shouldn't be anything left in that buffer
+  (with-current-buffer (find-file-noselect org-caldav-test-orgfile)
+    (goto-char (point-min))
+    (should-not (re-search-forward "[:alnum:]" nil t)))
+  (should-not
+   (assoc '"orgcaldavtest@org4" org-caldav-event-list))
+
+  (org-caldav-test-cleanup)))
