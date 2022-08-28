@@ -3,8 +3,17 @@
 
 ;; Run it from the org-caldav directory like this:
 ;;   TZ="Europe/Berlin" emacs -Q -L . --eval '(setq org-caldav-url "CALDAV-URL")' -l org-caldav-testsuite.el -f ert
+;;
 ;; On the server, there must already exist two calendars "test1" and "test2".
 ;; These will completely wiped by running this test!
+;;
+;; Hint: In case you need a test server, one lightweight option is:
+;;    docker run -v /path/to/data:/data tomsquest/docker-radicale
+;; Then, you can create the test1 calendar from Thunderbird like so:
+;; Thunderbird -> New Calendar -> Network -> Location:
+;; http://localhost:5232/test/test1/ (the trailing slash is
+;; important), with username "test" and blank password. Then add an
+;; event from Thunderbird to make sure the calendar exists.
 
 (require 'ert)
 (require 'org)
