@@ -898,11 +898,14 @@ If RESUME is non-nil, try to resume."
 	    calvalues (append calvalues (list (nth (1+ i) calendar)))))
     (cl-progv (mapcar 'org-caldav-var-for-key calkeys) calvalues
       (when (org-caldav-sync-do-org->cal)
-	(dolist (filename (org-caldav-get-org-files-for-sync))
-	  (when (not (file-exists-p filename))
-	    (if (yes-or-no-p (format "File %s does not exist, create it?" filename))
-		(write-region "" nil filename)
-	      (user-error "File %s does not exist" filename)))))
+	(let ((files-for-sync (org-caldav-get-org-files-for-sync)))
+	  (dolist (filename files-for-sync)
+	    (when (not (file-exists-p filename))
+	      (if (yes-or-no-p (format "File %s does not exist, create it?" filename))
+		  (write-region "" nil filename)
+		(user-error "File %s does not exist" filename))))
+	  ;; prevent https://github.com/dengste/org-caldav/issues/230
+	  (org-id-update-id-locations files-for-sync)))
       ;; Check if we need to do OAuth2
       (when (org-caldav-use-oauth2)
 	;; We need to do oauth2. Check if it is available.
@@ -1306,7 +1309,9 @@ returned as a cons (POINT . LEVEL)."
 		(push (list org-caldav-calendar-id uid
 			    (org-caldav-event-status cur) 'cal->org)
 		      org-caldav-sync-result)
-		(setq buf (current-buffer)))
+		(setq buf (current-buffer))
+                ;; Org 9.5 can't find new IDs in unsaved files (upstream bug?)
+                (save-buffer))
 	    (error
 	     ;; inbox file/headline could not be found
 	     (org-caldav-event-set-status cur 'error)
@@ -1430,7 +1435,8 @@ which can only be synced to calendar. Ignoring." uid))
       ;; Check if a timestring is in the heading
       (goto-char start)
       (save-excursion
-        (when (re-search-forward org-ts-regexp-both end t)
+        ;; FIXME org-maybe-keyword-time-regexp is deprecated
+	(when (re-search-forward org-maybe-keyword-time-regexp end t)
 	  ;; Check if timestring is at the beginning or end of heading
 	  (if (< (- end (match-end 0))
 		 (- (match-beginning 0) start))
@@ -1462,11 +1468,8 @@ is on s-expression."
   (if (search-forward "<%%(" nil t)
       'orgsexp
     (when (or (re-search-forward org-tr-regexp nil t)
-              (and (re-search-forward "org-planning-line-re" nil t)
-                   (org-at-planning-p)
-                   (progn
-                     (org-skip-whitespace)
-                     (looking-at org-ts-regexp-both))))
+              ;; FIXME org-maybe-keyword-time-regexp is deprecated
+              (re-search-forward org-maybe-keyword-time-regexp nil t))
       (replace-match newtime nil t))
     (widen)))
 
@@ -1474,10 +1477,9 @@ is on s-expression."
   "Put current item in backup file."
   (let ((item (buffer-substring (org-entry-beginning-position)
 				(org-entry-end-position))))
-    (with-current-buffer (find-file-noselect org-caldav-backup-file)
-      (goto-char (point-max))
+    (with-temp-buffer
       (insert item "\n")
-      (save-buffer))))
+      (write-region (point-min) (point-max) org-caldav-backup-file t))))
 
 (defun org-caldav-skip-function (backend)
   (when (eq backend 'icalendar)
