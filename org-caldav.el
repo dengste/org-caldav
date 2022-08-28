@@ -1490,7 +1490,7 @@ is on s-expression."
        (let ((pt (save-excursion (apply 'org-agenda-skip-entry-if org-caldav-skip-conditions)))
               (ts (when org-caldav-days-in-past (* (abs org-caldav-days-in-past) -1)))
               (stamp (or (org-entry-get nil "TIMESTAMP" t) (org-entry-get nil "CLOSED" t))))
-	 (when (or pt (and stamp (> ts (org-time-stamp-to-now stamp))))
+	 (when (or pt (and stamp ts (> ts (org-time-stamp-to-now stamp))))
            (delete-region (point) (org-end-of-subtree t))))))))
 
 (defun org-caldav-timestamp-has-time-p (timestamp)
@@ -1571,9 +1571,7 @@ Returns buffer containing the ICS file."
 	(org-export-before-parsing-hook
 	 (append org-export-before-parsing-hook
            (when (or org-caldav-skip-conditions
-                     org-caldav-days-in-past) '(org-caldav-skip-function))))
-  (org-export-before-parsing-hook
-   (append org-export-before-parsing-hook
+                     org-caldav-days-in-past) '(org-caldav-skip-function))
            (when org-caldav-todo-deadline-schedule-warning-days '(org-caldav-scheduled-from-deadline))))
 	(org-icalendar-date-time-format
 	 (cond
