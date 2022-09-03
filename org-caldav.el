@@ -195,7 +195,11 @@ has no effect on the icalendar exporter."
 (defcustom org-caldav-backup-file
   (expand-file-name "org-caldav-backup.org" user-emacs-directory)
   "Name of the file where org-caldav should backup entries.
-Set this to nil if you don't want any backups."
+Set this to nil if you don't want any backups.
+
+Note that the ID property of the backup entry is renamed to
+OLDID, to prevent org-id-find from returning the backup entry in
+future syncs."
   :type 'file)
 
 (defcustom org-caldav-show-sync-results 'with-headings
@@ -1259,6 +1263,14 @@ is on s-expression."
 				(org-entry-end-position))))
     (with-temp-buffer
       (insert item "\n")
+      ;; Rename the ID property to OLDID, to prevent org-id-find from
+      ;; returning the backup entry in future syncs
+      (goto-char (point-min))
+      (let* ((entry (org-element-at-point))
+             (uid (org-element-property :ID entry)))
+        (when uid
+          (org-set-property "OLDID" uid)
+          (org-delete-property "ID")))
       (write-region (point-min) (point-max) org-caldav-backup-file t))))
 
 (defun org-caldav-skip-function (backend)
