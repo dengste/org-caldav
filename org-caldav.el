@@ -1409,8 +1409,9 @@ which can only be synced to calendar. Ignoring." uid))
 		(let ((level (org-current-level)))
 		  (delete-region (org-entry-beginning-position)
 				 (org-entry-end-position))
-		  (org-caldav-insert-org-entry-list
-		   (append eventdata-alist `((uid . ,uid) (level . ,level))))))
+		  (org-caldav-insert-org-event-or-todo
+		   (append eventdata-alist `((uid . ,uid)
+                                             (level . ,level))))))
 	      (setq buf (current-buffer))
 	      (push (list org-caldav-calendar-id uid
 			  (org-caldav-event-status cur)
@@ -1779,6 +1780,9 @@ Returns MD5 from entry."
     (insert (make-string (or level 1) ?*) " "
       todostate " " prio
       summary "\n"))
+  (when (> (length description) 0)
+    (insert "  " description "\n"))
+  (forward-line -1)
   (when start-d
     (org--deadline-or-schedule
      nil 'scheduled (org-caldav-convert-to-org-time start-d start-t)))
@@ -1788,9 +1792,6 @@ Returns MD5 from entry."
   (when completed-d
     (org-add-planning-info 'closed (org-caldav-convert-to-org-time completed-d completed-t)))
   (org-caldav-set-org-tags categories)
-  (when (> (length description) 0)
-    (insert "  " description "\n"))
-  ;;(forward-line -1)
   (when uid (org-set-property "ID" (url-unhex-string uid)))
   (org-caldav-insert-org-entry--wrapup))
 

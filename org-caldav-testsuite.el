@@ -945,6 +945,36 @@ Org task 2
 \\s-*:END:
 \\s-*ical test task 1")))
 
+  (message "Changing description in icalendar")
+  (with-current-buffer (org-caldav-get-event "orgcaldavtest@cal3")
+    (goto-char (point-min))
+    (save-excursion
+      (search-forward "DESCRIPTION:ical test task 1")
+      (replace-match "DESCRIPTION:ical test task 1 modified"))
+    
+    (message "PUTting changed description")
+    (should (org-caldav-save-resource
+	     (concat (org-caldav-events-url) (url-hexify-string "orgcaldavtest@cal3.ics"))
+	     (encode-coding-string (buffer-string) 'utf-8))))
+
+  (message "5th SYNC")
+  (let ((org-caldav-sync-changes-to-org 'all))
+    (org-caldav-sync))
+  
+  (should (equal `((,org-caldav-calendar-id "orgcaldavtest@cal3"
+                                            changed-in-cal cal->org))
+		 org-caldav-sync-result))
+
+  (with-current-buffer (find-file-noselect org-caldav-test-inbox)
+    (goto-char (point-min))
+    (should (re-search-forward
+	     "* TODO Changed A test task from iCal
+\\s-*SCHEDULED: <2012-12-24 Mon>
+\\s-*:PROPERTIES:
+\\s-*:ID:\\s-*orgcaldavtest@cal3
+\\s-*:END:
+\\s-*ical test task 1 modified")))
+
   (message "Deleting event in Org")
   (with-current-buffer (find-file-noselect org-caldav-test-orgfile)
     (goto-char (point-min))
