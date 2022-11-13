@@ -1727,6 +1727,13 @@ Returns MD5 from entry."
        .start-d .start-t .end-d .end-t .summary
        .description .location .e-type .uid .level))))
 
+(defun org-caldav--insert-description (description)
+  (when (> (length description) 0)
+    (let ((beg (point)))
+      (insert description)
+      (org-indent-region beg (point)))
+    (newline)))
+
 (defun org-caldav-insert-org-entry (start-d start-t end-d end-t
                                             summary description location e-type
                                             &optional uid level)
@@ -1743,8 +1750,7 @@ Returns MD5 from entry."
   (insert (make-string (or level 1) ?*) " " summary "\n")
   (insert (if org-adapt-indentation "  " "")
    (org-caldav-create-time-range start-d start-t end-d end-t e-type) "\n")
-  (when (> (length description) 0)
-    (insert "  " description "\n"))
+  (org-caldav--insert-description description)
   (forward-line -1)
   (when uid
     (org-set-property "ID" (url-unhex-string uid)))
@@ -1783,8 +1789,7 @@ Returns MD5 from entry."
     (insert (make-string (or level 1) ?*) " "
       todostate " " prio
       summary "\n"))
-  (when (> (length description) 0)
-    (insert "  " description "\n"))
+  (org-caldav--insert-description description)
   (forward-line -1)
   (when start-d
     (org--deadline-or-schedule
