@@ -347,6 +347,14 @@ have trouble finding IDs in unsaved buffers, causing syncs and
 the unit tests to fail otherwise."
   :type 'boolean)
 
+(defcustom org-caldav-description-blank-line-before t
+  "Whether DESCRIPTION inserted into org should be preceded by blank line."
+  :type 'boolean)
+
+(defcustom org-caldav-description-blank-line-after t
+  "Whether DESCRIPTION inserted into org should be followed by blank line."
+  :type 'boolean)
+
 ;; Internal variables
 (defvar org-caldav-oauth2-available
   (condition-case nil (require 'oauth2) (error))
@@ -1729,9 +1737,11 @@ Returns MD5 from entry."
 
 (defun org-caldav--insert-description (description)
   (when (> (length description) 0)
+    (when org-caldav-description-blank-line-before (newline))
     (let ((beg (point)))
       (insert description)
       (org-indent-region beg (point)))
+    (when org-caldav-description-blank-line-after (newline))
     (newline)))
 
 (defun org-caldav-insert-org-entry (start-d start-t end-d end-t
