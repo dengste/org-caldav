@@ -403,37 +403,37 @@ the events into the debug buffer. If you send such a buffer in a bug
 report, please make very sure you have removed personal information
 from those events.
 
-#### Syncing TODO
+#### Syncing TODOs between Org and CalDav
 
-This section is experimental.  So please make sure you have backups before you
-use this.  Create issues if it doesn't work for you.  This was developed with a
-nextcloud 12 server, and it is not sure if it works somewhere else.  Please
-report if you have another setup, so we can fix that.
+This is a relatively new feature, so please make sure you have backups
+before you use it.  It has been tested on nextcloud and radicale.
 
-To enable this, just use
+To sync TODO's between Org and the CalDav server, do:
 
     (setq org-icalendar-include-todo 'all
         org-caldav-sync-todo t)
 
-The first will include your todos to the exporter (org->cal) the second controls
-the use of downloaded vtodo events to import it to the `inbox`.
+The first instructs the Org exporter to include TODOs; the second
+tells org-caldav to import icalendar VTODOs as Org TODOs.
 
-It is also a good idea to set
+Other customizations to consider (see their documentation for more
+details):
+
+* `org-caldav-todo-priority` to control how priority levels map
+  between iCalendar and Org.
+* `org-caldav-todo-percent-states` to convert between
+  `org-todo-keywords` and iCalendar's percent-complete property.
+* `org-caldav-todo-deadline-schedule-warning-days` to auto-create
+  SCHEDULED timestamps when a DEADILNE is present (this might be
+  useful for users of the OpenTasks app).
+  
+If you find that some Org entries get an extra tag which equals their
+CATEGORY, this might be caused by the CATEGORY being exported to
+iCalendar, and then re-imported to Org as a tag. In that case, do
 
     (setq org-icalendar-categories '(local-tags))
-
-so the tags on the nextcloud will not include the local category.  If you need
-that, leave a message.  On cal->org this would add it to the tags.
-
-See the variables `org-caldav-todo-priority` and
-`org-caldav-todo-percent-states` for some customization.
-
-There is also `org-caldav-todo-deadline-schedule-warning-days` which can be set
-to `t` if you want to include a scheduled date.  Some apps like OpenTasks will
-move tasks out of the widget if there is a scheduled, until it actually starts.
-
-I would recommend you to test this and report issues, because I also want to
-have a stable todo handling.
+    
+to prevent the CATEGORY from being exported to iCalendar.
 
 #### Known Bugs
 
