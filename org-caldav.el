@@ -235,8 +235,8 @@ different timezone in your Org files."
 this, you should also set `org-icalendar-include-todo' to
 `\'all'.
 
-This is a relatively new feature; please ensure you have backups
-before enabling it."
+This feature is relatively new and less well tested; it is
+recommended to have backups before enabling it."
   :type 'boolean)
 
 (defcustom org-caldav-todo-priority '((0 nil) (1 "A") (5 "B") (9 "C"))

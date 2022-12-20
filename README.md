@@ -405,8 +405,9 @@ from those events.
 
 #### Syncing TODOs between Org and CalDav
 
-This is a relatively new feature, so please make sure you have backups
-before you use it.  It has been tested on nextcloud and radicale.
+This feature is relatively new and less well tested, so it is
+recommended to have backups before using it.  It has been tested on
+nextcloud and radicale.
 
 To sync TODO's between Org and the CalDav server, do:
 
