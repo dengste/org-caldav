@@ -424,7 +424,7 @@ details):
 * `org-caldav-todo-percent-states` to convert between
   `org-todo-keywords` and iCalendar's percent-complete property.
 * `org-caldav-todo-deadline-schedule-warning-days` to auto-create
-  SCHEDULED timestamps when a DEADILNE is present (this might be
+  SCHEDULED timestamps when a DEADLINE is present (this might be
   useful for users of the OpenTasks app).
   
 If you find that some Org entries get an extra tag which equals their

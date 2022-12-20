@@ -231,33 +231,32 @@ different timezone in your Org files."
   :type 'string)
 
 (defcustom org-caldav-sync-todo nil
-  "Experimental feature of syncing vtodo events along with the
-vevent.  Please make sure to save all your data before helping us
-to thest this feature.  If you enable this, you should set
-`org-icalendar-include-todo' to `\'all', to have the best
-experience.")
+  "Whether to sync TODO's with the CalDav server. If you enable
+this, you should also set `org-icalendar-include-todo' to
+`\'all'.
+
+This is a relatively new feature; please ensure you have backups
+before enabling it."
+  :type 'boolean)
 
 (defcustom org-caldav-todo-priority '((0 nil) (1 "A") (5 "B") (9 "C"))
-  "This maps the ical priority, which has numerical value, to the
-org-mode priority values.
+  "Mapping between iCalendar and Org TODO priority levels.
 
-If you have changed the default priority levels for org mode,
-please change this too.
+The iCalendar priority is an integer 1-9, with lower number
+having higher priority, and 0 equal to unspecified priority. The
+default Org priorities are A-C, but this can be changed with
+`org-priority-highest' and `org-priority-lowest'. If you change
+the default Org priority, you should also update this
+variable (`org-caldav-todo-priority').
 
-CAUTION: Nextcloud has priority 0 (not set) and 1-9 for high to
-low.  org-mode default has not set, but only A (high) to
-C (low).  The behaviour is following: Getting new entries between
-9 will synced localy as C, 5-8 as B and 1-4 as A.
+The default mapping is: 0 is no priority, 1-4 is #A, 5-8 is #B,
+and 9 is #C.
 
-If you want to change this see
-`http://orgmode.org/manual/Priorities.html' and change this here
-accordingly.
-
-TODO: Store the priority in a property and use this property for sync.
-")
+TODO: Store the priority in a property and sync it."
+  :type 'list)
 
 (defcustom org-caldav-todo-percent-states '((0 "TODO") (100 "DONE"))
-  "Mapping between `org-todo-keywords' & iCal's percent-complete.
+  "Mapping between `org-todo-keywords' & iCal VTODO's percent-complete.
 
 iCalendar's percent-complete is a positive integer between 0 and
 100. The default value for `org-caldav-todo-percent-states' maps
@@ -272,19 +271,23 @@ The following example would instead map 0 to TODO, 1 to NEXT,
 
 Note: You should check that the keywords in
 `org-caldav-todo-percent-states' are also valid keywords in
-`org-todo-keywords'.")
+`org-todo-keywords'."
+  :type 'list)
 
 (defcustom org-caldav-todo-deadline-schedule-warning-days nil
-  "When set to `t' this will make sure to set a scheduled time when a deadline
-is given.
+  "Whether to auto-create SCHEDULED timestamp from DEADLINE.
 
-This uses the warning string like DEADLINE: <2017-07-05 Wed -3d> to a SCHEDULED
-<2017-07-02 Sun>.  If the warning days (here -3d) is not given its taken from
-`org-deadline-warning-days'.  Which is also used in the org agenda.
+When set to `t', on sync any TODO item with a DEADLINE timestamp
+will have a SCHEDULED timestamp added if it doesn't already have
+one.
 
-This makes sense if you use the OpenTasks Widget, which also
-shows up entries which have a deadline years in the future, but
-if a scheduled is set it dissapears.")
+This uses the warning string like DEADLINE: <2017-07-05 Wed -3d>
+to a SCHEDULED <2017-07-02 Sun>.  If the warning days (here -3d)
+is not given it is taken from `org-deadline-warning-days'.
+
+This might be useful for OpenTasks users, to prevent the app from
+showing tasks which have a deadline years in the future."
+  :type 'boolean)
 
 (defcustom org-caldav-debug-level 1
   "Level of debug output in `org-caldav-debug-buffer'.
