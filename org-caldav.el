@@ -256,23 +256,23 @@ accordingly.
 TODO: Store the priority in a property and use this property for sync.
 ")
 
-(defcustom org-caldav-todo-percent-states '((0 "TODO") (1 "STARTED") (100 "DONE"))
-  "Ical vtodo entries have a percent-complete tag, which has numeric values 0-100.
+(defcustom org-caldav-todo-percent-states '((0 "TODO") (100 "DONE"))
+  "Mapping between `org-todo-keywords' & iCal's percent-complete.
 
-Here we map it with todo keywords.  The default values can be
-  explained as: 0 is TODO, 1-99 is STARTED and 100 is
-  DONE.  (Higher than rule, highest value wins.)
+iCalendar's percent-complete is a positive integer between 0 and
+100. The default value for `org-caldav-todo-percent-states' maps
+these to `org-todo-keywords' as follows: 0-99 is TODO, and 100 is
+DONE.
 
-NOTE: STARTED is not default in org-todo-keywords, so this rule
-may be omitted if you didn't set it.  See
-`http://orgmode.org/manual/Workflow-states.html#Workflow-states'
-and
-`http://orgmode.org/manual/Per_002dfile-keywords.html#Per_002dfile-keywords'
-for details.
+The following example would instead map 0 to TODO, 1 to NEXT,
+2-99 to PROG, and 100 to DONE:
 
-Some people work with the NEXT keyword, to have better filtering
-for entries, the ical way would be to set priorities for that.  I
-use the NEXT with a percent-state of 1, setting STARTED to 2.")
+  (setq org-caldav-todo-percent-states
+        '((0 \"TODO\") (1 \"NEXT\") (2 \"PROG\") (100 \"DONE\")))
+
+Note: You should check that the keywords in
+`org-caldav-todo-percent-states' are also valid keywords in
+`org-todo-keywords'.")
 
 (defcustom org-caldav-todo-deadline-schedule-warning-days nil
   "When set to `t' this will make sure to set a scheduled time when a deadline
