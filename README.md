@@ -448,11 +448,6 @@ to prevent the CATEGORY from being exported to iCalendar.
 * Pretty much everything besides SUMMARY, DESCRIPTION, LOCATION and
   time is ignored in iCalendar.
 
-* When trying to sync todo entries org-mode's export to ical can create empty
-  entries.  org-caldav tries to sync this, which results in errors.
-  In this case you can set `org-icalender-sync-todo` to `t` instead of `'all`,
-  until it is fixed.
-
 #### How syncing happens (a.k.a. my little CalDAV rant)
 
 (This is probably not interesting, so you can just stop reading.)
