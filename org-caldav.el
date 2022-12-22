@@ -2247,7 +2247,7 @@ This switches to OAuth2 if necessary."
 ;;;###autoload
 (defun org-caldav-import-ics-buffer-to-org ()
   "Add ics content in current buffer to `org-caldav-inbox'."
-  (let ((event (org-caldav-convert-event-or-todo))
+  (let ((event (org-caldav-convert-event-or-todo nil))
         (file (org-caldav-inbox-file org-caldav-inbox)))
     (with-current-buffer (find-file-noselect file)
       (let* ((point-and-level (org-caldav-inbox-point-and-level org-caldav-inbox))
