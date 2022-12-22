@@ -165,7 +165,8 @@ might loose information in your Org items (take a look at
 This makes it very easy to keep the remote calendar clean.
 
 nil means include all entries (default)
-any number set will cut the dates older than N days in the past. ")
+any number set will cut the dates older than N days in the past."
+  :type 'integer)
 
 (defcustom org-caldav-delete-org-entries 'ask
   "Whether entries deleted in calendar may be deleted in Org.
