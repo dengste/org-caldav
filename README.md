@@ -434,7 +434,9 @@ iCalendar, and then re-imported to Org as a tag. In that case, do
 
     (setq org-icalendar-categories '(local-tags))
     
-to prevent the CATEGORY from being exported to iCalendar.
+to prevent the CATEGORY from being exported to iCalendar. This problem
+only seems to affect some CalDav servers: in particular, NextCloud
+is affected, but Radicale does not seem to experience this problem.
 
 #### Known Bugs
 
