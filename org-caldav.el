@@ -6,7 +6,7 @@
 ;; Author: David Engster <deng@randomsample.de>
 ;; Maintainer: Jack Kamm <jackkamm@tatersworld.org>
 ;; Keywords: calendar, caldav
-;; Package-Requires: ((org "7"))
+;; Package-Requires: ((org "9"))
 ;;
 ;; This file is not part of GNU Emacs.
 ;;
@@ -1278,11 +1278,7 @@ returned as a cons (POINT . LEVEL)."
 	 (save-excursion
 	   (let ((org-link-search-inhibit-query t)
 		 level)
-	     ;; org-link-search changed signature in v8.3
-	     (with-no-warnings
-	       (if (version< org-version "8.3")
-		   (org-link-search (concat "*" (nth 2 inbox)) nil nil t)
-		 (org-link-search (concat "*" (nth 2 inbox)) nil t)))
+	     (org-link-search (concat "*" (nth 2 inbox)) nil t)
 	     (setq level (1+ (org-current-level)))
 	     (org-end-of-subtree t t)
 	     (cons (point) level))))
@@ -1632,11 +1628,7 @@ Returns buffer containing the ICS file."
 				      (symbol-value icalendar-file)))
     ;; Export events to one single ICS file.
     (if (featurep 'ox-icalendar)
-	;; New exporter (Org 8)
-	;; Signature changed in version 8.3
-	(if (version< org-version "8.3beta")
-	    (apply 'org-icalendar--combine-files nil orgfiles)
-	  (apply 'org-icalendar--combine-files orgfiles))
+        (apply 'org-icalendar--combine-files orgfiles)
       (apply 'org-export-icalendar t orgfiles))
     (find-file-noselect (symbol-value icalendar-file))))
 
