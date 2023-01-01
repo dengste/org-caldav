@@ -95,12 +95,14 @@ All items that carry one of these tags will not be exported."
   "Where to put new entries obtained from calendar.
 
 This can be simply be a filename to an Org file where all new
-entries will be put.  It can also be an alist, in which case you
-can choose between the following options:
+entries will be put.  It can also be a list, in which case you
+can choose between the following options (which are a subset of
+the allowed targets in `org-capture-templates'):
 
  - (file \"path/to/file\"), or
  - (id \"id of existing org entry\"), or
- - (file+headline \"path/to/file\" \"node headline\")."
+ - (file+headline \"path/to/file\" \"node headline\"), or
+ - (file+olp \"path/to/file\" \"Level 1 headline\" \"Level 2\" ...)."
   :type 'file)
 
 (defcustom org-caldav-sync-direction 'twoway
@@ -1263,7 +1265,7 @@ also look if there is a deadline."
 For format of INBOX, see `org-caldav-inbox'."
   (cond ((stringp inbox)
 	 inbox)
-	((memq (car inbox) '(file file+headline))
+	((memq (car inbox) '(file file+headline file+olp))
 	 (nth 1 inbox))
 	((eq (car inbox) 'id)
 	 (org-id-find-id-file (nth 1 inbox)))))
@@ -1279,6 +1281,13 @@ returned as a cons (POINT . LEVEL)."
 	   (let ((org-link-search-inhibit-query t)
 		 level)
 	     (org-link-search (concat "*" (nth 2 inbox)) nil t)
+	     (setq level (1+ (org-current-level)))
+	     (org-end-of-subtree t t)
+	     (cons (point) level))))
+        ((eq (car inbox) 'file+olp)
+	 (save-excursion
+	   (let (level)
+             (goto-char (org-find-olp (cdr inbox)))
 	     (setq level (1+ (org-current-level)))
 	     (org-end-of-subtree t t)
 	     (cons (point) level))))
