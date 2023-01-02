@@ -354,7 +354,8 @@ and inbox is 'fromstuff.org'. See the doc-string of
 
 See the doc-string of `org-caldav-inbox` if you want more flexibility in
 where new items should be put. Instead of simply providing a file, you
-can also choose an existing entry or headline.
+can also choose an existing entry or headline, or put the entry under a
+datetree.
 
 #### Timezone problems
 

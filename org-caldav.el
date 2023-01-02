@@ -102,8 +102,34 @@ the allowed targets in `org-capture-templates'):
  - (file \"path/to/file\"), or
  - (id \"id of existing org entry\"), or
  - (file+headline \"path/to/file\" \"node headline\"), or
- - (file+olp \"path/to/file\" \"Level 1 headline\" \"Level 2\" ...)."
+ - (file+olp \"path/to/file\" \"Level 1 headline\" \"Level 2\" ...), or
+ - (file+olp+datetree \"path/to/file\" \"Level 1 heading\" ...)
+
+For datetree, use `org-caldav-datetree-treetype' to control the
+tree-type; see its Help for more info about the datetree behavior."
   :type 'file)
+
+(defcustom org-caldav-datetree-treetype 'month
+  "Tree-type when `org-caldav-inbox' is a datetree.
+
+This can be one of 'month, 'week, or 'day.
+
+Entries are filed into the datetree according to their start
+date. TODO's without a scheduled date instead use the current
+date at sync time.
+
+Currently, this only controls where new entries are filed;
+existing entries whose dates change won't be refiled
+automatically.
+
+Since existing entries aren't refiled automatically yet, the
+datetree is more useful for light organization of the org-file,
+rather than as a precise reflection of your calendar. Therefore
+the default value is at the coarsest level of month-tree."
+  :type '(choice
+          (const month :tag "Month-tree")
+          (const week :tag "Week-Day-tree")
+          (const day :tag "Month-Day-tree")))
 
 (defcustom org-caldav-sync-direction 'twoway
   "Which kind of sync should be done between Org and calendar.
@@ -1265,38 +1291,51 @@ also look if there is a deadline."
 For format of INBOX, see `org-caldav-inbox'."
   (cond ((stringp inbox)
 	 inbox)
-	((memq (car inbox) '(file file+headline file+olp))
+	((memq (car inbox) '(file file+headline file+olp file+olp+datetree))
 	 (nth 1 inbox))
 	((eq (car inbox) 'id)
 	 (org-id-find-id-file (nth 1 inbox)))))
 
-(defun org-caldav-inbox-point-and-level (inbox)
+(defun org-caldav-inbox-point-and-level (inbox eventdata-alist)
   "Return position and level where to add new entries in INBOX.
 For format of INBOX, see `org-caldav-inbox'.  The values are
 returned as a cons (POINT . LEVEL)."
-  (cond ((or (stringp inbox) (eq (car inbox) 'file))
-	 (cons (point-max) 1))
-	((eq (car inbox) 'file+headline)
-	 (save-excursion
-	   (let ((org-link-search-inhibit-query t)
-		 level)
+  (save-excursion
+    (cond ((or (stringp inbox) (eq (car inbox) 'file))
+	   (cons (point-max) 1))
+	  ((eq (car inbox) 'file+headline)
+	   (let ((org-link-search-inhibit-query t))
 	     (org-link-search (concat "*" (nth 2 inbox)) nil t)
-	     (setq level (1+ (org-current-level)))
-	     (org-end-of-subtree t t)
-	     (cons (point) level))))
-        ((eq (car inbox) 'file+olp)
-	 (save-excursion
-	   (let (level)
-             (goto-char (org-find-olp (cdr inbox)))
-	     (setq level (1+ (org-current-level)))
-	     (org-end-of-subtree t t)
-	     (cons (point) level))))
-	((eq (car inbox) 'id)
-	 (save-excursion
+             (org-caldav--point-level-helper)))
+          ((eq (car inbox) 'file+olp)
+	   (goto-char (org-find-olp (cdr inbox)))
+	   (org-caldav--point-level-helper))
+          ((eq (car inbox) 'file+olp+datetree)
+           (let ((outline-path (cdr (cdr inbox))))
+             (when outline-path
+               (goto-char (org-find-olp (cdr inbox))))
+             (funcall
+              (pcase org-caldav-datetree-treetype
+	        (`week #'org-datetree-find-iso-week-create)
+	        (`month #'org-datetree-find-month-create)
+	        (`day #'org-datetree-find-date-create))
+              (let ((start-d (alist-get 'start-d eventdata-alist)))
+                (if start-d (org-caldav--convert-to-calendar start-d)
+                  ;; Use current date for a VTODO without DTSTART
+                  (calendar-current-date)))
+              (when outline-path 'subtree-at-point))
+             (org-caldav--point-level-helper)))
+	  ((eq (car inbox) 'id)
 	   (goto-char (cdr (org-id-find (nth 1 inbox))))
-	   (let ((level (1+ (org-current-level))))
-	     (org-end-of-subtree t t)
-	     (cons (point) level))))))
+	   (org-caldav--point-level-helper)))))
+
+(defun org-caldav--point-level-helper ()
+  "Helper function for `org-caldav-inbox-point-and-level'.
+Go to the end of the current subtree, and return the point and
+level to add a new child entry."
+  (let ((level (1+ (org-current-level))))
+    (org-end-of-subtree t t)
+    (cons (point) level)))
 
 (defun org-caldav-update-events-in-org ()
   "Update events in Org files."
@@ -1333,7 +1372,8 @@ returned as a cons (POINT . LEVEL)."
 	  (condition-case nil
 	      (with-current-buffer (find-file-noselect
 				    (org-caldav-inbox-file org-caldav-inbox))
-		(let ((point-and-level (org-caldav-inbox-point-and-level org-caldav-inbox)))
+		(let ((point-and-level (org-caldav-inbox-point-and-level
+                                        org-caldav-inbox eventdata-alist)))
 		  (org-caldav-debug-print
 		   1 (format "Event UID %s: New in Cal --> Org inbox." uid))
 		  (goto-char (car point-and-level))
@@ -1889,39 +1929,30 @@ Sets the block's tags, and return its MD5."
 (defun org-caldav-insert-org-time-stamp (date &optional time)
   "Insert org time stamp using DATE and TIME at point.
 DATE is given as european date (DD MM YYYY)."
-  (let* ((stime (when time (mapcar 'string-to-number
-				   (split-string time ":"))))
-	 (hours (if time (car stime) 0))
-	 (minutes (if time (nth 1 stime) 0))
-	 (sdate (mapcar 'string-to-number (split-string date)))
-	 (day (car sdate))
-	 (month (nth 1 sdate))
-	 (year (nth 2 sdate))
-	 (internaltime (encode-time 0 minutes hours day month year)))
-    (insert
-      (concat "<"
-        (if time
-          (format-time-string "%Y-%m-%d %a %H:%M" internaltime)
-          (format-time-string "%Y-%m-%d %a" internaltime))
-        ">"))))
+  (insert
+   (concat "<" (org-caldav-convert-to-org-time date time) ">")))
 
-
-;; is it needed?
 (defun org-caldav-convert-to-org-time (date &optional time)
-  "Insert org time stamp using DATE and TIME at point.
-DATE is given as european date (DD MM YYYY)."
+  "Convert to org time stamp using DATE and TIME.
+DATE is given as european date \"DD MM YYYY\"."
   (let* ((stime (when time (mapcar 'string-to-number
                              (split-string time ":"))))
           (hours (if time (car stime) 0))
           (minutes (if time (nth 1 stime) 0))
-          (sdate (mapcar 'string-to-number (split-string date)))
-          (day (car sdate))
-          (month (nth 1 sdate))
-          (year (nth 2 sdate))
-          (internaltime (encode-time 0 minutes hours day month year)))
+          (sdate (org-caldav--convert-to-calendar date))
+          (internaltime (encode-time 0 minutes hours
+                                     (calendar-extract-day sdate)
+                                     (calendar-extract-month sdate)
+                                     (calendar-extract-year sdate))))
     (if time
         (format-time-string "%Y-%m-%d %a %H:%M" internaltime)
       (format-time-string "%Y-%m-%d %a" internaltime))))
+
+(defun org-caldav--convert-to-calendar (date)
+  "Convert DATE to calendar.el-style list (month day year).
+DATE is given as european date \"DD MM YYYY\"."
+  (let ((sdate (mapcar 'string-to-number (split-string date))))
+    (list (nth 1 sdate) (nth 0 sdate) (nth 2 sdate))))
 
 (defun org-caldav-save-sync-state ()
   "Save org-caldav sync database to disk.
@@ -2252,7 +2283,8 @@ This switches to OAuth2 if necessary."
   (let ((event (org-caldav-convert-event-or-todo nil))
         (file (org-caldav-inbox-file org-caldav-inbox)))
     (with-current-buffer (find-file-noselect file)
-      (let* ((point-and-level (org-caldav-inbox-point-and-level org-caldav-inbox))
+      (let* ((point-and-level (org-caldav-inbox-point-and-level
+                               org-caldav-inbox event))
              (point (car point-and-level))
              (level (cdr point-and-level)))
         (goto-char point)
