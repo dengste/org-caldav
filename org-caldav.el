@@ -1162,11 +1162,19 @@ The ics must be in the current buffer."
 
 (defun org-caldav-cleanup-ics-description ()
   "Cleanup description for event in current buffer.
-This removes timestamps which weren't properly removed by
-org-icalendar."
+This removes an initial timestamp or range if it wasn't removed
+by ox-icalendar."
   (save-excursion
     (goto-char (point-min))
-    (when (re-search-forward "^DESCRIPTION:.*?\\(\s*-*<[^>]+>\\(–<[^>]+>\\)?\\(\\\\n\\\\n\\)?\\)" nil t)
+    (when (re-search-forward
+           ;; Can't use org-tsr-regexp because -- is converted to
+           ;; unicode emdash –
+           (concat "^DESCRIPTION:\\(\\s-*"
+                   org-ts-regexp
+                   "\\(–"
+                   org-ts-regexp
+                   "\\)?\\(\\\\n\\\\n\\)?\\)")
+            nil t)
       (replace-match "" nil nil nil 1))))
 
 (defun org-caldav-maybe-fix-timezone ()

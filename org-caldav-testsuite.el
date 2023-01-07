@@ -1024,3 +1024,62 @@ Org task 2
    (assoc '"orgcaldavtest@org4" org-caldav-event-list))
 
   (org-caldav-test-cleanup)))
+
+(ert-deftest org-caldav-10-test-description-cleanup ()
+  (let ((org-caldav-sync-todo t)
+        (org-icalendar-include-todo 'all))
+    (message "Setting up temporary files")
+    (org-caldav-test-setup-temp-files)
+    (setq org-caldav-calendar-id (car org-caldav-test-calendar-names))
+    ;; Set up data for org-caldav.
+    (setq org-caldav-files (list org-caldav-test-orgfile))
+    (setq org-caldav-inbox org-caldav-test-inbox)
+    (setq org-caldav-debug-level 2)
+
+    (message "Cleaning up upstream calendars")
+    (org-caldav-test-set-up)
+
+    (with-current-buffer (find-file-noselect org-caldav-test-orgfile)
+      (insert "* TODO Test links preserved in description
+:PROPERTIES:
+:ID:       org-caldav-10-test-links-preserved
+:END:
+
+https://orgmode.org
+
+* Test timestamp is filtered from description
+:PROPERTIES:
+:ID:       org-caldav-10-test-timestamp-filtered
+:END:
+<2023-01-06 Fri>
+
+* 2nd test for timestamp filtering
+:PROPERTIES:
+:ID:       org-caldav-10-test-timestamp-filtered2
+:END:
+<2023-01-06 Fri 14:00>--<2023-01-06 Fri 15:00>")
+      (save-buffer))
+
+    (org-caldav-sync)
+
+    (with-current-buffer (org-caldav-get-event
+                          "org-caldav-10-test-links-preserved")
+      (goto-char (point-min))
+      (save-excursion
+        (should (search-forward "DESCRIPTION:<https://orgmode.org>"))))
+
+    (with-current-buffer (org-caldav-get-event
+                          "org-caldav-10-test-timestamp-filtered")
+      (goto-char (point-min))
+      (save-excursion
+        (should (not (re-search-forward
+                      "DESCRIPTION:.*2023-01-06" nil t)))))
+
+    (with-current-buffer (org-caldav-get-event
+                          "org-caldav-10-test-timestamp-filtered2")
+      (goto-char (point-min))
+      (save-excursion
+        (should (not (re-search-forward
+                      "DESCRIPTION:.*2023-01-06" nil t))))))
+
+  (org-caldav-test-cleanup))
