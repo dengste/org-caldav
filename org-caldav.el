@@ -1451,11 +1451,23 @@ which can only be synced to calendar. Ignoring." uid))
 	      (when (or (eq org-caldav-sync-changes-to-org 'timestamp-only)
 			(eq org-caldav-sync-changes-to-org 'title-and-timestamp))
                 (if (not is-todo)
-                    ;; Sync timestamp
-		    (setq timesync
-		          (org-caldav-change-timestamp
-                           (org-caldav-create-time-range
-                            .start-d .start-t .end-d .end-t .end-type)))
+                    ;; Sync timestamp; also sets timesync to 'orgsexp
+                    ;; if unable to sync due to s-expression
+                    (progn
+                      (org-narrow-to-subtree)
+                      (goto-char (point-min))
+		      (setq timesync
+                            (if (search-forward "<%%(" nil t)
+                                'orgsexp
+                              ;; org-caldav-create-time-range can mess
+                              ;; with replace-match, so we let-bind tr
+                              ;; before calling re-search-forward
+                              (let ((tr (org-caldav-create-time-range
+                                         .start-d .start-t
+                                         .end-d .end-t .end-type)))
+                                (when (re-search-forward org-tsr-regexp nil t)
+                                  (replace-match tr nil t)))))
+                      (widen))
                   ;; Sync scheduled
                   (when .start-d
                     (org--deadline-or-schedule
@@ -1522,8 +1534,7 @@ which can only be synced to calendar. Ignoring." uid))
       ;; Check if a timestring is in the heading
       (goto-char start)
       (save-excursion
-        ;; FIXME org-maybe-keyword-time-regexp is deprecated
-	(when (re-search-forward org-maybe-keyword-time-regexp end t)
+	(when (re-search-forward org-ts-regexp-both end t)
 	  ;; Check if timestring is at the beginning or end of heading
 	  (if (< (- end (match-end 0))
 		 (- (match-beginning 0) start))
@@ -1545,20 +1556,6 @@ NEWLOCATION contains newlines, replace them with
 	(org-set-property "LOCATION"
 			  (replace-regexp-in-string "\n" replacement newlocation))
       (org-delete-property "LOCATION"))))
-
-(defun org-caldav-change-timestamp (newtime)
-  "Change timestamp from Org item under point to NEWTIME.
-Return symbol 'orgsexp if this entry cannot be changed because it
-is on s-expression."
-  (org-narrow-to-subtree)
-  (goto-char (point-min))
-  (if (search-forward "<%%(" nil t)
-      'orgsexp
-    (when (or (re-search-forward org-tr-regexp nil t)
-              ;; FIXME org-maybe-keyword-time-regexp is deprecated
-              (re-search-forward org-maybe-keyword-time-regexp nil t))
-      (replace-match newtime nil t))
-    (widen)))
 
 (defun org-caldav-backup-item ()
   "Put current item in backup file."
@@ -1916,7 +1913,7 @@ Sets the block's tags, and return its MD5."
       (org-set-tags-to nil))))
 
 (defun org-caldav-create-time-range (start-d start-t end-d end-t e-type)
-  "Creeate an Org timestamp range from START-D/T, END-D/T."
+  "Create an Org timestamp range from START-D/T, END-D/T."
   (with-temp-buffer
     (cond
      ((string= "S" e-type) (insert "SCHEDULED: "))
