@@ -131,9 +131,9 @@ passphrase again to connect with Google Calendar.
 By default, plstore will *not* cache your entered password, so it will
 possibly ask you *many* times. To activate caching, use
 
-#+begin_example
+#+begin_src emacs-lisp
 (setq plstore-cache-passphrase-for-symmetric-encryption t)
-#+end_example
+#+end_src
 
 *** DETAILS
 Compared to earlier versions of this package from 2012, it now does
@@ -332,7 +332,7 @@ values of variables like =org-caldav-calendar-id=, and calling
 
 Example:
 
-#+begin_example
+#+begin_src emacs-lisp
 (setq org-caldav-calendars
   '((:calendar-id "work@whatever" :files ("~/org/work.org")
      :inbox "~/org/fromwork.org")
@@ -340,7 +340,7 @@ Example:
      :files ("~/org/sports.org" "~/org/play.org")
      :skip-conditions (regexp "soccer")
      :inbox "~/org/fromstuff.org")) )
-#+end_example
+#+end_src
 
 This means that you have two calendars with IDs "work@whatever" and
 "stuff@mystuff". Both will be accessed through the global value of
@@ -378,9 +378,9 @@ CalDAV server.
 If the error is that the URL does not seem to accept DAV requests, you
 can additionally check with 'curl' by doing
 
-#+begin_example
+#+begin_src shell
  curl -D - -X OPTIONS --basic -u mylogin:mypassword URL
-#+end_example
+#+end_src
 
 The output of this command must contain a 'DAV' header like this:
 
@@ -415,10 +415,10 @@ nextcloud and radicale.
 
 To sync TODO's between Org and the CalDav server, do:
 
-#+begin_example
+#+begin_src emacs-lisp
 (setq org-icalendar-include-todo 'all
     org-caldav-sync-todo t)
-#+end_example
+#+end_src
 
 The first instructs the Org exporter to include TODOs; the second tells
 org-caldav to import icalendar VTODOs as Org TODOs.
@@ -438,9 +438,9 @@ If you find that some Org entries get an extra tag which equals their
 CATEGORY, this might be caused by the CATEGORY being exported to
 iCalendar, and then re-imported to Org as a tag. In that case, do
 
-#+begin_example
+#+begin_src emacs-lisp
 (setq org-icalendar-categories '(local-tags))
-#+end_example
+#+end_src
 
 to prevent the CATEGORY from being exported to iCalendar. This problem
 only seems to affect some CalDav servers: in particular, NextCloud is
