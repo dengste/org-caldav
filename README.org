@@ -44,7 +44,26 @@ further details). If you don't want this, then /do not use this
 package/; there is just no way around that. It is the only reliable way
 to uniquely identify Org entries.
 
-*** Quick start
+* Contents :TOC_3:
+- [[#quick-start][Quick start]]
+  - [[#syncing-to-google-calendar][Syncing to Google Calendar]]
+- [[#advanced-usage][Advanced usage]]
+  - [[#org-and-the-icalendar-format][Org and the iCalendar format]]
+  - [[#filtering-entries][Filtering entries]]
+  - [[#syncing-deletions][Syncing deletions]]
+  - [[#conflict-handling][Conflict handling]]
+  - [[#storing-authentication-information-in-authinfonetrc][Storing authentication information in authinfo/netrc]]
+  - [[#storage-of-sync-information-and-sync-from-different-computers][Storage of sync information and sync from different computers]]
+  - [[#starting-from-scratch][Starting from scratch]]
+  - [[#syncing-with-more-than-one-calendar][Syncing with more than one calendar]]
+  - [[#customizing-the-inbox][Customizing the inbox]]
+  - [[#timezone-problems][Timezone problems]]
+  - [[#troubleshooting][Troubleshooting]]
+  - [[#syncing-todos-between-org-and-caldav][Syncing TODOs between Org and CalDav]]
+- [[#known-bugs][Known Bugs]]
+- [[#how-syncing-happens-aka-my-little-caldav-rant][How syncing happens (a.k.a. my little CalDAV rant)]]
+
+* Quick start
 - Create a new calendar; the name does not matter.
 
 - Set ~org-caldav-url~ to the base address of your CalDAV server:
@@ -103,7 +122,7 @@ Google Calendar, it is not unusual to get stuff like '409' errors during
 the initial sync. Only Google knows why. Just run ~org-caldav-sync~
 again until all events are uploaded.
 
-*** Syncing to Google Calendar
+** Syncing to Google Calendar
 The new CalDAV endpoint for Google Calendar requires OAuth2
 authentication. So first, you need to install the oauth2 library from
 GNU ELPA, and afterwards you need to acquire an application ID and
@@ -135,7 +154,7 @@ possibly ask you *many* times. To activate caching, use
 (setq plstore-cache-passphrase-for-symmetric-encryption t)
 #+end_src
 
-*** Advanced usage
+* Advanced usage
 Compared to earlier versions of this package from 2012, it now does
 proper two-way syncing, that means it does not matter where and how you
 change an entry. You can also move Org entries freely from one file to
@@ -151,7 +170,7 @@ choose ~'org->cal~, then ~org-caldav-inbox~ won't matter and can be
 ~nil~. Likewise, if you choose ~'cal->org~, then ~org-caldav-files~ will
 be ignored and only the calendar will be imported into the inbox.
 
-**** Org and the iCalendar format
+** Org and the iCalendar format
 An Org entry can store much more information than an iCalendar entry, so
 there is no one-to-one correspondence between the two formats which
 makes syncing a bit difficult.
@@ -225,7 +244,7 @@ one-time sync error instead (again: those are not critical, just FYI).
 If you don't want those entries to be exported at all, just set
 ~org-icalendar-include-sexps~ to nil.
 
-**** Filtering entries
+** Filtering entries
 There are several possibilities to choose which entries should be synced
 and which should not:
 
@@ -249,7 +268,7 @@ Note however that the normal ~org-agenda-skip-function(-global)~ will
 *not* have any effect on the icalendar exporter (this used to be the
 case, but changed with the new exporters).
 
-**** Syncing deletions
+** Syncing deletions
 If you delete entries in your Org files, the corresponding iCalendar
 entries will by default get deleted. You can change that behavior with
 ~org-caldav-delete-calendar-entries~ to never delete, or to ask before
@@ -269,13 +288,13 @@ behavior through ~org-caldav-delete-org-entries~.
 If you answer a deletion request with "no", the event should get
 re-synced to the calendar next time you call ~org-caldav-sync~.
 
-**** Conflict handling
+** Conflict handling
 Now that's an easy one: Org always wins. That means, if you change an
 entry in Org /and/ in the calendar, the changes in the calendar will be
 lost. I might implement proper conflict handling some day, but don't
 hold your breath (patches are welcome, of course).
 
-**** Storing authentication information in authinfo/netrc
+** Storing authentication information in authinfo/netrc
 If you don't want to enter your user/password every time, you can store
 it permanently in an authinfo file. In Emacs, the auth-source package
 takes care of that, but the syntax for https authentication is a bit
@@ -293,7 +312,7 @@ Since you are storing your password in a file you should encrypt it
 using GnuPG. Emacs will prompt you for a decryption key when it tries to
 read the file.
 
-**** Storage of sync information and sync from different computers
+** Storage of sync information and sync from different computers
 The current sync state is stored in a file ~org-caldav-SOMEID.el~ in the
 ~/.emacs.d directory. You can change the location through the variable
 ~org-caldav-save-directory~. SOMEID directly depends on the calendar id
@@ -304,7 +323,7 @@ org-caldav on all of them, don't forget to sync the org sync state, too.
 Probably your best bet is to set ~org-caldav-save-directory~ to the path
 you have your Org files in, so that it gets copied alongside with them.
 
-**** Starting from scratch
+** Starting from scratch
 If your sync state somehow gets broken, you can make a clean slate by
 doing
 
@@ -323,7 +342,7 @@ Deleting many events can be slow, though; in that case, just delete the
 calendar and re-create it, delete the sync state file in ~/.emacs.d and
 restart Emacs.
 
-**** Syncing with more than one calendar
+** Syncing with more than one calendar
 This can be done by setting the variable ~org-caldav-calendars~. It
 should be a list of plists (a 'plist' is simply a list with alternating
 :key's and values). Through these plists, you can override the global
@@ -351,13 +370,13 @@ org-caldav-url, since the key :url isn't specified. The calendar
 'fromstuff.org'. See the doc-string of ~org-caldav-calendars~ for more
 details on which keys you can use.
 
-**** Additional stuff
+** Customizing the inbox
 See the doc-string of ~org-caldav-inbox~ if you want more flexibility in
 where new items should be put. Instead of simply providing a file, you
 can also choose an existing entry or headline, or put the entry under a
 datetree.
 
-**** Timezone problems
+** Timezone problems
 Timezone handling is plain horrible, and it seems every CalDAV server
 does it slightly differently, also using non-standard headers like
 X-WR-TIMEZONE. If you see items being shifted by a few hours, make
@@ -370,7 +389,7 @@ server should transpose the time to the timezone you have set in your
 calendar preferences. For some servers (like SOGo) this might work
 better than setting a "real" timezone.
 
-**** Troubleshooting
+** Troubleshooting
 If org-caldav reports a problem with the given URL, please triple-check
 that the URL is correct. It must point to a valid calendar on your
 CalDAV server.
@@ -408,7 +427,7 @@ the events into the debug buffer. If you send such a buffer in a bug
 report, please make very sure you have removed personal information from
 those events.
 
-**** Syncing TODOs between Org and CalDav
+** Syncing TODOs between Org and CalDav
 This feature is relatively new and less well tested, so it is
 recommended to have backups before using it. It has been tested on
 nextcloud and radicale.
@@ -446,7 +465,7 @@ to prevent the CATEGORY from being exported to iCalendar. This problem
 only seems to affect some CalDav servers: in particular, NextCloud is
 affected, but Radicale does not seem to experience this problem.
 
-**** Known Bugs
+* Known Bugs
 - Recurring events created or changed on the calendar side cannot be
   synced (they will work fine as long as you manage them in Org,
   though).
@@ -457,7 +476,7 @@ affected, but Radicale does not seem to experience this problem.
 - Pretty much everything besides SUMMARY, DESCRIPTION, LOCATION and time
   is ignored in iCalendar.
 
-**** How syncing happens (a.k.a. my little CalDAV rant)
+* How syncing happens (a.k.a. my little CalDAV rant)
 (This is probably not interesting, so you can just stop reading.)
 
 CalDAV is a mess.
