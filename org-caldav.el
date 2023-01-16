@@ -6,7 +6,10 @@
 ;; Author: David Engster <deng@randomsample.de>
 ;; Maintainer: Jack Kamm <jackkamm@tatersworld.org>
 ;; Keywords: calendar, caldav
-;; Package-Requires: ((org "9"))
+;; URL: https://github.com/dengste/org-caldav/
+;; Package-Requires: ((emacs "26.3") (org "9.1"))
+;;
+;; Version: 3.0
 ;;
 ;; This file is not part of GNU Emacs.
 ;;
@@ -32,14 +35,15 @@
 
 (require 'url-dav)
 (require 'url-http) ;; b/c of Emacs bug
-(unless (require 'ox-icalendar nil t)
-  (require 'org-icalendar))
+(require 'ox-icalendar)
 (require 'org-id)
 (require 'icalendar)
 (require 'url-util)
 (require 'cl-lib)
 (require 'button)
 
+(declare-function oauth2-url-retrieve-synchronously "ext:oauth2" (&rest args))
+(declare-function oauth2-auth-and-store "ext:oauth2" (&rest args))
 
 (defgroup org-caldav nil
   "Sync org files with external calendar through CalDAV."
@@ -420,6 +424,14 @@ and  action = {org->cal, cal->org, error:org->cal, error:cal->org}.")
 (defvar org-caldav-previous-files nil
   "Files that were synced during previous run.")
 
+(defmacro org-caldav--suppress-obsolete-warning (var body)
+  "Macro for compatibility.
+To be removed when emacs dependency reaches >=27.1."
+  (declare (indent defun))
+  (if (fboundp 'with-suppressed-warnings)
+      `(with-suppressed-warnings ((obsolete ,var))
+         ,body))
+  `(with-no-warnings ,body))
 
 (defsubst org-caldav-add-event (uid md5 etag sequence status)
   "Add event with UID, MD5, ETAG and STATUS."
@@ -591,7 +603,7 @@ OAuth2 if necessary."
 	(goto-char (point-min))
 	(when (not (re-search-forward "^HTTP[^ ]* \\([0-9]+ .*\\)$"
 				      (point-at-eol) t))
-	  (switch-to-buffer buffer)
+	  (switch-to-buffer resultbuf)
 	  (error "No valid HTTP response from URL %s." url))
 	(let ((response (match-string 1)))
 	  (when (not (string-match "2[0-9][0-9].*" response))
@@ -1252,8 +1264,7 @@ TODO: save percent-complete also as a property in org"
                             (goto-char (point-min))
                             (org-id-goto (org-caldav-get-uid))
                             (org-add-planning-info 'closed (org-current-effective-time))
-                            (org-element-property :closed (org-element-at-point))))
-          )
+                            (org-element-property :closed (org-element-at-point)))))
         (when completed
           (insert (org-icalendar-convert-timestamp
                     completed "COMPLETED") "\n"))))))
@@ -1325,7 +1336,7 @@ returned as a cons (POINT . LEVEL)."
              (funcall
               (pcase org-caldav-datetree-treetype
 	        (`week #'org-datetree-find-iso-week-create)
-	        (`month #'org-datetree-find-month-create)
+	        (`month #'org-caldav--datetree-find-month-create)
 	        (`day #'org-datetree-find-date-create))
               (let ((start-d (alist-get 'start-d eventdata-alist)))
                 (if start-d (org-caldav--convert-to-calendar start-d)
@@ -1337,6 +1348,13 @@ returned as a cons (POINT . LEVEL)."
 	   (goto-char (cdr (org-id-find (nth 1 inbox))))
 	   (org-caldav--point-level-helper)))))
 
+(defun org-caldav--datetree-find-month-create (d keep-restriction)
+  "Helper function for compatibility.
+To be removed when emacs dependency reaches >=27.2."
+  (if (fboundp 'org-datetree-find-month-create)
+      (org-datetree-find-month-create d keep-restriction)
+    (error "Need to update to Org 9.4 to use monthtree.")))
+
 (defun org-caldav--point-level-helper ()
   "Helper function for `org-caldav-inbox-point-and-level'.
 Go to the end of the current subtree, and return the point and
@@ -1344,6 +1362,14 @@ level to add a new child entry."
   (let ((level (1+ (org-current-level))))
     (org-end-of-subtree t t)
     (cons (point) level)))
+
+(defun org-caldav--todo-percent-to-state (npercent)
+  "Converts percentage to keyword in `org-caldav-todo-percent-states'."
+  (let (tstate)
+    (dolist (to org-caldav-todo-percent-states
+                tstate)
+      (when (>= npercent (car to))
+        (setq tstate (car (cdr to)))))))
 
 (defun org-caldav-update-events-in-org ()
   "Update events in Org files."
@@ -1440,12 +1466,8 @@ which can only be synced to calendar. Ignoring." uid))
                     (when vprio
                       (org-priority (string-to-char vprio))))
                   ;; Sync todo status
-                  (let* ((npercent (string-to-number .percent-complete))
-                         (todostate (dolist (to org-caldav-todo-percent-states
-                                                tstate)
-                                      (when (>= npercent (car to))
-                                        (setq tstate (car (cdr to)))))))
-                    (org-todo todostate))
+                  (org-todo (org-caldav--todo-percent-to-state
+                             (string-to-number .percent-complete)))
                   ;; Sync categories
                   (org-caldav-set-org-tags .categories)))
 	      (when (or (eq org-caldav-sync-changes-to-org 'timestamp-only)
@@ -1522,11 +1544,19 @@ which can only be synced to calendar. Ignoring." uid))
 		    'deleted-in-cal 'removed-from-org)
 	      org-caldav-sync-result)))))
 
+(defun org-caldav--org-show-subtree ()
+  "Helper function for compatibility.
+To be removed when org dependency reaches >=9.6."
+  (if (fboundp 'org-fold-show-subtree)
+      (org-fold-show-subtree)
+    (org-caldav--suppress-obsolete-warning org-show-subtree
+      (org-show-subtree))))
+
 (defun org-caldav-change-heading (newheading)
   "Change heading from Org item under point to NEWHEADING."
   (org-narrow-to-subtree)
   (goto-char (point-min))
-  (org-show-subtree)
+  (org-caldav--org-show-subtree)
   (when (and (re-search-forward org-complex-heading-regexp nil t)
 	     (match-string 4))
     (let ((start (match-beginning 4))
@@ -1658,11 +1688,6 @@ Returns buffer containing the ICS file."
 	;; Does not work yet
 	(org-icalendar-include-bbdb-anniversaries nil)
 	(icalendar-uid-format "orgsexp-%h")
-	(org-export-before-parsing-hook
-	 (append org-export-before-parsing-hook
-           (when (or org-caldav-skip-conditions
-                     org-caldav-days-in-past) '(org-caldav-skip-function))
-           (when org-caldav-todo-deadline-schedule-warning-days '(org-caldav-scheduled-from-deadline))))
 	(org-icalendar-date-time-format
 	 (cond
 	  ((and org-icalendar-timezone
@@ -1675,15 +1700,22 @@ Returns buffer containing the ICS file."
     (dolist (orgfile orgfiles)
       (with-current-buffer (org-get-agenda-file-buffer orgfile)
         (org-caldav-create-uid orgfile t)))
-    ;; check scheduled and deadline for having both time or noone (vtodo)
+    ;; check scheduled and deadline for having both time or none (vtodo)
     (org-caldav-prepare-scheduled-deadline-timestamps orgfiles)
     (set icalendar-file (make-temp-file "org-caldav-"))
     (org-caldav-debug-print 1 (format "Generating ICS file %s."
 				      (symbol-value icalendar-file)))
-    ;; Export events to one single ICS file.
-    (if (featurep 'ox-icalendar)
-        (apply 'org-icalendar--combine-files orgfiles)
-      (apply 'org-export-icalendar t orgfiles))
+    ;; compat: use org-export-before-parsing-functions after org >=9.6
+    (org-caldav--suppress-obsolete-warning org-export-before-parsing-hook
+      (let ((org-export-before-parsing-hook
+	     (append org-export-before-parsing-hook
+                     (when (or org-caldav-skip-conditions
+                               org-caldav-days-in-past)
+                       '(org-caldav-skip-function))
+                     (when org-caldav-todo-deadline-schedule-warning-days
+                       '(org-caldav-scheduled-from-deadline)))))
+        ;; Export events to one single ICS file.
+        (apply 'org-icalendar--combine-files orgfiles)))
     (find-file-noselect (symbol-value icalendar-file))))
 
 (defun org-caldav-get-uid ()
@@ -1839,14 +1871,11 @@ Returns MD5 from entry."
           (vprio (dolist (p org-caldav-todo-priority r)
                    (when (>= nprio (car p))
                      (setq r (car (cdr p))))))
-          (prio (if vprio (concat "[#" vprio "] ") ""))
-          (npercent (string-to-number (or percent-complete "0")))
-          (todostate (dolist (to org-caldav-todo-percent-states tstate)
-                       (when (>= npercent (car to))
-                         (setq tstate (car (cdr to)))))))
+          (prio (if vprio (concat "[#" vprio "] ") "")))
     (insert (make-string (or level 1) ?*) " "
-      todostate " " prio
-      summary "\n"))
+            (org-caldav--todo-percent-to-state
+             (string-to-number (or percent-complete "0")))
+            " " prio summary "\n"))
   (org-caldav--insert-description description)
   (forward-line -1)
   (when start-d
@@ -1861,11 +1890,17 @@ Returns MD5 from entry."
   (when uid (org-set-property "ID" (url-unhex-string uid)))
   (org-caldav-insert-org-entry--wrapup))
 
+(defun org-caldav--org-set-tags-to (tags)
+  "Helper function for compatibility.
+To be removed when org dependency reaches >=9.2."
+  (org-caldav--suppress-obsolete-warning org-set-tags-to
+    (org-set-tags-to tags)))
+
 (defun org-caldav-insert-org-entry--wrapup ()
   "Helper function to finish inserting an org entry or todo.
 Sets the block's tags, and return its MD5."
   (org-back-to-heading)
-  (org-set-tags-to org-caldav-select-tags)
+  (org-caldav--org-set-tags-to org-caldav-select-tags)
   (md5 (buffer-substring-no-properties
 	(org-entry-beginning-position)
 	(org-entry-end-position))))
@@ -1909,16 +1944,15 @@ Sets the block's tags, and return its MD5."
           (setq cleantags (cons
                             (replace-regexp-in-string " " "-" (string-trim i))
                             cleantags)))
-        (org-set-tags (reverse cleantags)))
-      (org-set-tags-to nil))))
+        (org-caldav--org-set-tags-to (reverse cleantags)))
+      (org-caldav--org-set-tags-to nil))))
 
 (defun org-caldav-create-time-range (start-d start-t end-d end-t e-type)
   "Create an Org timestamp range from START-D/T, END-D/T."
   (with-temp-buffer
     (cond
      ((string= "S" e-type) (insert "SCHEDULED: "))
-     ((string= "DL" e-type) (insert "DEADLINE: "))
-     )
+     ((string= "DL" e-type) (insert "DEADLINE: ")))
     (org-caldav-insert-org-time-stamp start-d start-t)
     (if (and end-d
 	     (not (equal end-d start-d)))
@@ -2075,7 +2109,7 @@ If COMPLEMENT is non-nil, return all item without errors."
 	(goto-char (marker-position marker))
 	(org-narrow-to-subtree)
 	(goto-char (point-min))
-	(org-show-subtree)
+	(org-caldav--org-show-subtree)
 	(prog1
 	    (if (re-search-forward org-complex-heading-regexp nil t)
 		(match-string 4)
