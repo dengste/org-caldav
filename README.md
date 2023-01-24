@@ -64,6 +64,7 @@ calendar:
     - Google: Click on 'calendar settings' and the id will be shown
       next to "Calendar Address". It is of the form
       `ID@group.calendar.google.com`. Do *not* omit the domain!
+    - Otherwise: Run the command `curl -X PROPFIND -u <username here> -H "Content-Type: text/xml" -H "Depth: 1" --data "<propfind xmlns='DAV:'><prop><calendar-data xmlns='urn:ietf:params:xml:ns:caldav'/></prop></propfind>" <org-caldav-url here>` to receive your list of calendars and their corresponding IDs.
 
 * Set `org-caldav-inbox` to an org filename where new entries from the
   calendar should be stored. Just to be safe, I suggest using an
