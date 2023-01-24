@@ -24,6 +24,36 @@ https, though!). If you get asked for password repeatedly, put it in
 
 * **SOGo** and **Kolab**: Reported to be working
     (https://kolabnow.com/clients/emacs)
+* **DaviCal** requires redefining functions to patch the ical file
+  ```elisp
+  ;; adapted from https://github.com/dengste/org-caldav/issues/126#issuecomment-327452868
+  (defun org-caldav-url-dav-get-properties (url property)
+     "Retrieve PROPERTY from URL.
+  Output is the same as `url-dav-get-properties'.  This switches to
+  OAuth2 if necessary."
+     (let ((request-data (concat "<?xml version=\"1.0\" encoding=\"utf-8\" ?>\n"
+                                 "<DAV:propfind xmlns:DAV='DAV:'>\n<DAV:prop>"
+                                 "<DAV:" property "/></DAV:prop></DAV:propfind>\n"))
+           (extra '(("Depth" . "1") ("Content-type" . "text/xml"))))
+       (let ((resultbuf (org-caldav-url-retrieve-synchronously
+                         url "PROPFIND" request-data extra)))
+         ;; (with-current-buffer resultbuf (message (buffer-string)))
+         (org-caldav-namespace-bug-workaround resultbuf)
+         ;; Workaround for davical sending empty prop tags
+         (with-current-buffer resultbuf
+          (save-excursion
+            (while (re-search-forward "<\\(?:DAV:\\)?response>" nil t)
+              (let ((begin (point))
+                    (end (progn (re-search-forward "</\\(?:DAV:\\)?response>" nil t) (+ (point) 15))))
+                (when (and begin end)
+                  (goto-char begin)
+                  (if (and (re-search-forward "<\\(?:DAV:\\)?prop/>" nil t) (< (point) end))
+                      (progn
+                        (goto-char end)
+                        (delete-region begin end))
+                    (goto-char end)))))))
+         (url-dav-process-response resultbuf url))))
+  ```
 
 Note that Emacs releases <26.3 might not correctly handle https via
 TLSv1.3 (see https://debbugs.gnu.org/cgi/bugreport.cgi?bug=34341). If
