@@ -840,6 +840,10 @@ Are you really sure? ")))
 	  (org-caldav-event-set-md5 event md5)
 	  (org-caldav-event-set-status event 'changed-in-org))
 	 ((eq (org-caldav-event-status event) 'new-in-org)
+          ;; FIXME This only detects duplicate events that are new. It
+          ;; would also be nice to detect duplicate events that
+          ;; changed (#267). But this is complicated to detect b/c
+          ;; status 'changed-in-org could be from the previous sync
 	  (org-caldav-debug-print 1
 	   (format "Org UID %s: Error. Double entry." uid))
 	  (push (list org-caldav-calendar-id
