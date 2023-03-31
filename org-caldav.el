@@ -1087,6 +1087,7 @@ ICSBUF is the buffer containing the exported iCalendar file."
           (unless (string-match (car cur) uid)
             (error "Could not find UID %s" (car cur)))
           (org-caldav-narrow-event-under-point)
+          (org-caldav-convert-buffer-to-crlf)
           (org-caldav-cleanup-ics-description)
           (org-caldav-maybe-fix-timezone)
           (org-caldav-set-sequence-number cur event-etag)
@@ -1094,7 +1095,6 @@ ICSBUF is the buffer containing the exported iCalendar file."
           (org-caldav-fix-todo-status-percent-state)
           (org-caldav-fix-categories)
           (org-caldav-fix-todo-dtstart)
-          (org-caldav-convert-buffer-to-crlf)
           (message "Putting event %d of %d Org --> Cal" counter (length events))
           (if (org-caldav-put-event icsbuf)
               (org-caldav-event-set-etag cur 'put)
@@ -1210,6 +1210,7 @@ This is a bug in older Org versions."
     (when (search-forward "BEGIN:VTODO" nil t)
       (search-forward "PRIORITY:")
       (unless (eq (thing-at-point 'number) 0)
+        ;; NOTE: Deletion up to eol-1 assumes the line ends with ^M
         (delete-region (point) (- (point-at-eol) 1))
         (insert (number-to-string
                   (save-excursion
