@@ -1609,6 +1609,7 @@ NEWLOCATION contains newlines, replace them with
       (write-region (point-min) (point-max) org-caldav-backup-file t))))
 
 (defun org-caldav-skip-function (backend)
+  (org-caldav-debug-print 2 "Skipping over excluded entries")
   (when (eq backend 'icalendar)
     (org-map-entries
      (lambda ()
@@ -1616,7 +1617,8 @@ NEWLOCATION contains newlines, replace them with
               (ts (when org-caldav-days-in-past (* (abs org-caldav-days-in-past) -1)))
               (stamp (or (org-entry-get nil "TIMESTAMP" t) (org-entry-get nil "CLOSED" t))))
 	 (when (or pt (and stamp ts (> ts (org-time-stamp-to-now stamp))))
-           (delete-region (point) (org-end-of-subtree t))))))))
+           (delete-region (point) (org-end-of-subtree t)))))))
+  (org-caldav-debug-print 2 "Finished skipping"))
 
 (defun org-caldav-timestamp-has-time-p (timestamp)
   "Checks whether a timestamp has a time.
