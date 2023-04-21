@@ -580,9 +580,6 @@ Org task 2
   )
 
 (ert-deftest org-caldav-05-multiple-calendars-agenda-skip-function ()
-  ;; FIXME https://github.com/dengste/org-caldav/issues/272
-  (when (version<= "9.6" org-version)
-    (ert-skip "Hangs on org 9.6+"))
   (org-caldav-test-setup-temp-files)
   (with-current-buffer (find-file-noselect org-caldav-test-orgfile)
     (insert org-caldav-test-org1)

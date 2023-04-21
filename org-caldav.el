@@ -1617,7 +1617,8 @@ NEWLOCATION contains newlines, replace them with
               (ts (when org-caldav-days-in-past (* (abs org-caldav-days-in-past) -1)))
               (stamp (or (org-entry-get nil "TIMESTAMP" t) (org-entry-get nil "CLOSED" t))))
 	 (when (or pt (and stamp ts (> ts (org-time-stamp-to-now stamp))))
-           (delete-region (point) (org-end-of-subtree t)))))))
+           (delete-region (point) (org-end-of-subtree t t))
+           (setq org-map-continue-from (point)))))))
   (org-caldav-debug-print 2 "Finished skipping"))
 
 (defun org-caldav-timestamp-has-time-p (timestamp)
