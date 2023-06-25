@@ -4,7 +4,7 @@
 ;; Copyright (C) 2018-2023 David Engster
 
 ;; Author: David Engster <deng@randomsample.de>
-;; Maintainer: Jack Kamm <jackkamm@tatersworld.org>
+;; Contributor: Jack Kamm <jackkamm@tatersworld.org>
 ;; Keywords: calendar, caldav
 ;; URL: https://github.com/dengste/org-caldav/
 ;; Package-Requires: ((emacs "26.3") (org "9.1"))
