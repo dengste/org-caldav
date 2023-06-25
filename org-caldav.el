@@ -1707,7 +1707,13 @@ Returns buffer containing the ICS file."
 	   ":%Y%m%dT%H%M%S"))))
     (dolist (orgfile orgfiles)
       (with-current-buffer (org-get-agenda-file-buffer orgfile)
-        (org-caldav-create-uid orgfile t)))
+        (org-caldav-debug-print
+         2 (format "Checking %s for new entries & unsaved changes" orgfile))
+        (org-caldav-create-uid orgfile t)
+        (when (and org-caldav-save-buffers
+                   (buffer-modified-p))
+          (org-caldav-debug-print 2 (format "Saving %s" orgfile))
+          (save-buffer))))
     ;; check scheduled and deadline for having both time or none (vtodo)
     (org-caldav-prepare-scheduled-deadline-timestamps orgfiles)
     (set icalendar-file (make-temp-file "org-caldav-"))

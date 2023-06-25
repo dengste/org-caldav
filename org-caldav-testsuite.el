@@ -1083,3 +1083,34 @@ https://orgmode.org
                       "DESCRIPTION:.*2023-01-06" nil t))))))
 
   (org-caldav-test-cleanup))
+
+(ert-deftest org-caldav-11-test-sync-unsaved ()
+  (org-caldav-test-setup-temp-files)
+  (setq org-caldav-files (list org-caldav-test-orgfile))
+  (setq org-caldav-inbox org-caldav-test-inbox)
+  (setq org-caldav-debug-level 2)
+  (setq org-caldav-calendar-id (car org-caldav-test-calendar-names))
+  (org-caldav-test-set-up)
+  (with-current-buffer (find-file-noselect org-caldav-test-orgfile)
+    ;; Make sure the file exists
+    (save-buffer)
+    ;; Add an event, but don't save it
+    (insert org-caldav-test-org2))
+  (org-caldav-sync))
+
+(ert-deftest org-caldav-12-test-doublesync-created-id ()
+  (org-caldav-test-setup-temp-files)
+  (setq org-caldav-files (list org-caldav-test-orgfile))
+  (setq org-caldav-inbox org-caldav-test-inbox)
+  (setq org-caldav-debug-level 2)
+  (setq org-caldav-calendar-id (car org-caldav-test-calendar-names))
+  (org-caldav-test-set-up)
+  (with-current-buffer (find-file-noselect org-caldav-test-orgfile)
+    (insert "* This is a test without ID\n"
+	    "  <2009-08-08 Sat 10:00>\n whatever\n foo\n bar\n")
+    (save-buffer))
+  ;; First sync creates an ID for the event
+  (org-caldav-sync)
+  ;; Test if second sync can find the ID we created. If not, the test
+  ;; will exit with org-caldav error "Could not find UID"
+  (org-caldav-sync))
