@@ -2027,7 +2027,10 @@ See also `org-caldav-save-directory'."
       (insert "\n"))
     ;; Save the current value of org-caldav-files
     (insert "(setq org-caldav-previous-files '"
-	    (prin1-to-string org-caldav-files) ")\n")
+            (let ((print-length nil)
+                  (print-level nil))
+	            (prin1-to-string org-caldav-files))
+      ")\n")
     ;; Save it.
     (write-region (point-min) (point-max)
 		  (org-caldav-sync-state-filename org-caldav-calendar-id))))
