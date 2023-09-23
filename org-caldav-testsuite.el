@@ -27,7 +27,7 @@
 (defvar org-caldav-test-calendar-names '("test1" "test2"))
 
 (setq org-caldav-delete-calendar-entries 'always)
-(setq org-caldav-backup-file (make-temp-file "org-caldav-test-" nil ".org"))
+(setq org-caldav-backup-file nil)
 (setq org-caldav-test-preamble
       "BEGIN:VCALENDAR
 VERSION:2.0
@@ -244,6 +244,7 @@ Org task 2
   (let ((tmpdir (make-temp-file "org-caldav-test-" t)))
     (message "Using tempdir %s" tmpdir)
     (setq org-caldav-save-directory (expand-file-name "org-caldav-savedir" tmpdir)
+          org-caldav-backup-file (expand-file-name "org-caldav-test-backup.org" tmpdir)
 	  org-caldav-test-orgfile (expand-file-name "test.org" tmpdir)
 	  org-caldav-test-second-orgfile (expand-file-name "test-second.org" tmpdir)
 	  org-caldav-test-inbox (expand-file-name "inbox.org" tmpdir)
