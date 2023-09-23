@@ -1597,6 +1597,7 @@ NEWLOCATION contains newlines, replace them with
   (let ((item (buffer-substring (org-entry-beginning-position)
 				(org-entry-end-position))))
     (with-temp-buffer
+      (org-mode)
       (insert item "\n")
       ;; Rename the ID property to OLDID, to prevent org-id-find from
       ;; returning the backup entry in future syncs
