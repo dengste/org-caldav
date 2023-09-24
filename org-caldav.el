@@ -430,8 +430,8 @@ To be removed when emacs dependency reaches >=27.1."
   (declare (indent defun))
   (if (fboundp 'with-suppressed-warnings)
       `(with-suppressed-warnings ((obsolete ,var))
-         ,body))
-  `(with-no-warnings ,body))
+         ,body)
+    `(with-no-warnings ,body)))
 
 (defsubst org-caldav-add-event (uid md5 etag sequence status)
   "Add event with UID, MD5, ETAG and STATUS."
