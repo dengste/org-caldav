@@ -116,7 +116,7 @@ tree-type; see its Help for more info about the datetree behavior."
 (defcustom org-caldav-datetree-treetype 'month
   "Tree-type when `org-caldav-inbox' is a datetree.
 
-This can be one of 'month, 'week, or 'day.
+This can be one of `month', `week', or `day'.
 
 Entries are filed into the datetree according to their start
 date. TODO's without a scheduled date instead use the current
@@ -138,12 +138,12 @@ the default value is at the coarsest level of month-tree."
 (defcustom org-caldav-sync-direction 'twoway
   "Which kind of sync should be done between Org and calendar.
 
-Default is 'twoway, meaning that changes in Org are synced to the
+Default is `twoway', meaning that changes in Org are synced to the
 calendar and changes in the calendar are synced back to
 Org. Other options are:
 
-  'org->cal: Only sync Org to calendar
-  'cal->org: Only sync calendar to Org"
+  `org->cal': Only sync Org to calendar
+  `cal->org': Only sync calendar to Org"
   :type '(choice
           (const twoway :tag "Two-way sync")
           (const org->cal :tag "Only sync org to calendar")
@@ -164,7 +164,7 @@ also use any other key, which will then override any org-*
 variable.
 
 Example:
-'((:calendar-id \"work@whatever\" :files (\"~/org/work.org\")
+\\='((:calendar-id \"work@whatever\" :files (\"~/org/work.org\")
    :inbox \"~/org/fromwork.org\")
   (:calendar-id \"stuff@mystuff\"
    :files (\"~/org/sports.org\" \"~/org/play.org\")
@@ -183,7 +183,7 @@ Can be one of the following symbols:
   timestamp-only: Sync only the timestamp.
   all: Sync everything.
 
-When choosing 'all', you should be aware of the fact that the
+When choosing `all', you should be aware of the fact that the
 iCalendar format is pretty limited in what it can store, so you
 might loose information in your Org items (take a look at
 `org-icalendar-include-body')."
@@ -245,7 +245,7 @@ future syncs."
 
 (defcustom org-caldav-show-sync-results 'with-headings
   "Whether to show what was done after syncing.
-If this is the symbol 'with-headings, the results will also
+If this is the symbol `with-headings', the results will also
 include headings from Org entries."
   :type '(choice
           (const with-headings :tag "Show what was done after syncing including headings")
@@ -267,7 +267,7 @@ different timezone in your Org files."
 (defcustom org-caldav-sync-todo nil
   "Whether to sync TODO's with the CalDav server. If you enable
 this, you should also set `org-icalendar-include-todo' to
-`\'all'.
+`all'.
 
 This feature is relatively new and less well tested; it is
 recommended to have backups before enabling it."
@@ -301,7 +301,7 @@ The following example would instead map 0 to TODO, 1 to NEXT,
 2-99 to PROG, and 100 to DONE:
 
   (setq org-caldav-todo-percent-states
-        '((0 \"TODO\") (1 \"NEXT\") (2 \"PROG\") (100 \"DONE\")))
+        \\='((0 \"TODO\") (1 \"NEXT\") (2 \"PROG\") (100 \"DONE\")))
 
 Note: You should check that the keywords in
 `org-caldav-todo-percent-states' are also valid keywords in
