@@ -1356,6 +1356,8 @@ returned as a cons (POINT . LEVEL)."
 (defun org-caldav--datetree-find-month-create (d keep-restriction)
   "Helper function for compatibility.
 To be removed when emacs dependency reaches >=27.2."
+  ;; NOTE: package-lint may give an erroneous warning here. See:
+  ;; https://github.com/purcell/package-lint/issues/240
   (if (fboundp 'org-datetree-find-month-create)
       (org-datetree-find-month-create d keep-restriction)
     (error "Need to update to Org 9.4 to use monthtree.")))
