@@ -1,4 +1,4 @@
-;;; org-caldav.el --- Sync org files with external calendar through CalDAV
+;;; org-caldav.el --- Sync org files with external calendar through CalDAV   -*- lexical-binding: t; -*-
 
 ;; Copyright (C) 2012-2017 Free Software Foundation, Inc.
 ;; Copyright (C) 2018-2023 David Engster
@@ -492,9 +492,7 @@ To be removed when emacs dependency reaches >=27.1."
 (defun org-caldav-check-dav (url)
   "Check if URL accepts DAV requests.
 Report an error with further details if that is not the case."
-  (let* ((buffer (org-caldav-url-retrieve-synchronously url "OPTIONS"))
-	 (header nil)
-	 (options nil))
+  (let* ((buffer (org-caldav-url-retrieve-synchronously url "OPTIONS")))
     (when (not buffer)
       (error "Retrieving URL %s failed." url))
     (with-current-buffer buffer
@@ -746,8 +744,7 @@ The filename will be derived from the UID."
     (with-temp-buffer
       (insert org-caldav-calendar-preamble event "END:VCALENDAR\n")
       (goto-char (point-min))
-      (let* ((uid (org-caldav-get-uid))
-	     (url (concat (org-caldav-events-url) (url-hexify-string uid) org-caldav-uuid-extension)))
+      (let* ((uid (org-caldav-get-uid)))
 	(org-caldav-debug-print 1 (format "Putting event UID %s." uid))
 	(org-caldav-debug-print 2 (format "Content of event UID %s: " uid)
 				(buffer-string))
@@ -960,7 +957,7 @@ If CALENDAR is not provided, the default values will be used.
 If RESUME is non-nil, try to resume."
   (setq org-caldav-empty-calendar nil)
   (setq org-caldav-previous-calendar calendar)
-  (let (calkeys calvalues oauth-enable)
+  (let (calkeys calvalues)
     ;; Extrace keys and values from 'calendar' for progv binding.
     (dolist (i (number-sequence 0 (1- (length calendar)) 2))
       (setq calkeys (append calkeys (list (nth i calendar)))
@@ -1328,6 +1325,8 @@ returned as a cons (POINT . LEVEL)."
     (cond ((or (stringp inbox) (eq (car inbox) 'file))
 	   (cons (point-max) 1))
 	  ((eq (car inbox) 'file+headline)
+           ;; FIXME: org-link-search-inhibit-query removed in Org 9.3,
+           ;; so byte-compile gives unused lexical variable warning
 	   (let ((org-link-search-inhibit-query t))
 	     (org-link-search (concat "*" (nth 2 inbox)) nil t)
              (org-caldav--point-level-helper)))
