@@ -2154,8 +2154,8 @@ If COMPLEMENT is non-nil, return all item without errors."
 
 (defun org-caldav--datetime-to-colontime (datetime e property &optional default)
   "Extract time part of decoded datetime.
-If PROPERTY in event E contains has valuetype 'date' instead of
-'date-time', return DEFAULT instead."
+If PROPERTY in event E contains has valuetype \"DATE\" instead of
+\"DATE-TIME\", return DEFAULT instead."
   (if (and datetime
              (not (string= 
                    (cadr (icalendar--get-event-property-attributes
