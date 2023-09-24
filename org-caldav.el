@@ -502,7 +502,7 @@ Report an error with further details if that is not the case."
 	(error "Not data received for URL %s (maybe TLS problem)." url))
       (goto-char (point-min))
       (when (not (re-search-forward "^HTTP[^ ]* \\([0-9]+ .*\\)$"
-				    (point-at-eol) t))
+				    (line-end-position) t))
 	(switch-to-buffer buffer)
 	(error "No valid HTTP response from URL %s." url))
       (let ((response (match-string 1)))
@@ -602,7 +602,7 @@ OAuth2 if necessary."
       (with-current-buffer resultbuf
 	(goto-char (point-min))
 	(when (not (re-search-forward "^HTTP[^ ]* \\([0-9]+ .*\\)$"
-				      (point-at-eol) t))
+				      (line-end-position) t))
 	  (switch-to-buffer resultbuf)
 	  (error "No valid HTTP response from URL %s." url))
 	(let ((response (match-string 1)))
@@ -700,7 +700,7 @@ If retrieve fails, do `org-caldav-retry-attempts' retries."
 	(if (looking-at "HTTP.*2[0-9][0-9]")
 	    (setq eventbuffer (current-buffer))
 	  ;; There was an error retrieving the event
-	  (setq errormessage (buffer-substring (point-min) (point-at-eol)))
+	  (setq errormessage (buffer-substring (point-min) (line-end-position)))
 	  (setq counter (1+ counter))
 	  (org-caldav-debug-print
 	   1 (format "(Try %d) Error when trying to retrieve UID %s: %s"
@@ -733,7 +733,7 @@ If retrieve fails, do `org-caldav-retry-attempts' retries."
   (save-excursion
     (goto-char (point-min))
     (while (not (= (point) (point-max)))
-      (goto-char (- (point-at-eol) 1))
+      (goto-char (- (line-end-position) 1))
       (unless (string= (thing-at-point 'char) "\^M")
         (forward-char)
         (insert "\^M"))
@@ -1168,7 +1168,7 @@ The ics must be in the current buffer."
         (setq seq (1+ seq))
         (goto-char (point-min))
         (if (re-search-forward "^SEQUENCE:" nil t)
-            (delete-region (point-at-bol) (+ 1 (point-at-eol)))
+            (delete-region (line-beginning-position) (+ 1 (line-end-position)))
 	  (goto-char (point-min))
 	  (re-search-forward "^SUMMARY:")
 	  (forward-line))
@@ -1211,7 +1211,7 @@ This is a bug in older Org versions."
       (search-forward "PRIORITY:")
       (unless (eq (thing-at-point 'number) 0)
         ;; NOTE: Deletion up to eol-1 assumes the line ends with ^M
-        (delete-region (point) (- (point-at-eol) 1))
+        (delete-region (point) (- (line-end-position) 1))
         (insert (number-to-string
                   (save-excursion
                     (goto-char (point-min))
@@ -1239,9 +1239,9 @@ TODO: save percent-complete also as a property in org"
     (goto-char (point-min))
     (when (search-forward "BEGIN:VTODO" nil t)
       (if (search-forward "STATUS:" nil t)
-        (delete-region (point-at-bol) (+ 1 (point-at-eol)))
+        (delete-region (line-beginning-position) (+ 1 (line-end-position)))
         (progn (search-forward "END:VTODO")
-          (goto-char (point-at-bol))))
+          (goto-char (line-beginning-position))))
 
 
       (let* ((state (save-excursion
@@ -1282,7 +1282,7 @@ TODO: save percent-complete also as a property in org"
     (goto-char (point-min))
     (when (and (search-forward "CATEGORIES:" nil t)
             (not (thing-at-point 'word)))
-      (delete-region (point-at-bol) (+ (point-at-eol) 1)))))
+      (delete-region (line-beginning-position) (+ (line-end-position) 1)))))
 
 (defun org-caldav-fix-todo-dtstart ()
   "ox-icalendar includes the actual time as DTSTART into the
@@ -1308,7 +1308,7 @@ also look if there is a deadline."
                                    (or (org-entry-get nil "DEADLINE" nil) "")))
                 (or (org-get-scheduled-time nil) (org-get-deadline-time nil))
               (org-get-scheduled-time nil)))
-          (delete-region (point-at-bol) (+ 1 (point-at-eol))))))))
+          (delete-region (line-beginning-position) (+ 1 (line-end-position))))))))
 
 (defun org-caldav-inbox-file (inbox)
   "Return file name associated with INBOX.
@@ -2317,7 +2317,7 @@ This switches to OAuth2 if necessary."
           ;; There was an error putting the resource, try again.
           (when (> org-caldav-debug-level 1)
               (setq full-response (buffer-string)))
-          (setq errormessage (buffer-substring (point-min) (point-at-eol)))
+          (setq errormessage (buffer-substring (point-min) (line-end-position)))
           (setq counter (1+ counter))
 	  (org-caldav-debug-print
 	   1 (format "(Try %d) Error when trying to put URL %s: %s"
@@ -2353,7 +2353,7 @@ This switches to OAuth2 if necessary."
                   point
                   (save-excursion
                     (goto-char point)
-                    (point-at-eol 2))))))))
+                    (line-end-position 2))))))))
 
 ;;;###autoload
 (defun org-caldav-import-ics-to-org (path)
