@@ -1627,7 +1627,7 @@ NEWLOCATION contains newlines, replace them with
 (defun org-caldav-timestamp-has-time-p (timestamp)
   "Checks whether a timestamp has a time.
 Returns nil if not and (sec min hour) if it has."
-  (let ((ti (parse-time-string timestamp)))
+  (let ((ti (org-parse-time-string timestamp)))
     (or (nth 0 ti) (nth 1 ti) (nth 2 ti))))
 
 (defun org-caldav-prepare-scheduled-deadline-timestamps (orgfiles)
