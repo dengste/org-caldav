@@ -1,7 +1,7 @@
 ;;; org-caldav.el --- Sync org files with external calendar through CalDAV   -*- lexical-binding: t; -*-
 
 ;; Copyright (C) 2012-2017 Free Software Foundation, Inc.
-;; Copyright (C) 2018-2023 David Engster
+;; Copyright (C) 2018-2024 David Engster
 
 ;; Author: David Engster <deng@randomsample.de>
 ;; Contributor: Jack Kamm <jackkamm@tatersworld.org>
