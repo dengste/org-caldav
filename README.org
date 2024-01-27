@@ -24,17 +24,6 @@ CalDAV servers:
 - *SOGo* and *Kolab*: Reported to be working
   (https://kolabnow.com/clients/emacs)
 
-Note that Emacs releases <26.3 might not correctly handle https via
-TLSv1.3 (see https://debbugs.gnu.org/cgi/bugreport.cgi?bug=34341). If
-you see errors like "Bad request" or "No data received" you can either
-try to set
-
-#+begin_src emacs-lisp
-(setq gnutls-algorithm-priority "NORMAL:-VERS-TLS1.3")
-#+end_src
-
-or you upgrade to Emacs 26.3.
-
 *IMPORTANT*: Before using this code, please make sure you have backups
 of your precious Org files. Also, I strongly suggest to create a new,
 empty calendar on your server for using this package.
