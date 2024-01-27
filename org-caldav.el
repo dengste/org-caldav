@@ -78,7 +78,7 @@ authentication with access URIs set in
 This is usually .ics, but on some servers (davmail), it is .EML"
   :type 'string)
 
-(defcustom org-caldav-files '("~/org/appointments.org")
+(defcustom org-caldav-files nil
   "List of files which should end up in calendar.
 The file in `org-caldav-inbox' is implicitly included, so you
 don't have to add it here."
