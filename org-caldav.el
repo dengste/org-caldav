@@ -730,7 +730,7 @@ If retrieve fails, do `org-caldav-retry-attempts' retries."
   of the line.  Some ical validators fail otherwise."
   (save-excursion
     (goto-char (point-min))
-    (while (not (= (point) (point-max)))
+    (while (not (eobp))
       (goto-char (- (line-end-position) 1))
       (unless (string= (thing-at-point 'char) "\^M")
         (forward-char)
@@ -1193,7 +1193,7 @@ by ox-icalendar."
 (defun org-caldav-maybe-fix-timezone ()
   "Fix the timezone if it is all uppercase.
 This is a bug in older Org versions."
-  (unless (null org-icalendar-timezone)
+  (when org-icalendar-timezone
     (save-excursion
       (goto-char (point-min))
       (while (search-forward (upcase org-icalendar-timezone) nil t)
@@ -1238,7 +1238,7 @@ TODO: save percent-complete also as a property in org"
       (if (search-forward "STATUS:" nil t)
         (delete-region (line-beginning-position) (+ 1 (line-end-position)))
         (progn (search-forward "END:VTODO")
-          (goto-char (line-beginning-position))))
+          (beginning-of-line)))
 
 
       (let* ((state (save-excursion
@@ -1983,7 +1983,7 @@ Sets the block's tags, and return its MD5."
   "Insert org time stamp using DATE and TIME at point.
 DATE is given as european date (DD MM YYYY)."
   (insert
-   (concat "<" (org-caldav-convert-to-org-time date time) ">")))
+   "<" (org-caldav-convert-to-org-time date time) ">"))
 
 (defun org-caldav-convert-to-org-time (date &optional time)
   "Convert to org time stamp using DATE and TIME.
