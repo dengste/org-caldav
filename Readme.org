@@ -2,5 +2,6 @@
 
 Caldav sync for Emacs Orgmode
 
-For documentation, see the [[file:org-caldav-manual.org][manual]]. The manual is also
-available at [[https://jackkamm.neocities.org/org-caldav-manual]].
+For documentation, see the manual at [[file:doc/org-caldav.org]]. The
+manual is also available at
+[[https://jackkamm.neocities.org/org-caldav-manual]].
