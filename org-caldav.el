@@ -9,7 +9,7 @@
 ;; URL: https://github.com/dengste/org-caldav/
 ;; Package-Requires: ((emacs "26.3") (org "9.1"))
 ;;
-;; Version: 3.0
+;; Version: 3.1
 ;;
 ;; This file is not part of GNU Emacs.
 ;;
