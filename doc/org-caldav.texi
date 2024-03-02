@@ -442,6 +442,9 @@ provider.
 @node Syncing to Google Calendar
 @section Syncing to Google Calendar
 
+NOTE: Using org-caldav with Google Calendar may be currently
+broken. See @uref{https://github.com/dengste/org-caldav/issues/284}
+
 The CalDAV endpoint for Google Calendar requires OAuth2
 authentication.  So first, you need to install the oauth2 library from
 GNU ELPA, and afterwards you need to acquire an application ID and

@@ -332,6 +332,9 @@ is affected, but Radicale does not seem to experience this problem.
 :CUSTOM_ID: gcal-sync
 :END:
 
+NOTE: Using org-caldav with Google Calendar may be currently
+broken. See [[https://github.com/dengste/org-caldav/issues/284]]
+
 The CalDAV endpoint for Google Calendar requires OAuth2
 authentication.  So first, you need to install the oauth2 library from
 GNU ELPA, and afterwards you need to acquire an application ID and
