@@ -6,6 +6,11 @@
 @documentlanguage en
 @c %**end of header
 
+@dircategory Emacs
+@direntry
+* Org-caldav: (org-caldav). Caldav sync for Emacs Orgmode.
+@end direntry
+
 @finalout
 @titlepage
 @title org-caldav
