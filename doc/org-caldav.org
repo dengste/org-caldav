@@ -486,6 +486,18 @@ and I can't blame them for that.
 
 * Tips, Tricks, and Troubleshooting
 
+** Standalone import of ICS files
+
+org-caldav can also be used for standalone import of ICS files to Org.
+
+In particular, see ~org-caldav-import-ics-buffer-to-org~ to import
+iCalendar entries (e.g. from e-mail attachments) directly to your
+~org-caldav-inbox~.
+
+Also, see ~org-caldav-convert-ics-to-datetree~ to convert an iCalendar
+file into an Org datetree in a separate buffer (use
+~org-caldav-datetree-treetype~ to control the style of datetree).
+
 ** Storage of sync information and sync from different computers
 
 The current sync state is stored in a file ~org-caldav-SOMEID.el~ in

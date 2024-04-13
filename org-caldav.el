@@ -1403,7 +1403,7 @@ level to add a new child entry."
 	    (when (re-search-forward "^SEQUENCE:\\s-*\\([0-9]+\\)" nil t)
 	      (org-caldav-event-set-sequence
 	       cur (string-to-number (match-string 1)))))
-	  (setq eventdata-alist (org-caldav-convert-event-or-todo is-todo)))
+	  (setq eventdata-alist (org-caldav-convert-event-or-todo--from-buffer is-todo)))
 	(cond
 	 ((eq (org-caldav-event-status cur) 'new-in-cal)
 	  ;; This is a new event.
@@ -2164,7 +2164,7 @@ If PROPERTY in event E contains has valuetype \"DATE\" instead of
     default))
 
 (defun org-caldav--event-date-plist (e property zone-map)
-  "Helper function for `org-caldav-convert-event-or-todo'.
+  "Helper function for `org-caldav-convert-event-or-todo--from-buffer'.
 Extracts datetime-related attributes from PROPERTY of event E and
 puts them in a plist."
   (let* ((dt-prop (icalendar--get-event-property e property))
@@ -2189,8 +2189,7 @@ puts them in a plist."
     result))
 
 ;; The following is taken from icalendar.el, written by Ulf Jasper.
-;; The LOCATION property is added the extracted list
-(defun org-caldav-convert-event-or-todo (is-todo)
+(defun org-caldav-convert-event-or-todo--from-buffer (is-todo)
   "Convert icalendar event or todo in current buffer.
 If IS-TODO, it is a VTODO, else a VEVENT.  Returns an alist of properties
 which can be fed into `org-caldav-insert-org-event-or-todo'."
@@ -2202,11 +2201,18 @@ which can be fed into `org-caldav-insert-org-event-or-todo'."
   (goto-char (point-min))
   (let* ((calendar-date-style 'european)
 	 (ical-list (icalendar--read-element nil nil))
-	 (e (car (if is-todo
-                     (org-caldav--icalendar--all-todos ical-list)
-                   (icalendar--all-events ical-list))))
-	 (zone-map (icalendar--convert-all-timezones ical-list))
-         (dtstart-plist (org-caldav--event-date-plist e 'DTSTART zone-map))
+	 (zone-map (icalendar--convert-all-timezones ical-list)))
+    (org-caldav-convert-event-or-todo--from-element
+     is-todo zone-map
+     (car (if is-todo
+              (org-caldav--icalendar--all-todos ical-list)
+            (icalendar--all-events ical-list))))))
+
+(defun org-caldav-convert-event-or-todo--from-element (is-todo zone-map e)
+  "Convert event/todo from icalendar element E.
+If IS-TODO, it is a VTODO, else a VEVENT.  Returns an alist of properties
+which can be fed into `org-caldav-insert-org-event-or-todo'."
+  (let* ((dtstart-plist (org-caldav--event-date-plist e 'DTSTART zone-map))
          (eventdata-alist
           `((start-d . ,(plist-get dtstart-plist 'date))
             (start-t . ,(plist-get dtstart-plist 'time))
@@ -2333,32 +2339,79 @@ This switches to OAuth2 if necessary."
         (format "Full error response:\n %s" full-response)))
     (< counter org-caldav-retry-attempts)))
 
+(defun org-caldav-import-ics-buffer--intern (inbox)
+  "Add ics content in current buffer to INBOX.
+See `org-caldav-inbox' for the format of INBOX.
+
+Currently, this function only adds entries, and does not
+overwrite existing entries in INBOX, even if the event has an
+existing ID.  This behavior may change in future.
+
+Currently, this function only imports events, not todos.  This
+behavior may change in future."
+  (with-current-buffer (icalendar--get-unfolded-buffer (current-buffer))
+    (goto-char (point-min))
+    (if (save-excursion (re-search-forward "^BEGIN:VCALENDAR\\s-*$" nil t))
+        (let* ((calendar-date-style 'european)
+               (ical-list (icalendar--read-element nil nil))
+               ;; TODO: Handle VTODO
+               (event-list (icalendar--all-events ical-list))
+               (zone-map (icalendar--convert-all-timezones ical-list))
+               (nevents (length event-list))
+               event)
+          (with-current-buffer (find-file-noselect
+                                (org-caldav-inbox-file inbox))
+            ;; step through all events/appointments
+            (while event-list
+              (setq event (org-caldav-convert-event-or-todo--from-element
+                           nil zone-map (car event-list)))
+              (setq event-list (cdr event-list))
+              (let* ((point-and-level (org-caldav-inbox-point-and-level
+                                       inbox event))
+                     (point (or (car point-and-level) (point-max)))
+                     (level (or (cdr point-and-level) 1)))
+                (goto-char point)
+                (org-caldav-insert-org-event-or-todo
+                 (append event `((uid . nil) (level . ,level))))
+                (when org-caldav-save-buffers (save-buffer))
+                (org-caldav-debug-print
+                 1 (format "Added %d entries to %s"
+                           nevents (org-caldav-inbox-file inbox)))))))
+      (message "Current buffer does not contain iCalendar contents!"))))
+
+;;;###autoload
+(defun org-caldav-convert-ics-to-datetree ()
+  "Convert ics content in current buffer to Org datetree format.
+Output is displayed in the buffer *org-caldav-convert-ics-to-datetree*."
+  (interactive)
+  (let* ((tmp-file (make-temp-file "org-caldav"))
+         (tmp-buf (find-file-noselect tmp-file))
+         (output-buffer (get-buffer-create
+                         "*org-caldav-convert-ics-to-datetree*")))
+    (unwind-protect
+        (progn
+          (with-current-buffer tmp-buf (org-mode))
+          (org-caldav-import-ics-buffer--intern `(file+olp+datetree ,tmp-file))
+          (let ((contents (with-current-buffer tmp-buf (buffer-string))))
+            (with-current-buffer output-buffer
+              (unless (eq major-mode 'org-mode) (org-mode))
+              (erase-buffer)
+              (insert contents)))
+          (pop-to-buffer output-buffer))
+      (when (buffer-live-p tmp-buf)
+        (with-current-buffer tmp-buf (set-buffer-modified-p nil))
+        (kill-buffer tmp-buf))
+      (when (file-exists-p tmp-file) (delete-file tmp-file)))))
+
 ;;;###autoload
 (defun org-caldav-import-ics-buffer-to-org ()
   "Add ics content in current buffer to `org-caldav-inbox'."
-  (let ((event (org-caldav-convert-event-or-todo nil))
-        (file (org-caldav-inbox-file org-caldav-inbox)))
-    (with-current-buffer (find-file-noselect file)
-      (let* ((point-and-level (org-caldav-inbox-point-and-level
-                               org-caldav-inbox event))
-             (point (car point-and-level))
-             (level (cdr point-and-level)))
-        (goto-char point)
-        (org-caldav-insert-org-event-or-todo
-         (append event `((uid . nil) (level . ,level))))
-        (message "%s: Added event: %s"
-                 file
-                 (buffer-substring
-                  point
-                  (save-excursion
-                    (goto-char point)
-                    (line-end-position 2))))))))
+  (org-caldav-import-ics-buffer--intern org-caldav-inbox))
 
 ;;;###autoload
 (defun org-caldav-import-ics-to-org (path)
   "Add ics content in PATH to `org-caldav-inbox'."
-  (with-current-buffer (get-buffer-create "*import-ics-to-org*")
-    (delete-region (point-min) (point-max))
+  (with-temp-buffer
     (insert-file-contents path)
     (org-caldav-import-ics-buffer-to-org)))
 
