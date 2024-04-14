@@ -67,6 +67,7 @@ Implementation details
 
 Tips, Tricks, and Troubleshooting
 
+* Standalone import of ICS files::
 * Storage of sync information and sync from different computers::
 * Starting from scratch::
 * Timezone problems::
@@ -617,11 +618,25 @@ and I can't blame them for that.
 @chapter Tips, Tricks, and Troubleshooting
 
 @menu
+* Standalone import of ICS files::
 * Storage of sync information and sync from different computers::
 * Starting from scratch::
 * Timezone problems::
 * Troubleshooting::
 @end menu
+
+@node Standalone import of ICS files
+@section Standalone import of ICS files
+
+org-caldav can also be used for standalone import of ICS files to Org.
+
+In particular, see @code{org-caldav-import-ics-buffer-to-org} to import
+iCalendar entries (e.g. from e-mail attachments) directly to your
+@code{org-caldav-inbox}.
+
+Also, see @code{org-caldav-convert-ics-to-datetree} to convert an iCalendar
+file into an Org datetree in a separate buffer (use
+@code{org-caldav-datetree-treetype} to control the style of datetree).
 
 @node Storage of sync information and sync from different computers
 @section Storage of sync information and sync from different computers
