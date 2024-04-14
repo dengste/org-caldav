@@ -2222,7 +2222,9 @@ which can be fed into `org-caldav-insert-org-event-or-todo'."
 		             "No Title")))
             (description . ,(icalendar--convert-string-for-import
 		             (or (icalendar--get-event-property e 'DESCRIPTION)
-			         ""))))))
+			         "")))
+            (rrule . ,(icalendar--get-event-property e 'RRULE))
+            (rdate . ,(icalendar--get-event-property e 'RDATE)))))
     (if is-todo
         (org-caldav-convert-event-or-todo--todo e zone-map eventdata-alist)
       (org-caldav-convert-event-or-todo--event e zone-map eventdata-alist))))
