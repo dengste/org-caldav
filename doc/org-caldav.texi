@@ -252,6 +252,10 @@ and can be @code{nil}. Likewise, if you choose @code{'cal->org}, then
 @code{org-caldav-files} will be ignored and only the calendar will be
 imported into the inbox.
 
+WARNING: It is NOT safe to switch the same calendar between 1-way and
+2-way sync modes.  Doing so may cause unexpected behavior, such as
+deleting all events in the calendar.
+
 @node Filtering entries
 @section Filtering entries
 
