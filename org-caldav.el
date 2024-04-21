@@ -2222,9 +2222,7 @@ which can be fed into `org-caldav-insert-org-event-or-todo'."
 		             "No Title")))
             (description . ,(icalendar--convert-string-for-import
 		             (or (icalendar--get-event-property e 'DESCRIPTION)
-			         "")))
-            (rrule . ,(icalendar--get-event-property e 'RRULE))
-            (rdate . ,(icalendar--get-event-property e 'RDATE)))))
+			         ""))))))
     (if is-todo
         (org-caldav-convert-event-or-todo--todo e zone-map eventdata-alist)
       (org-caldav-convert-event-or-todo--event e zone-map eventdata-alist))))
@@ -2241,7 +2239,8 @@ which can be fed into `org-caldav-insert-org-event-or-todo'."
 		       (plist-get dtend-plist 'event-property) -1
 		       (plist-get dtend-plist 'zone)))
 	 e-type
-	 (duration (icalendar--get-event-property e 'DURATION)))
+	 (duration (icalendar--get-event-property e 'DURATION))
+         (rrule . ,(icalendar--get-event-property e 'RRULE)))
     (when (string-match "^\\(?:\\(DL\\|S\\):\s+\\)?\\(.*\\)$" summary)
       (setq e-type (match-string 1 summary))
       (setq summary (match-string 2 summary)))
@@ -2258,6 +2257,12 @@ which can be fed into `org-caldav-insert-org-event-or-todo'."
 		     summary))
 	(setq dtend-dec dtend-dec-d)
 	(setq dtend-1-dec dtend-1-dec-d)))
+    (when rrule
+      (setq eventdata-alist
+            (append
+             eventdata-alist
+             `((recurring-diary-sexp . ,(icalendar--convert-recurring-to-diary
+                                         e dtstart-dec start-t end-t))))))
     (let ((end-t (org-caldav--datetime-to-colontime
 		  dtend-dec e 'DTEND start-t)))
       ;; Return result
