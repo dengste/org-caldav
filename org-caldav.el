@@ -1854,7 +1854,10 @@ Returns MD5 from entry."
           (org-caldav-insert-org-entry--wrapup))
       (insert (make-string (or .level 1) ?*) " " .summary "\n")
       (insert (if org-adapt-indentation "  " "")
-              (org-caldav-create-time-range .start-d .start-t .end-d .end-t .e-type) "\n")
+              (if .recurring-diary-sexp
+                  (format "<%s>" (string-trim-right .recurring-diary-sexp))
+                (org-caldav-create-time-range .start-d .start-t .end-d .end-t .e-type))
+               "\n")
       (org-caldav--insert-description .description)
       (forward-line -1)
       (when .uid
@@ -2221,6 +2224,11 @@ which can be fed into `org-caldav-insert-org-event-or-todo'."
         (setq eventdata-alist
               (append
                eventdata-alist
+               ;; TODO: Reimplement
+               ;; icalendar--convert-recurring-to-diary to prefer
+               ;; org-date, org-cyclic, etc over diary-date,
+               ;; diary-cyclic so that order of variables follows ISO
+               ;; instead of evilly depending on calendar-date-style
                `((recurring-diary-sexp . ,(icalendar--convert-recurring-to-diary
                                            e dtstart-dec start-t end-t))))))
       ;; Return result
