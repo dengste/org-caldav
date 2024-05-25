@@ -503,16 +503,23 @@ Org task 2
     ))
 
 (ert-deftest org-caldav-03-insert-org-entry ()
-  "Make sure that `org-caldav-insert-org-entry' works fine."
-  (let ((entry '("01 01 2015" "19:00" "01 01 2015" "20:00" "The summary" "The description" "location" nil))
+  "Make sure that `org-caldav-insert-org-event-or-todo' works fine."
+  (let ((entry '((start-d . "01 01 2015")
+                 (start-t . "19:00")
+                 (end-d ."01 01 2015")
+                 (end-t . "20:00")
+                 (summary . "The summary")
+                 (description . "The description")
+                 (location . "location")))
         (org-caldav-select-tags ""))
     (cl-flet ((write-entry (uid level)
                            (with-temp-buffer
                              (org-mode) ; useful to set org-mode's
                                         ; internal variables
-                             (apply #'org-caldav-insert-org-entry
-                                    (append entry (list uid level)))
-                             (setq foo (buffer-string)))))
+                             (org-caldav-insert-org-event-or-todo
+                              (append entry `((uid . ,uid)
+                                              (level . ,level))))
+                             (buffer-string))))
       (should (string-match (concat
 			     "\\*\\s-+The summary\n"
 			     "\\s-*:PROPERTIES:\n"

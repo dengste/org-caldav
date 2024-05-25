@@ -1814,21 +1814,6 @@ Do nothing if LEVEL is larger than `org-caldav-debug-level'."
   (> (buffer-size) (- (point-max)
 		      (point-min))))
 
-(defun org-caldav-insert-org-event-or-todo (eventdata-alist)
-  "Insert org block from given event data at current position.
-Elements of EVENTDATA-ALIST are passed on as arguments to
-`org-caldav-insert-org-entry' and `org-caldav-insert-org-todo'.
-Returns MD5 from entry."
-  (let-alist eventdata-alist
-    (if (eq .component-type 'todo)
-        (org-caldav-insert-org-todo
-         .start-d .start-t .due-d .due-t .priority .percent-complete
-         .summary .description .completed-d .completed-t .categories
-         .uid .level)
-      (org-caldav-insert-org-entry
-       .start-d .start-t .end-d .end-t .summary
-       .description .location .e-type .uid .level))))
-
 (defun org-caldav--insert-description (description)
   (when (> (length description) 0)
     (when org-caldav-description-blank-line-before (newline))
@@ -1838,71 +1823,44 @@ Returns MD5 from entry."
     (when org-caldav-description-blank-line-after (newline))
     (newline)))
 
-(defun org-caldav-insert-org-entry (start-d start-t end-d end-t
-                                            summary description location e-type
-                                            &optional uid level)
-  "Insert org block from given data at current position.
-START/END-D: Start/End date.  START/END-T: Start/End time.
-SUMMARY, DESCRIPTION, LOCATION, UID: obvious.
-Dates must be given in a format `org-read-date' can parse.
-
-If LOCATION is \"\", no LOCATION: property is written.
-If UID is nil, no UID: property is written.
-If LEVEL is nil, it defaults to 1.
-
+(defun org-caldav-insert-org-event-or-todo (eventdata-alist)
+  "Insert org block from given event data at current position.
 Returns MD5 from entry."
-  (insert (make-string (or level 1) ?*) " " summary "\n")
-  (insert (if org-adapt-indentation "  " "")
-   (org-caldav-create-time-range start-d start-t end-d end-t e-type) "\n")
-  (org-caldav--insert-description description)
-  (forward-line -1)
-  (when uid
-    (org-set-property "ID" (url-unhex-string uid)))
-  (org-caldav-change-location location)
-  (org-caldav-insert-org-entry--wrapup))
-
-(defun org-caldav-insert-org-todo (start-d start-t due-d due-t
-                                    priority percent-complete
-                                    summary description
-                                    completed-d completed-t
-                                    categories
-                                    &optional uid level)
-  "Insert org block from given data at current position.
-START/DUE-D: Start/Due date.  START/DUE-T: Start/Due time.
-PRIORITY: 0-9, PERCENT-COMPLETE: 0-100.
-See `org-caldav-todo-priority' and
-`org-caldav-todo-percent-states' for explanations how this values
-are used.
-SUMMARY, DESCRIPTION, UID: obvious.
-Dates must be given in a format `org-read-date' can parse.
-
-If UID is nil, no UID: property is written.
-If LEVEL is nil, it defaults to 1.
-
-Returns MD5 from entry."
-  (let* ((nprio (string-to-number (or priority "0")))
-          (r nil)
-          (vprio (dolist (p org-caldav-todo-priority r)
-                   (when (>= nprio (car p))
-                     (setq r (car (cdr p))))))
-          (prio (if vprio (concat "[#" vprio "] ") "")))
-    (insert (make-string (or level 1) ?*) " "
-            (org-caldav--todo-percent-to-state
-             (string-to-number (or percent-complete "0")))
-            " " prio summary "\n"))
-  (org-caldav--insert-description description)
-  (forward-line -1)
-  (when start-d
-    (org--deadline-or-schedule
-     nil 'scheduled (org-caldav-convert-to-org-time start-d start-t)))
-  (when due-d
-    (org--deadline-or-schedule
-     nil 'deadline (org-caldav-convert-to-org-time due-d due-t)))
-  (when completed-d
-    (org-add-planning-info 'closed (org-caldav-convert-to-org-time completed-d completed-t)))
-  (org-caldav-set-org-tags categories)
-  (when uid (org-set-property "ID" (url-unhex-string uid)))
-  (org-caldav-insert-org-entry--wrapup))
+  (let-alist eventdata-alist
+    (if (eq .component-type 'todo)
+        (progn
+          (let* ((nprio (string-to-number (or .priority "0")))
+                 (r nil)
+                 (vprio (dolist (p org-caldav-todo-priority r)
+                          (when (>= nprio (car p))
+                            (setq r (car (cdr p))))))
+                 (prio (if vprio (concat "[#" vprio "] ") "")))
+            (insert (make-string (or .level 1) ?*) " "
+                    (org-caldav--todo-percent-to-state
+                     (string-to-number (or .percent-complete "0")))
+                    " " prio .summary "\n"))
+          (org-caldav--insert-description .description)
+          (forward-line -1)
+          (when .start-d
+            (org--deadline-or-schedule
+             nil 'scheduled (org-caldav-convert-to-org-time .start-d .start-t)))
+          (when .due-d
+            (org--deadline-or-schedule
+             nil 'deadline (org-caldav-convert-to-org-time .due-d .due-t)))
+          (when .completed-d
+            (org-add-planning-info 'closed (org-caldav-convert-to-org-time .completed-d .completed-t)))
+          (org-caldav-set-org-tags .categories)
+          (when .uid (org-set-property "ID" (url-unhex-string .uid)))
+          (org-caldav-insert-org-entry--wrapup))
+      (insert (make-string (or .level 1) ?*) " " .summary "\n")
+      (insert (if org-adapt-indentation "  " "")
+              (org-caldav-create-time-range .start-d .start-t .end-d .end-t .e-type) "\n")
+      (org-caldav--insert-description .description)
+      (forward-line -1)
+      (when .uid
+        (org-set-property "ID" (url-unhex-string .uid)))
+      (org-caldav-change-location .location)
+      (org-caldav-insert-org-entry--wrapup))))
 
 (defun org-caldav--org-set-tags-to (tags)
   "Helper function for compatibility.
