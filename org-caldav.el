@@ -2240,7 +2240,7 @@ which can be fed into `org-caldav-insert-org-event-or-todo'."
 		       (plist-get dtend-plist 'zone)))
 	 e-type
 	 (duration (icalendar--get-event-property e 'DURATION))
-         (rrule . ,(icalendar--get-event-property e 'RRULE)))
+         (rrule (icalendar--get-event-property e 'RRULE)))
     (when (string-match "^\\(?:\\(DL\\|S\\):\s+\\)?\\(.*\\)$" summary)
       (setq e-type (match-string 1 summary))
       (setq summary (match-string 2 summary)))
@@ -2257,14 +2257,14 @@ which can be fed into `org-caldav-insert-org-event-or-todo'."
 		     summary))
 	(setq dtend-dec dtend-dec-d)
 	(setq dtend-1-dec dtend-1-dec-d)))
-    (when rrule
-      (setq eventdata-alist
-            (append
-             eventdata-alist
-             `((recurring-diary-sexp . ,(icalendar--convert-recurring-to-diary
-                                         e dtstart-dec start-t end-t))))))
     (let ((end-t (org-caldav--datetime-to-colontime
 		  dtend-dec e 'DTEND start-t)))
+      (when rrule
+        (setq eventdata-alist
+              (append
+               eventdata-alist
+               `((recurring-diary-sexp . ,(icalendar--convert-recurring-to-diary
+                                           e dtstart-dec start-t end-t))))))
       ;; Return result
       (append `((component-type . event)
 		(end-d
