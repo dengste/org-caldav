@@ -1490,7 +1490,8 @@ which can only be synced to calendar. Ignoring." uid))
                               ;; before calling re-search-forward
                               (let ((tr (org-caldav-create-time-range
                                          .start-d .start-t
-                                         .end-d .end-t .end-type)))
+                                         .end-d .end-t
+                                         .e-type .rrule-props)))
                                 (when (re-search-forward org-tsr-regexp nil t)
                                   (replace-match tr nil t)))))
                       (widen))
@@ -1841,12 +1842,18 @@ Returns MD5 from entry."
                     " " prio .summary "\n"))
           (org-caldav--insert-description .description)
           (forward-line -1)
+          ;; TODO Handle UNTIL rrule property; ox-icalendar currently
+          ;; uses DEADLINE for that in certain cases
           (when .start-d
             (org--deadline-or-schedule
-             nil 'scheduled (org-caldav-convert-to-org-time .start-d .start-t)))
+             nil 'scheduled (org-caldav-convert-to-org-time
+                             .start-d .start-t
+                             .rrule-props)))
           (when .due-d
             (org--deadline-or-schedule
-             nil 'deadline (org-caldav-convert-to-org-time .due-d .due-t)))
+             nil 'deadline (org-caldav-convert-to-org-time
+                            .due-d .due-t
+                            .rrule-props)))
           (when .completed-d
             (org-add-planning-info 'closed (org-caldav-convert-to-org-time .completed-d .completed-t)))
           (org-caldav-set-org-tags .categories)
@@ -1854,9 +1861,9 @@ Returns MD5 from entry."
           (org-caldav-insert-org-entry--wrapup))
       (insert (make-string (or .level 1) ?*) " " .summary "\n")
       (insert (if org-adapt-indentation "  " "")
-              (if .recurring-diary-sexp
-                  (format "<%s>" (string-trim-right .recurring-diary-sexp))
-                (org-caldav-create-time-range .start-d .start-t .end-d .end-t .e-type))
+              (org-caldav-create-time-range .start-d .start-t
+                                            .end-d .end-t
+                                            .e-type .rrule-props)
                "\n")
       (org-caldav--insert-description .description)
       (forward-line -1)
@@ -1922,7 +1929,8 @@ Sets the block's tags, and return its MD5."
         (org-caldav--org-set-tags-to (reverse cleantags)))
       (org-caldav--org-set-tags-to nil))))
 
-(defun org-caldav-create-time-range (start-d start-t end-d end-t e-type)
+(defun org-caldav-create-time-range (start-d start-t end-d end-t
+                                             e-type &optional rrule-props)
   "Create an Org timestamp range from START-D/T, END-D/T."
   (with-temp-buffer
     (cond
@@ -1933,11 +1941,17 @@ Sets the block's tags, and return its MD5."
 	     (not (equal end-d start-d)))
 	(progn
 	  (insert "--")
-	  (org-caldav-insert-org-time-stamp end-d end-t))
+	  (org-caldav-insert-org-time-stamp end-d end-t)
+          (when rrule-props
+            ;; TODO Implement repeating multiday events upstrean in ox-icalendar
+            (org-caldav-debug-print 1 "Skipping repeater for multiday timestamp (ox-icalendar does not yet support repeating multiday time ranges)")))
+      (backward-char 1)
       (when end-t
-	;; Same day, different time.
-	(backward-char 1)
-	(insert "-" end-t)))
+        (insert "-" end-t))
+      (when rrule-props
+        (insert (format " +%d%s"
+                        (read (or (cadr (assoc 'INTERVAL rrule-props)) "1"))
+                        (downcase (substring (cadr (assoc 'FREQ rrule-props)) 0 1))))))
     (buffer-string)))
 
 (defun org-caldav-insert-org-time-stamp (date &optional time)
@@ -1946,7 +1960,7 @@ DATE is given as european date (DD MM YYYY)."
   (insert
    "<" (org-caldav-convert-to-org-time date time) ">"))
 
-(defun org-caldav-convert-to-org-time (date &optional time)
+(defun org-caldav-convert-to-org-time (date &optional time rrule-props)
   "Convert to org time stamp using DATE and TIME.
 DATE is given as european date \"DD MM YYYY\"."
   (let* ((stime (when time (mapcar 'string-to-number
@@ -1958,9 +1972,13 @@ DATE is given as european date \"DD MM YYYY\"."
                                      (calendar-extract-day sdate)
                                      (calendar-extract-month sdate)
                                      (calendar-extract-year sdate))))
-    (if time
-        (format-time-string "%Y-%m-%d %a %H:%M" internaltime)
-      (format-time-string "%Y-%m-%d %a" internaltime))))
+    (concat
+     (if time
+         (format-time-string "%Y-%m-%d %a %H:%M" internaltime)
+       (format-time-string "%Y-%m-%d %a" internaltime))
+     (when rrule-props
+       (format " +%d%s" (read (or (cadr (assoc 'INTERVAL rrule-props)) "1"))
+               (downcase (substring (cadr (assoc 'FREQ rrule-props)) 0 1)))))))
 
 (defun org-caldav--convert-to-calendar (date)
   "Convert DATE to calendar.el-style list (month day year).
@@ -2183,7 +2201,9 @@ which can be fed into `org-caldav-insert-org-event-or-todo'."
 		             "No Title")))
             (description . ,(icalendar--convert-string-for-import
 		             (or (icalendar--get-event-property e 'DESCRIPTION)
-			         ""))))))
+			         "")))
+            (rrule-props . ,(icalendar--split-value
+                             (icalendar--get-event-property e 'RRULE))))))
     (if is-todo
         (org-caldav-convert-event-or-todo--todo e zone-map eventdata-alist)
       (org-caldav-convert-event-or-todo--event e zone-map eventdata-alist))))
@@ -2200,8 +2220,7 @@ which can be fed into `org-caldav-insert-org-event-or-todo'."
 		       (plist-get dtend-plist 'event-property) -1
 		       (plist-get dtend-plist 'zone)))
 	 e-type
-	 (duration (icalendar--get-event-property e 'DURATION))
-         (rrule (icalendar--get-event-property e 'RRULE)))
+	 (duration (icalendar--get-event-property e 'DURATION)))
     (when (string-match "^\\(?:\\(DL\\|S\\):\s+\\)?\\(.*\\)$" summary)
       (setq e-type (match-string 1 summary))
       (setq summary (match-string 2 summary)))
@@ -2220,17 +2239,6 @@ which can be fed into `org-caldav-insert-org-event-or-todo'."
 	(setq dtend-1-dec dtend-1-dec-d)))
     (let ((end-t (org-caldav--datetime-to-colontime
 		  dtend-dec e 'DTEND start-t)))
-      (when rrule
-        (setq eventdata-alist
-              (append
-               eventdata-alist
-               ;; TODO: Reimplement
-               ;; icalendar--convert-recurring-to-diary to prefer
-               ;; org-date, org-cyclic, etc over diary-date,
-               ;; diary-cyclic so that order of variables follows ISO
-               ;; instead of evilly depending on calendar-date-style
-               `((recurring-diary-sexp . ,(icalendar--convert-recurring-to-diary
-                                           e dtstart-dec start-t end-t))))))
       ;; Return result
       (append `((component-type . event)
 		(end-d
@@ -2245,7 +2253,7 @@ which can be fed into `org-caldav-insert-org-event-or-todo'."
 		(location
 		 . ,(icalendar--convert-string-for-import
 		     (or (icalendar--get-event-property e 'LOCATION) "")))
-		(end-type . ,e-type))
+		(e-type . ,e-type))
 	      eventdata-alist))))
 
 (defun org-caldav-convert-event-or-todo--todo (e zone-map eventdata-alist)
