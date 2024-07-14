@@ -1845,13 +1845,15 @@ Returns MD5 from entry."
           ;; TODO Handle UNTIL rrule property; ox-icalendar currently
           ;; uses DEADLINE for that in certain cases
           (when .start-d
+            ;; FIXME use `org-schedule' or `org-deadline' instead
+            ;; (here and elsewhere)
             (org--deadline-or-schedule
-             nil 'scheduled (org-caldav-convert-to-org-time
+             nil 'scheduled (org-caldav--convert-to-org-time-with-brackets
                              .start-d .start-t
                              .rrule-props)))
           (when .due-d
             (org--deadline-or-schedule
-             nil 'deadline (org-caldav-convert-to-org-time
+             nil 'deadline (org-caldav--convert-to-org-time-with-brackets
                             .due-d .due-t
                             .rrule-props)))
           (when .completed-d
@@ -1958,7 +1960,11 @@ Sets the block's tags, and return its MD5."
   "Insert org time stamp using DATE and TIME at point.
 DATE is given as european date (DD MM YYYY)."
   (insert
-   "<" (org-caldav-convert-to-org-time date time) ">"))
+   (org-caldav--convert-to-org-time-with-brackets date time)))
+
+(defun org-caldav--convert-to-org-time-with-brackets (&rest args)
+  "Wraps `org-caldav-convert-to-org-time' results with angle brackets."
+  (concat "<" (apply 'org-caldav-convert-to-org-time args) ">"))
 
 (defun org-caldav-convert-to-org-time (date &optional time rrule-props)
   "Convert to org time stamp using DATE and TIME.
