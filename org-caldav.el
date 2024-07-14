@@ -2320,23 +2320,23 @@ This switches to OAuth2 if necessary."
         (format "Full error response:\n %s" full-response)))
     (< counter org-caldav-retry-attempts)))
 
-(defun org-caldav-import-ics-buffer--intern (inbox)
+(defun org-caldav-import-ics-buffer--intern (inbox &optional import-todos)
   "Add ics content in current buffer to INBOX.
 See `org-caldav-inbox' for the format of INBOX.
 
+If IMPORT-TODOS, imports vtodos only. Else imports vevents only.
+
 Currently, this function only adds entries, and does not
 overwrite existing entries in INBOX, even if the event has an
-existing ID.  This behavior may change in future.
-
-Currently, this function only imports events, not todos.  This
-behavior may change in future."
+existing ID.  This behavior may change in future."
   (with-current-buffer (icalendar--get-unfolded-buffer (current-buffer))
     (goto-char (point-min))
     (if (save-excursion (re-search-forward "^BEGIN:VCALENDAR\\s-*$" nil t))
         (let* ((calendar-date-style 'european)
                (ical-list (icalendar--read-element nil nil))
-               ;; TODO: Handle VTODO
-               (event-list (icalendar--all-events ical-list))
+               (event-list (if import-todos
+                               (org-caldav--icalendar--all-todos ical-list)
+                             (icalendar--all-events ical-list)))
                (zone-map (icalendar--convert-all-timezones ical-list))
                (nevents (length event-list))
                event)
@@ -2345,7 +2345,7 @@ behavior may change in future."
             ;; step through all events/appointments
             (while event-list
               (setq event (org-caldav-convert-event-or-todo--from-element
-                           nil zone-map (car event-list)))
+                           import-todos zone-map (car event-list)))
               (setq event-list (cdr event-list))
               (let* ((point-and-level (org-caldav-inbox-point-and-level
                                        inbox event))
@@ -2373,6 +2373,8 @@ Output is displayed in the buffer *org-caldav-convert-ics-to-datetree*."
         (progn
           (with-current-buffer tmp-buf (org-mode))
           (org-caldav-import-ics-buffer--intern `(file+olp+datetree ,tmp-file))
+          (when org-caldav-sync-todo
+            (org-caldav-import-ics-buffer--intern `(file+olp+datetree ,tmp-file) t))
           (let ((contents (with-current-buffer tmp-buf (buffer-string))))
             (with-current-buffer output-buffer
               (unless (eq major-mode 'org-mode) (org-mode))
@@ -2387,7 +2389,9 @@ Output is displayed in the buffer *org-caldav-convert-ics-to-datetree*."
 ;;;###autoload
 (defun org-caldav-import-ics-buffer-to-org ()
   "Add ics content in current buffer to `org-caldav-inbox'."
-  (org-caldav-import-ics-buffer--intern org-caldav-inbox))
+  (org-caldav-import-ics-buffer--intern org-caldav-inbox)
+  (when org-caldav-sync-todo
+    (org-caldav-import-ics-buffer--intern org-caldav-inbox t)))
 
 ;;;###autoload
 (defun org-caldav-import-ics-to-org (path)
