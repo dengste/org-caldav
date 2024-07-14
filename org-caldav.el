@@ -1495,16 +1495,25 @@ which can only be synced to calendar. Ignoring." uid))
                                 (when (re-search-forward org-tsr-regexp nil t)
                                   (replace-match tr nil t)))))
                       (widen))
-                  ;; Sync scheduled
-                  (when .start-d
-                    (org--deadline-or-schedule
-                     nil 'scheduled (org-caldav-convert-to-org-time
-                                     .start-d .start-t)))
                   ;; Sync deadline
                   (when .due-d
                     (org--deadline-or-schedule
-                     nil 'deadline (org-caldav-convert-to-org-time
-                                    .due-d .due-t)))
+                     nil 'deadline (org-caldav--convert-to-org-time-with-brackets
+                                    .due-d .due-t
+                                    .rrule-props)))
+                  ;; Sync scheduled
+                  (when .start-d
+                    (org--deadline-or-schedule
+                     nil 'scheduled (org-caldav--convert-to-org-time-with-brackets
+                                     .start-d .start-t
+                                     .rrule-props))
+                    (let ((until (assoc 'UNTIL .rrule-props)))
+                      (when until
+                        (org--deadline-or-schedule
+                         nil 'deadline
+                         (org-caldav--convert-to-org-time-with-brackets
+                          (icalendar--datetime-to-european-date until)
+                          (when .start-t (icalendar--datetime-to-colontime until)))))))
                   ;; Sync completion time
                   (when .completed-d (org-add-planning-info
                                       'closed (org-caldav-convert-to-org-time
@@ -1842,20 +1851,23 @@ Returns MD5 from entry."
                     " " prio .summary "\n"))
           (org-caldav--insert-description .description)
           (forward-line -1)
-          ;; TODO Handle UNTIL rrule property; ox-icalendar currently
-          ;; uses DEADLINE for that in certain cases
-          (when .start-d
-            ;; FIXME use `org-schedule' or `org-deadline' instead
-            ;; (here and elsewhere)
-            (org--deadline-or-schedule
-             nil 'scheduled (org-caldav--convert-to-org-time-with-brackets
-                             .start-d .start-t
-                             .rrule-props)))
           (when .due-d
             (org--deadline-or-schedule
              nil 'deadline (org-caldav--convert-to-org-time-with-brackets
                             .due-d .due-t
                             .rrule-props)))
+          (when .start-d
+            (org--deadline-or-schedule
+             nil 'scheduled (org-caldav--convert-to-org-time-with-brackets
+                             .start-d .start-t
+                             .rrule-props))
+            (let ((until (assoc 'UNTIL .rrule-props)))
+              (when until
+                (org--deadline-or-schedule
+                 nil 'deadline
+                 (org-caldav--convert-to-org-time-with-brackets
+                  (icalendar--datetime-to-european-date until)
+                  (when .start-t (icalendar--datetime-to-colontime until)))))))
           (when .completed-d
             (org-add-planning-info 'closed (org-caldav-convert-to-org-time .completed-d .completed-t)))
           (org-caldav-set-org-tags .categories)
