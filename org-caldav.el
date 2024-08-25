@@ -640,8 +640,7 @@ Also sets `org-caldav-empty-calendar' if calendar is empty."
   (org-caldav-check-dav (org-caldav-events-url))
   (let* ((output (org-caldav-url-dav-get-properties
 		  (org-caldav-events-url) "resourcetype"))
-	 (status (plist-get (cdar output) 'DAV:status))
-         )
+	 (status (plist-get (cdar output) 'DAV:status)))
     (when (and (stringp status) (string= status ""))
       (setq status 404))
     ;; We accept any 2xx status. Since some CalDAV servers return 404
