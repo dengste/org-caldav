@@ -26,6 +26,8 @@
 
 (defvar org-caldav-test-calendar-names '("test1" "test2"))
 
+(setq org-caldav-debug-level (max 2 org-caldav-debug-level))
+
 (setq org-caldav-delete-calendar-entries 'always)
 (setq org-caldav-backup-file nil)
 (setq org-caldav-test-preamble
@@ -283,7 +285,6 @@ Org task 2
   ;; Set up data for org-caldav.
   (setq org-caldav-files (list org-caldav-test-orgfile))
   (setq org-caldav-inbox org-caldav-test-inbox)
-  (setq org-caldav-debug-level 2)
   (message "Cleaning up upstream calendars")
   (org-caldav-test-set-up)
   (message "Putting events")
@@ -643,7 +644,6 @@ Org task 2
   ;; Set org-caldav-files to nil
   (setq org-caldav-files nil)
   (setq org-caldav-inbox org-caldav-test-inbox)
-  (setq org-caldav-debug-level 2)
   (message "Setting up upstream calendar")
   (org-caldav-test-set-up)
   (message "Putting events")
@@ -674,7 +674,6 @@ Org task 2
   ;; Set org-caldav-files to nil
   (setq org-caldav-files (list org-caldav-test-orgfile org-caldav-test-second-orgfile))
   (setq org-caldav-inbox org-caldav-test-inbox)
-  (setq org-caldav-debug-level 2)
   (message "Setting up upstream calendar")
   (org-caldav-test-set-up)
   (message "Putting events")
@@ -791,7 +790,6 @@ Org task 2
     ;; Set up data for org-caldav.
     (setq org-caldav-files (list org-caldav-test-orgfile))
     (setq org-caldav-inbox org-caldav-test-inbox)
-    (setq org-caldav-debug-level 2)
 
     (message "Cleaning up upstream calendars")
     (org-caldav-test-set-up)
@@ -1042,7 +1040,6 @@ Org task 2
     ;; Set up data for org-caldav.
     (setq org-caldav-files (list org-caldav-test-orgfile))
     (setq org-caldav-inbox org-caldav-test-inbox)
-    (setq org-caldav-debug-level 2)
 
     (message "Cleaning up upstream calendars")
     (org-caldav-test-set-up)
@@ -1096,7 +1093,6 @@ https://orgmode.org
   (org-caldav-test-setup-temp-files)
   (setq org-caldav-files (list org-caldav-test-orgfile))
   (setq org-caldav-inbox org-caldav-test-inbox)
-  (setq org-caldav-debug-level 2)
   (setq org-caldav-calendar-id (car org-caldav-test-calendar-names))
   (org-caldav-test-set-up)
   (with-current-buffer (find-file-noselect org-caldav-test-orgfile)
@@ -1110,7 +1106,6 @@ https://orgmode.org
   (org-caldav-test-setup-temp-files)
   (setq org-caldav-files (list org-caldav-test-orgfile))
   (setq org-caldav-inbox org-caldav-test-inbox)
-  (setq org-caldav-debug-level 2)
   (setq org-caldav-calendar-id (car org-caldav-test-calendar-names))
   (org-caldav-test-set-up)
   (with-current-buffer (find-file-noselect org-caldav-test-orgfile)
