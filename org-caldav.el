@@ -580,6 +580,27 @@ default namespace."
 	  (while (re-search-forward "</?" nil t)
 	    (insert "DAV:")))))))
 
+(defun org-caldav-icloud-empty-props-workaround (buffer)
+  "Workaraound for icloud implementation which returns empty prop in propstat"
+  (with-current-buffer buffer
+    (save-excursion
+      ;; Remove the blocks with <status>HTTP/1.1 404 Not Found</status>
+      (goto-char (point-min))
+      (while (re-search-forward
+              "^[[:space:]]*<propstat>[[:space:]\n]*<prop>[[:space:]\n]*<resourcetype xmlns=\"DAV:\"/>[[:space:]\n]*</prop>[[:space:]\n]*<status>HTTP/1\\.1 404 Not Found</status>[[:space:]\n]*</propstat>[[:space:]\n]*"
+              nil t)
+        (replace-match ""))
+
+      (goto-char (point-min))
+      (while (re-search-forward
+              "^[[:space:]]*<propstat>[[:space:]\n]*<prop>[[:space:]\n]*</prop>[[:space:]\n]*<status>HTTP/1\\.1 200 OK</status>[[:space:]\n]*</propstat>[[:space:]\n]*"
+              nil t)
+        (replace-match "        <propstat>\n            <prop>\n\n                <resourcetype xmlns=\"DAV:\"/>\n\n            </prop>\n            <status>HTTP/1.1 200 OK</status>\n        </propstat>"))
+
+      (goto-char (point-min))
+      (while (re-search-forward "<propstat>" nil t)
+        (replace-match "<propstat xmlns=\"DAV:\">")))))
+
 (defun org-caldav-url-dav-get-properties (url property)
   "Retrieve PROPERTY from URL.
 Output is the same as `url-dav-get-properties'.  This switches to
@@ -608,6 +629,7 @@ OAuth2 if necessary."
 	    (switch-to-buffer resultbuf)
 	    (error "Error while doing PROPFIND for '%s' at URL %s: %s" property url response))))
       (org-caldav-namespace-bug-workaround resultbuf)
+      (org-caldav-icloud-empty-props-workaround resultbuf)
       (url-dav-process-response resultbuf url))))
 
 (defun org-caldav-check-connection ()
@@ -618,7 +640,10 @@ Also sets `org-caldav-empty-calendar' if calendar is empty."
   (org-caldav-check-dav (org-caldav-events-url))
   (let* ((output (org-caldav-url-dav-get-properties
 		  (org-caldav-events-url) "resourcetype"))
-	 (status (plist-get (cdar output) 'DAV:status)))
+	 (status (plist-get (cdar output) 'DAV:status))
+         )
+    (when (and (stringp status) (string= status ""))
+      (setq status 404))
     ;; We accept any 2xx status. Since some CalDAV servers return 404
     ;; for a newly created and not yet used calendar, we accept it as
     ;; well.
