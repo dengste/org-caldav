@@ -559,12 +559,9 @@ configured correctly, and throw an user error otherwise."
 This will switch to OAuth2 if necessary."
   (org-caldav-debug-print
    3 (format "====Sending request:
-=====URL:
-%s
-=====METHOD:
-%s
-=====EXTRA-HEADERS:
-%s
+=====URL: %s
+=====METHOD: %s
+=====EXTRA-HEADERS: %s
 =====DATA:
 %s"
              url request-method extra-headers request-data))
