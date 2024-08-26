@@ -326,8 +326,9 @@ showing tasks which have a deadline years in the future."
 (defcustom org-caldav-debug-level 1
   "Level of debug output in `org-caldav-debug-buffer'.
 0 or nil: no debug output.  1: Normal debugging.  2: Excessive
-debugging (this will also output event content into the
-buffer)."
+debugging (this will also output event content into the buffer).
+3: Very excessive debugging, will also output all URL requests
+and responses."
   :type 'integer)
 
 (defcustom org-caldav-debug-buffer "*org-caldav-debug*"
@@ -556,6 +557,26 @@ configured correctly, and throw an user error otherwise."
 					      extra-headers)
   "Retrieve URL with REQUEST-METHOD, REQUEST-DATA and EXTRA-HEADERS.
 This will switch to OAuth2 if necessary."
+  (org-caldav-debug-print
+   3 (format "====Sending request:
+=====URL: %s
+=====METHOD: %s
+=====EXTRA-HEADERS: %s
+=====DATA:
+%s"
+             url request-method extra-headers request-data))
+  (let ((resultbuf (org-caldav--url-retrieve-synchronously-intern
+                    url request-method request-data extra-headers)))
+    (org-caldav-debug-print
+     3 (concat "====Begin response:\n"
+               (with-current-buffer resultbuf (buffer-string))
+               "\n"
+               "====End response"))
+    resultbuf))
+
+(defun org-caldav--url-retrieve-synchronously-intern
+    (url &optional request-method request-data extra-headers)
+  "Internal helper function for `org-caldav-url-retrieve-synchronously'."
   (if (org-caldav-use-oauth2)
       (oauth2-url-retrieve-synchronously
        (org-caldav-retrieve-oauth2-token org-caldav-url org-caldav-calendar-id)
@@ -608,7 +629,13 @@ OAuth2 if necessary."
 	    (switch-to-buffer resultbuf)
 	    (error "Error while doing PROPFIND for '%s' at URL %s: %s" property url response))))
       (org-caldav-namespace-bug-workaround resultbuf)
-      (url-dav-process-response resultbuf url))))
+      (let ((processed (url-dav-process-response resultbuf url)))
+        (org-caldav-debug-print 3 (format "\
+====Begin properties (%s)
+%s
+====End properties (%s)"
+                                          property processed property))
+        processed))))
 
 (defun org-caldav-check-connection ()
   "Check connection by doing a PROPFIND on CalDAV URL.
