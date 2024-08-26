@@ -1092,6 +1092,7 @@ ICSBUF is the buffer containing the exported iCalendar file."
           (org-caldav-fix-todo-status-percent-state)
           (org-caldav-fix-categories)
           (org-caldav-fix-todo-dtstart)
+          (org-caldav-fix-todo-remove-until)
           (message "Putting event %d of %d Org --> Cal" counter (length events))
           (if (org-caldav-put-event icsbuf)
               (org-caldav-event-set-etag cur 'put)
@@ -1306,6 +1307,35 @@ also look if there is a deadline."
                 (or (org-get-scheduled-time nil) (org-get-deadline-time nil))
               (org-get-scheduled-time nil)))
           (delete-region (line-beginning-position) (+ 1 (line-end-position))))))))
+
+(defun org-caldav-fix-todo-remove-until ()
+  "Remove RRULE UNTIL from VTODOs in ox-icalendar export.
+ox-icalendar has confusing behavior around RRULE UNTIL in todos:
+Todos with repeating SCHEDULED timestamp and non-repeating
+DEADLINE timestamp treat the latter as RRULE UNTIL.  This makes
+sense for users who set
+`org-agenda-skip-scheduled-repeats-after-deadline' but that
+option is not well known and nil by default.  A better and more
+flexible approach (that applies to both Todos and non-Todos)
+would be to use diary-style sexp timestamps for UNTIL and other
+complex RRULEs, but this requires implementing sexp timestamps
+during import, as well as upstream work to fix sexp timestamps on
+export (ox-icalendar export of sexp timestamps appears broken as
+of current writing 2024-08-26).  For now, we simply ignore UNTIL
+during Cal->Org, and strip out UNTIL during Org->Cal, until we
+figure out a better path forward -- ideally in collaboration with
+upstream ox-icalendar."
+  (save-excursion
+    (goto-char (point-min))
+    (when (search-forward "BEGIN:VTODO" nil t)
+      (when (re-search-forward "^RRULE:\\(.*UNTIL=[^\^M\n]+\\)" nil t)
+        (replace-match
+         (save-match-data
+           (string-join (cl-loop for x in (string-split (match-string 1) ";")
+                                 unless (string-prefix-p "UNTIL=" x)
+                                 collect x)
+                        ";"))
+         nil nil nil 1)))))
 
 (defun org-caldav-inbox-file (inbox)
   "Return file name associated with INBOX.
