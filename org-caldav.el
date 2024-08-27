@@ -1899,8 +1899,6 @@ Returns MD5 from entry."
                     " " prio .summary "\n"))
           (org-caldav--insert-description .description)
           (forward-line -1)
-          ;; TODO Handle UNTIL rrule property; ox-icalendar currently
-          ;; uses DEADLINE for that in certain cases
           (when .start-d
             ;; FIXME use `org-schedule' or `org-deadline' instead
             ;; (here and elsewhere)
