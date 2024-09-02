@@ -1117,3 +1117,53 @@ https://orgmode.org
   ;; Test if second sync can find the ID we created. If not, the test
   ;; will exit with org-caldav error "Could not find UID"
   (org-caldav-sync))
+
+;; TODO: Make a macro/function to generalize this test to other
+;; inputs/outputs
+(ert-deftest org-caldav-13-test-repeating ()
+  (let ((org-caldav-sync-todo t)
+        (org-icalendar-include-todo 'all))
+    (message "Setting up temporary files")
+    (org-caldav-test-setup-temp-files)
+    (setq org-caldav-calendar-id (car org-caldav-test-calendar-names))
+    ;; Set up data for org-caldav.
+    (setq org-caldav-files (list org-caldav-test-orgfile))
+    (setq org-caldav-inbox org-caldav-test-inbox)
+
+    (message "Cleaning up upstream calendars")
+    (org-caldav-test-set-up)
+
+    ;; Set up orgfile.
+    (with-current-buffer (find-file-noselect org-caldav-test-orgfile)
+      (insert "* Simple repeating event
+:PROPERTIES:
+:ID:       test-repeating-event
+:END:
+<2024-05-25 Sat +7d>")
+      (save-buffer))
+
+    (message "Sync")
+    ;; Sync event to iCal
+    (org-caldav-sync)
+
+    ;; Reset org-caldav sync state
+    ;; TODO: Make a helper function for this?
+    (delete-file (org-caldav-sync-state-filename org-caldav-calendar-id))
+    (setq org-caldav-event-list nil)
+    (setq org-caldav-sync-result nil)
+    ;; Also delete the event in org
+    ;;(delete-file org-caldav-test-orgfile)
+    (with-current-buffer (find-file-noselect org-caldav-test-orgfile)
+      (erase-buffer)
+      (save-buffer))
+
+    ;; Sync event back to inbox
+    (org-caldav-sync)
+    (with-current-buffer (find-file-noselect org-caldav-test-inbox)
+      (goto-char (point-min))
+      (should (re-search-forward
+               "* Simple repeating event
+:PROPERTIES:
+:ID:\\s-+test-repeating-event
+:END:
+<2024-05-25 Sat \\+7d>")))))
