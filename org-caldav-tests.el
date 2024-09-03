@@ -1118,52 +1118,72 @@ https://orgmode.org
   ;; will exit with org-caldav error "Could not find UID"
   (org-caldav-sync))
 
-;; TODO: Make a macro/function to generalize this test to other
-;; inputs/outputs
-(ert-deftest org-caldav-13-test-repeating ()
-  (let ((org-caldav-sync-todo t)
-        (org-icalendar-include-todo 'all))
-    (message "Setting up temporary files")
-    (org-caldav-test-setup-temp-files)
-    (setq org-caldav-calendar-id (car org-caldav-test-calendar-names))
-    ;; Set up data for org-caldav.
-    (setq org-caldav-files (list org-caldav-test-orgfile))
-    (setq org-caldav-inbox org-caldav-test-inbox)
+(defun org-caldav-test-input-output-entry (input output)
+  "Helper function to test Org->Cal->Org preserves an entry.
+Clear the Org files and iCalendar. Then add INPUT to
+`org-caldav-test-inbox'.  Then sync it to iCalendar. Then reset
+the Org files and database, pull from iCalendar, and check that
+the result matches the regular expression OUTPUT."
+  (message "Setting up temporary files")
+  (org-caldav-test-setup-temp-files)
+  (setq org-caldav-calendar-id (car org-caldav-test-calendar-names))
+  ;; Set up data for org-caldav.
+  (setq org-caldav-files (list org-caldav-test-orgfile))
+  (setq org-caldav-inbox org-caldav-test-inbox)
 
-    (message "Cleaning up upstream calendars")
-    (org-caldav-test-set-up)
+  (message "Cleaning up upstream calendars")
+  (org-caldav-test-set-up)
 
-    ;; Set up orgfile.
-    (with-current-buffer (find-file-noselect org-caldav-test-orgfile)
-      (insert "* Simple repeating event
+  ;; Set up orgfile.
+  (with-current-buffer (find-file-noselect org-caldav-test-orgfile)
+    (insert input)
+    (save-buffer))
+
+  (message "Sync")
+  ;; Sync event to iCal
+  (org-caldav-sync)
+
+  ;; Reset org-caldav sync state
+  (delete-file (org-caldav-sync-state-filename org-caldav-calendar-id))
+  (setq org-caldav-event-list nil)
+  (setq org-caldav-sync-result nil)
+  ;; Also delete the event in org
+  ;;(delete-file org-caldav-test-orgfile)
+  (with-current-buffer (find-file-noselect org-caldav-test-orgfile)
+    (erase-buffer)
+    (save-buffer))
+
+  ;; Sync event back to inbox
+  (org-caldav-sync)
+  (with-current-buffer (find-file-noselect org-caldav-test-inbox)
+    (goto-char (point-min))
+    (should (re-search-forward
+             output))))
+
+(ert-deftest org-caldav-13a-test-simple-repeating-event ()
+  (org-caldav-test-input-output-entry
+   "* Simple repeating event
 :PROPERTIES:
 :ID:       test-repeating-event
 :END:
-<2024-05-25 Sat +7d>")
-      (save-buffer))
-
-    (message "Sync")
-    ;; Sync event to iCal
-    (org-caldav-sync)
-
-    ;; Reset org-caldav sync state
-    ;; TODO: Make a helper function for this?
-    (delete-file (org-caldav-sync-state-filename org-caldav-calendar-id))
-    (setq org-caldav-event-list nil)
-    (setq org-caldav-sync-result nil)
-    ;; Also delete the event in org
-    ;;(delete-file org-caldav-test-orgfile)
-    (with-current-buffer (find-file-noselect org-caldav-test-orgfile)
-      (erase-buffer)
-      (save-buffer))
-
-    ;; Sync event back to inbox
-    (org-caldav-sync)
-    (with-current-buffer (find-file-noselect org-caldav-test-inbox)
-      (goto-char (point-min))
-      (should (re-search-forward
-               "* Simple repeating event
+<2024-05-25 Sat +7d>"
+   "* Simple repeating event
 :PROPERTIES:
 :ID:\\s-+test-repeating-event
 :END:
-<2024-05-25 Sat \\+7d>")))))
+<2024-05-25 Sat \\+7d>"))
+
+(ert-deftest org-caldav-13b-test-simple-repeating-todo ()
+  (let ((org-caldav-sync-todo t)
+        (org-icalendar-include-todo 'all))
+    (org-caldav-test-input-output-entry
+     "* TODO Simple repeating todo
+SCHEDULED: <2024-06-08 Sat +3d>
+:PROPERTIES:
+:ID:       test-simple-repeating-todo
+:END:"
+     "* TODO Simple repeating todo
+SCHEDULED: <2024-06-08 Sat \\+3d>
+:PROPERTIES:
+:ID:\\s-+test-simple-repeating-todo
+:END:")))
