@@ -1173,17 +1173,32 @@ the result matches the regular expression OUTPUT."
 :END:
 <2024-05-25 Sat \\+7d>"))
 
-(ert-deftest org-caldav-13b-test-simple-repeating-todo ()
+(ert-deftest org-caldav-13b-test-simple-repeating-todo-dtstart ()
   (let ((org-caldav-sync-todo t)
         (org-icalendar-include-todo 'all))
     (org-caldav-test-input-output-entry
-     "* TODO Simple repeating todo
+     "* TODO Simple repeating scheduled todo
 SCHEDULED: <2024-06-08 Sat +3d>
 :PROPERTIES:
-:ID:       test-simple-repeating-todo
+:ID:       test-simple-repeating-todo-dtstart
 :END:"
-     "* TODO Simple repeating todo
+     "* TODO Simple repeating scheduled todo
 SCHEDULED: <2024-06-08 Sat \\+3d>
 :PROPERTIES:
-:ID:\\s-+test-simple-repeating-todo
+:ID:\\s-+test-simple-repeating-todo-dtstart
+:END:")))
+
+(ert-deftest org-caldav-13c-test-simple-repeating-todo-dtstart-due ()
+  (let ((org-caldav-sync-todo t)
+        (org-icalendar-include-todo 'all))
+    (org-caldav-test-input-output-entry
+     "* TODO Simple repeating scheduled todo with deadline
+SCHEDULED: <2024-06-08 Sat +3d> DEADLINE: <2024-06-10 Mon +3d>
+:PROPERTIES:
+:ID:       test-simple-repeating-todo-dtstart-due
+:END:"
+     "* TODO Simple repeating scheduled todo with deadline
+\\(SCHEDULED: <2024-06-08 Sat \\+3d> DEADLINE: <2024-06-10 Mon \\+3d>\\|DEADLINE: <2024-06-10 Mon \\+3d> SCHEDULED: <2024-06-08 Sat \\+3d>\\)
+:PROPERTIES:
+:ID:\\s-+test-simple-repeating-todo-dtstart-due
 :END:")))
