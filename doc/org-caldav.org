@@ -308,6 +308,44 @@ to prevent the CATEGORY from being exported to iCalendar. This problem
 only seems to affect some CalDav servers: in particular, NextCloud
 is affected, but Radicale does not seem to experience this problem.
 
+** Behavior of recurring TODO deadlines without a start time
+:PROPERTIES:
+:CUSTOM_ID: recur-deadline
+:END:
+
+Technically, the [[https://datatracker.ietf.org/doc/html/rfc5545#section-3.8.2.4][iCalendar spec]] requires repeating events and todos
+(i.e. having an ~RRULE~ property) to have a starting time (~DTSTART~
+in iCalendar, equivalent to ~SCHEDULED~ in Org TODOs).  This means
+that, a TODO with a repeating ~DEADLINE~ but without a ~SCHEDULED~
+property, such as below, is not allowed by the iCalendar spec:
+
+#+begin_src org
+  ,* TODO An example todo with a repeating deadline and no start time
+  DEADLINE: <2024-09-15 Sun +1w>
+#+end_src
+
+This is a clear shortcoming of the iCalendar spec, because it /does/
+allow tasks to have a standalone deadline without a starting time, but
+/doesn't/ allow such tasks to repeat.
+
+By default, ~ox-icalendar~ follows the iCalendar spec, and when
+exporting a TODO with a repeating ~DEADLINE~ but no ~SCHEDULED~
+timestamp, will add a start time based on
+~org-deadline-warning-days~. On future syncs, this start time will be
+inserted into Org as a ~SCHEDULED~ timestamp.
+
+However, in practice, many iCalendar implementations ignore this
+limitation, and allow Todos with ~DEADLINE~ (~DUE~) times to have
+repeaters (~RRULE~), even if they are missing ~SCHEDULED~ (~DTSTART~)
+times. If your CalDav server allows this, then you may set the
+variable ~org-icalendar-todo-unscheduled-start~ to ~nil~.  This will
+prevent ~ox-icalendar~ from adding a start time to such TODOs, thus
+preventing the ~SCHEDULED~ timestamp from being inserted on future
+syncs.
+
+See [[#recur-event-todo][Repeating events and todos]] for more details about how org-caldav
+handles repeating events and todos.
+
 * Compatible CalDav servers
 :PROPERTIES:
 :CUSTOM_ID:       caldav-servers
@@ -455,6 +493,26 @@ entry in Org /and/ in the calendar, the changes in the calendar will
 be lost. I might implement proper conflict handling some day, but
 don't hold your breath (patches are welcome, of course).
 
+** Repeating events and todos
+:PROPERTIES:
+:CUSTOM_ID: recur-event-todo
+:END:
+
+Org-caldav has basic support for repeating events and todos. In
+particular, simple Org timestamp repeaters such as ~+3d~ or ~+1m~ can
+be succesfully sync'd bidirectionally.
+
+However, complex iCalender recurrences, such as "repeat on the 2nd
+Tuesday of each month until X date", are not supported.
+
+For Org TODOs with both ~SCHEDULED~ and ~DEADLINE~ timestamps, each of
+the timestamps must have the same repeater, otherwise the behavior is
+undefined.
+
+Furthermore, the behavior of Org TODOs with a repeating ~DEADLINE~
+timestamp, but no ~SCHEDULED~ timestamp, has some subtleties; see the
+configuration section: [[#recur-deadline][Behavior of recurring TODO deadlines without a start time]].
+
 ** How syncing happens (a.k.a. David's little CalDAV rant)
 
 (This is probably not interesting, so you can skip this.)
@@ -589,10 +647,6 @@ report, please make very sure you have removed personal information
 from those events.
 
 * Known Bugs
-
-- Recurring events created or changed on the calendar side cannot be
-  synced (they will work fine as long as you manage them in Org,
-  though).
 
 - Syncing is currently pretty slow since everything is done
   synchronously.
