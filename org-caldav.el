@@ -569,7 +569,7 @@ This will switch to OAuth2 if necessary."
                     url request-method request-data extra-headers)))
     (org-caldav-debug-print
      3 (concat "====Begin response:\n"
-               (with-current-buffer resultbuf (buffer-string))
+               (if resultbuf (with-current-buffer resultbuf (buffer-string)) "")
                "\n"
                "====End response"))
     resultbuf))
