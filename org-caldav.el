@@ -1800,7 +1800,7 @@ Returns buffer containing the ICS file."
 	  (setq uid (concat uid (match-string 1))))
 	(while (string-match "\\s-+" uid)
 	  (setq uid (replace-match "" nil nil uid)))
-        (when (string-match "^\\(\\(DL\\|SC\\|TS\\|TODO\\)[0-9]*-\\)" uid)
+        (when (string-match "^\\(\\(DL\\|SC\\|TS\\|TODO\\|DS\\)[0-9]*-\\)" uid)
 	  (setq uid (replace-match "" nil nil uid)))
 	uid)
     (error "No UID could be found for current event.")))
