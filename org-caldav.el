@@ -1771,6 +1771,8 @@ Returns buffer containing the ICS file."
       (with-current-buffer (org-get-agenda-file-buffer orgfile)
         (org-caldav-debug-print
          2 (format "Checking %s for new entries & unsaved changes" orgfile))
+        (unless org-caldav-skip-create-uid
+          (org-caldav-create-uid orgfile t))
         (when (and org-caldav-save-buffers
                    (buffer-modified-p))
           (org-caldav-debug-print 2 (format "Saving %s" orgfile))
