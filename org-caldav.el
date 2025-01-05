@@ -194,7 +194,7 @@ might loose information in your Org items (take a look at
           (const all :tag "Sync everything")))
 
 (defcustom org-caldav-skip-create-uid nil
-  "Whether to generate UID for headers."
+  "Whether to skip UID creation for entries."
   :type 'boolean)
 
 (defcustom org-caldav-days-in-past nil
