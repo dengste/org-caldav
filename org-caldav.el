@@ -2450,6 +2450,7 @@ Output is displayed in the buffer *org-caldav-convert-ics-to-datetree*."
 ;;;###autoload
 (defun org-caldav-import-ics-buffer-to-org ()
   "Add ics content in current buffer to `org-caldav-inbox'."
+  (interactive)
   (org-caldav-import-ics-buffer--intern org-caldav-inbox)
   (when org-caldav-sync-todo
     (org-caldav-import-ics-buffer--intern org-caldav-inbox t)))
@@ -2457,6 +2458,7 @@ Output is displayed in the buffer *org-caldav-convert-ics-to-datetree*."
 ;;;###autoload
 (defun org-caldav-import-ics-to-org (path)
   "Add ics content in PATH to `org-caldav-inbox'."
+  (interactive "f")
   (with-temp-buffer
     (insert-file-contents path)
     (org-caldav-import-ics-buffer-to-org)))
