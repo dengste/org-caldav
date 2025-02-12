@@ -193,6 +193,10 @@ might loose information in your Org items (take a look at
           (const timestamp-only :tag "Sync only the timestamp")
           (const all :tag "Sync everything")))
 
+(defcustom org-caldav-skip-create-uid nil
+  "Whether to skip UID creation for entries."
+  :type 'boolean)
+
 (defcustom org-caldav-days-in-past nil
   "Number of days before today to skip in the exported calendar.
 This makes it very easy to keep the remote calendar clean.
@@ -1767,7 +1771,8 @@ Returns buffer containing the ICS file."
       (with-current-buffer (org-get-agenda-file-buffer orgfile)
         (org-caldav-debug-print
          2 (format "Checking %s for new entries & unsaved changes" orgfile))
-        (org-caldav-create-uid orgfile t)
+        (unless org-caldav-skip-create-uid
+          (org-caldav-create-uid orgfile t))
         (when (and org-caldav-save-buffers
                    (buffer-modified-p))
           (org-caldav-debug-print 2 (format "Saving %s" orgfile))
