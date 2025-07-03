@@ -33,6 +33,8 @@ At a minimum, set ~org-caldav-url~, ~org-caldav-calendar-id~,
 
 ** Minimal example
 
+*** Nextcloud/Owncloud
+
 This example configures a single Org file =/path/to/inbox.org= to sync
 with a single calendar (with ID =CALENDAR-ID=) located on a Nextcloud
 server at =NEXTCLOUD-SERVER-URL=.
@@ -56,6 +58,70 @@ server at =NEXTCLOUD-SERVER-URL=.
   (setq org-icalendar-timezone "Europe/Berlin")
 #+end_src
 
+*** Google Calendar
+
+This example configures org-caldav to sync with Google Calendar. 
+
+#+begin_src emacs-lisp
+  (require 'org-caldav)
+
+  ;; Google Calendar URL
+  (setq org-caldav-url "https://calendar.google.com/calendar/dav")
+
+  ;; Your Gmail address
+  (setq org-caldav-calendar-id "youremail@gmail.com")
+
+  ;; Use basic authentication
+  (setq org-caldav-auth-login-method 'basic)
+
+  ;; Configure auth-sources
+  (setq auth-sources '("~/.authinfo" "~/.authinfo.gpg"))
+
+  ;; Org filename where new entries from calendar stored
+  (setq org-caldav-inbox "/path/to/calendar-inbox.org")
+
+  ;; Additional Org files to check for calendar events
+  (setq org-caldav-files nil)
+
+  ;; Set timezone (adjust as needed)
+  (setq org-icalendar-timezone "America/New_York")
+
+  ;; Google Calendar discovery workarounds (may be needed)
+  ;; Fix Google Calendar's broken discovery by using direct events URL
+  (defun org-caldav-events-url ()
+    "Return the direct Google Calendar events URL that bypasses broken discovery."
+    (format "https://calendar.google.com/calendar/dav/%s/events/" 
+            (url-hexify-string org-caldav-calendar-id)))
+  
+  ;; Fix response filtering to ignore 404s from discovery
+  (defun org-caldav-get-icsfiles-etags-from-properties (properties)
+    "Get ICS files and ETAGs from CalDAV properties, ignoring 404 responses."
+    (let (prop files)
+      (while (setq prop (pop properties))
+        (let ((url (car prop))
+              (status (plist-get (cdr prop) 'DAV:status))
+              (etag (plist-get (cdr prop) 'DAV:getetag)))
+          ;; ONLY process if status is 200 (or missing, which means success)
+          (when (or (eq status 200) (null status))
+            ;; Extract UUID from URL if it matches the pattern
+            (let ((pattern (concat ".*/\\(.+\\)\\" org-caldav-uuid-extension "/?$")))
+              (when (string-match pattern url)
+                (setq url (match-string 1 url))
+                (when etag
+                  (when (string-match "\"\\(.*\\)\"" etag)
+                    (setq etag (match-string 1 etag)))
+                  (push (cons (url-unhex-string url) etag) files)))))))
+      files))
+#+end_src
+
+For authentication, also add this line to your ~.authinfo~ or ~.authinfo.gpg~ file (see section below "Using Basic Authentication (Recommended)" for ~your-app-password~): 
+
+#+begin_example
+machine calendar.google.com login youremail@gmail.com password your-app-password
+#+end_example
+
+Use your own ~org-caldav-calendar-id~, ~org-caldav-inbox~, ~org-icalendar-timezone~.
+
 ** Required configuration settings
 :PROPERTIES:
 :CUSTOM_ID: required-configs
@@ -65,8 +131,9 @@ server at =NEXTCLOUD-SERVER-URL=.
 
   - Owncloud/Nextcloud (9.x and above):
     https://OWNCLOUD-SERVER-URL/remote.php/dav/calendars/USERID
-  - Google: Set to symbol ~'google~. See [[#gcal-sync][Syncing to Google Calendar]]
-    for additional required setup.
+  - Google: Use ~"https://calendar.google.com/calendar/dav"~ and set
+    ~org-caldav-auth-login-method~ to ~'basic~. See [[#gcal-sync][Syncing to Google Calendar]]
+    for complete setup instructions.
 
 - Set ~org-caldav-calendar-id~ to the calendar ID of your new calendar:
 
@@ -216,7 +283,13 @@ a bit peculiar. You have to use a line like the following
 machine www.google.com:443 port https login username password secret
 #+end_example
 
-Note that you have to specify the port number in the URL and /also/
+*For Google Calendar* specifically, use this format instead:
+
+#+begin_example
+machine calendar.google.com login youremail@gmail.com password your-app-password_no_space
+#+end_example
+
+Note that for most other servers, you have to specify the port number in the URL and /also/
 specify 'https' for the port. This is not a bug. For more information,
 see (info "auth"), especially section "Help for users".
 
@@ -361,21 +434,67 @@ handles repeating events and todos.
 - *SOGo* and *Kolab*: Reported to be working
   (https://docs.kolab.org/client-configuration/emacs.html)
 
-- *Google Calendar*: Should work, but you need to register an
-  application with the Google Developer Console for OAuth2
-  authentication (see below), because Google explicitly forbids to put
-  client id/secrets into open source software (see
-  https://developers.google.com/terms, section 4b, paragraph 1). Instead
-  of doing that though, I'd rather suggest you choose another service
-  provider.
+- *Google Calendar*: Works with basic authentication using Google App
+  Passwords (recommended). OAuth2 authentication is currently broken
+  due to Google's deprecation of the "out of band" OAuth2 flow. See
+  [[#gcal-sync][Syncing to Google Calendar]] for setup instructions.
 
 ** Syncing to Google Calendar
 :PROPERTIES:
 :CUSTOM_ID: gcal-sync
 :END:
 
-NOTE: Using org-caldav with Google Calendar may be currently
-broken. See [[https://github.com/dengste/org-caldav/issues/284]]
+Google Calendar supports CalDAV access, but the OAuth2 method previously
+documented here is broken due to Google's deprecation of the "out of band"
+OAuth2 flow. The recommended approach is to use basic authentication with
+Google App Passwords.
+
+*** Using Basic Authentication (Recommended)
+
+This approach uses Google App Passwords and is more reliable than OAuth2:
+
+1. *Enable 2-factor authentication* on your Google account (required for App Passwords)
+
+2. *Generate an App Password*:
+   - Go to https://myaccount.google.com/apppasswords
+   - Select "Mail" or "Other" and give it a name like "Emacs org-caldav"
+   - Copy the generated 16-character password
+
+3. *Configure org-caldav*:
+
+#+begin_src emacs-lisp
+;; Basic Google Calendar setup
+(setq org-caldav-url "https://calendar.google.com/calendar/dav")
+(setq org-caldav-calendar-id "youremail@gmail.com")  ; Your Google email
+(setq org-caldav-auth-login-method 'basic)
+
+;; Configure auth-sources for automatic authentication
+(setq auth-sources '("~/.authinfo" "~/.authinfo.gpg"))
+
+;; Timezone setting (adjust as needed)
+(setq org-icalendar-timezone "America/New_York")
+#+end_src
+
+4. *Store credentials in authinfo*:
+   Add this line to your ~.authinfo~ or ~.authinfo.gpg~ file:
+
+#+begin_example
+machine calendar.google.com login youremail@gmail.com password your-app-password
+#+end_example
+
+Replace ~youremail@gmail.com~ with your actual Gmail address and
+~your-app-password~ with the 16-character App Password from step 2.
+
+5. *Known Issues and Workarounds*:
+   Google's CalDAV implementation has some quirks that may cause org-caldav
+   to report "no events" even when events exist. If you encounter this,
+   you may need to apply some fixes to org-caldav's internal functions.
+   See the troubleshooting section for debugging steps.
+
+*** Using OAuth2 (Legacy - Currently Broken)
+
+The OAuth2 method is currently broken due to Google's deprecation of the
+"out of band" OAuth2 flow, but documentation is kept for reference:
 
 The CalDAV endpoint for Google Calendar requires OAuth2
 authentication.  So first, you need to install the oauth2 library from
