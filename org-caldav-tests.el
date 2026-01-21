@@ -986,7 +986,7 @@ Org task 2
     (goto-char (point-min))
     (message (buffer-string))
     (should (search-forward
-	     "* DONE [#B] Changed Another test task from Org                         :test:
+	     "* DONE [#B] Changed Another test task from Org
 CLOSED: [2012-12-24 Mon 00:00] DEADLINE: <2012-12-23 Sun> SCHEDULED: <2012-12-19 Wed>
 :PROPERTIES:
 :ID:       orgcaldavtest-org5
@@ -1201,4 +1201,33 @@ SCHEDULED: <2024-06-08 Sat +3d> DEADLINE: <2024-06-10 Mon +3d>
 \\(SCHEDULED: <2024-06-08 Sat \\+3d> DEADLINE: <2024-06-10 Mon \\+3d>\\|DEADLINE: <2024-06-10 Mon \\+3d> SCHEDULED: <2024-06-08 Sat \\+3d>\\)
 :PROPERTIES:
 :ID:\\s-+test-simple-repeating-todo-dtstart-due
+:END:")))
+
+(ert-deftest org-caldav-14a-test-event-tags ()
+  (org-caldav-test-input-output-entry
+   "* Some event   :sometag:sometag2:
+:PROPERTIES:
+:ID:       test-event-tags
+:END:
+<2026-01-20 Tue>"
+   "* Some event\\s-+:sometag:sometag2:
+:PROPERTIES:
+:ID:\\s-+test-event-tags
+:END:
+<2026-01-20 Tue>"))
+
+(ert-deftest org-caldav-14b-test-todo-tags ()
+  (let ((org-caldav-sync-todo t)
+        (org-icalendar-include-todo 'all)
+        (org-caldav-sync-changes-to-org 'all))
+    (org-caldav-test-input-output-entry
+     "* TODO Some event   :sometag:
+SCHEDULED: <2026-01-20 Tue>
+:PROPERTIES:
+:ID:       test-todo-tags
+:END:"
+     "* TODO Some event\\s-+:sometag:
+SCHEDULED: <2026-01-20 Tue>
+:PROPERTIES:
+:ID:\\s-+test-todo-tags
 :END:")))

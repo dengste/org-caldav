@@ -1762,7 +1762,10 @@ Returns buffer containing the ICS file."
 	  (org-icalendar-timezone
 	   ";TZID=%Z:%Y%m%dT%H%M%S")
 	  (t
-	   ":%Y%m%dT%H%M%S"))))
+	   ":%Y%m%dT%H%M%S")))
+        (org-icalendar-categories (if (eq org-caldav-sync-direction 'twoway)
+                                      '(local-tags)
+                                    org-icalendar-categories)))
     (dolist (orgfile orgfiles)
       (with-current-buffer (org-get-agenda-file-buffer orgfile)
         (org-caldav-debug-print
@@ -1913,9 +1916,8 @@ Returns MD5 from entry."
                             .rrule-props)))
           (when .completed-d
             (org-add-planning-info 'closed (org-caldav-convert-to-org-time .completed-d .completed-t)))
-          (org-caldav-set-org-tags .categories)
           (when .uid (org-set-property "ID" (url-unhex-string .uid)))
-          (org-caldav-insert-org-entry--wrapup))
+          (org-caldav-insert-org-entry--wrapup .categories))
       (insert (make-string (or .level 1) ?*) " " .summary "\n")
       (insert (if org-adapt-indentation "  " "")
               (org-caldav-create-time-range .start-d .start-t
@@ -1927,7 +1929,7 @@ Returns MD5 from entry."
       (when .uid
         (org-set-property "ID" (url-unhex-string .uid)))
       (org-caldav-change-location .location)
-      (org-caldav-insert-org-entry--wrapup))))
+      (org-caldav-insert-org-entry--wrapup .categories))))
 
 (defun org-caldav--org-set-tags-to (tags)
   "Helper function for compatibility.
@@ -1935,11 +1937,11 @@ To be removed when org dependency reaches >=9.2."
   (org-caldav--suppress-obsolete-warning org-set-tags-to
     (org-set-tags-to tags)))
 
-(defun org-caldav-insert-org-entry--wrapup ()
+(defun org-caldav-insert-org-entry--wrapup (tags)
   "Helper function to finish inserting an org entry or todo.
-Sets the block's tags, and return its MD5."
+Sets the block's TAGS, and return its md5."
   (org-back-to-heading)
-  (org-caldav--org-set-tags-to org-caldav-select-tags)
+  (org-caldav--org-set-tags-to (seq-union tags org-caldav-select-tags))
   (md5 (buffer-substring-no-properties
 	(org-entry-beginning-position)
 	(org-entry-end-position))))
@@ -1972,19 +1974,22 @@ Sets the block's tags, and return its MD5."
          (org-caldav-debug-print 2 (format "scheduled: %s" (org-entry-get nil
                                                                  "SCHEDULED" t))))))))
 
-(defun org-caldav-set-org-tags (tags)
-  "Set tags to the headline, where tags is a coma-seperated
-  string.  This comes from the ical CATEGORIES line."
-  (save-excursion
-    (org-back-to-heading)
-    (if (> (length tags) 0)
+(defun org-caldav--tags-str-to-list (tags)
+  "Convert comma-separated TAGS from iCalendar to a list."
+  (when (> (length tags) 0)
       (let (cleantags)
         (dolist (i (split-string tags ","))
           (setq cleantags (cons
                             (replace-regexp-in-string " " "-" (string-trim i))
                             cleantags)))
-        (org-caldav--org-set-tags-to (reverse cleantags)))
-      (org-caldav--org-set-tags-to nil))))
+        (reverse cleantags))))
+
+(defun org-caldav-set-org-tags (tags)
+  "Set tags to the headline, where tags is a coma-seperated
+  string.  This comes from the ical CATEGORIES line."
+  (save-excursion
+    (org-back-to-heading)
+    (org-caldav--org-set-tags-to (org-caldav--tags-str-to-list tags))))
 
 (defun org-caldav-create-time-range (start-d start-t end-d end-t
                                              e-type &optional rrule-props)
@@ -2264,7 +2269,11 @@ which can be fed into `org-caldav-insert-org-event-or-todo'."
 		             (or (icalendar--get-event-property e 'DESCRIPTION)
 			         "")))
             (rrule-props . ,(icalendar--split-value
-                             (icalendar--get-event-property e 'RRULE))))))
+                             (icalendar--get-event-property e 'RRULE)))
+            (categories . ,(org-caldav--tags-str-to-list
+                            (icalendar--convert-string-for-import
+                             (or (icalendar--get-event-property e 'CATEGORIES)
+                                 "")))))))
     (if is-todo
         (org-caldav-convert-event-or-todo--todo e zone-map eventdata-alist)
       (org-caldav-convert-event-or-todo--event e zone-map eventdata-alist))))
@@ -2338,10 +2347,7 @@ which can be fed into `org-caldav-insert-org-event-or-todo'."
               (percent-complete ., percent-complete)
 	      (status . ,stat)
 	      (completed-d . ,(plist-get dtcomplete-plist 'date))
-	      (completed-t . ,(plist-get dtcomplete-plist 'time))
-              (categories . ,(icalendar--convert-string-for-import
-                              (or (icalendar--get-event-property e 'CATEGORIES)
-                                  ""))))
+	      (completed-t . ,(plist-get dtcomplete-plist 'time)))
 	    eventdata-alist)))
 
 ;; This is adapted from url-dav.el, written by Bill Perry.
