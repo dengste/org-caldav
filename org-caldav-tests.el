@@ -67,7 +67,7 @@ CREATED:20121216T205929Z
 DESCRIPTION:A first test
 CATEGORIES:sometag
 LAST-MODIFIED:20121218T212132Z
-LOCATION:
+LOCATION:here
 SUMMARY:Test appointment Number 1
 END:VEVENT
 ")
@@ -77,6 +77,7 @@ END:VEVENT
       "\\* Test appointment Number 1\\s-+:sometag:
 \\s-*:PROPERTIES:
 \\s-*:ID:\\s-*orgcaldavtest@cal1
+\\s-*:LOCATION: here
 \\s-*:END:
 \\s-*<2012-12-20 Thu>
 \\s-*A first test")
@@ -91,7 +92,7 @@ UID:orgcaldavtest-cal2
 CREATED:20121219T213352Z
 DESCRIPTION:A second test
 LAST-MODIFIED:20121219T213352Z
-LOCATION:
+LOCATION:there
 SUMMARY:Test appointment Number 2
 END:VEVENT
 ")
@@ -100,6 +101,7 @@ END:VEVENT
       "\\* Test appointment Number 2
 \\s-*:PROPERTIES:
 \\s-*:ID:\\s-*orgcaldavtest-cal2
+\\s-*:LOCATION: there
 \\s-*:END:
 \\s-*<2012-12-05 Wed 19:00-20:00>
 \\s-*A second test")
@@ -426,6 +428,7 @@ Org task 2
 	     "* Changed test appointment Number 1\\s-+:sometag:
 \\s-*:PROPERTIES:
 \\s-*:ID:\\s-*orgcaldavtest@cal1
+\\s-*:LOCATION: here
 \\s-*:END:
 \\s-*<2012-12-12 Wed>
 \\s-*A first test")))
