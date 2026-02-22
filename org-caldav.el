@@ -178,8 +178,8 @@ Example:
 (defcustom org-caldav-sync-changes-to-org 'title-and-timestamp
   "What kind of changes should be synced from Calendar to Org.
 Can be one of the following symbols:
-  title-and-timestamp: Sync title and timestamp (default).
-  title-only: Sync only the title.
+  title-and-timestamp: Sync title line (including tags) and timestamp (default).
+  title-only: Sync only the title line (including tags).
   timestamp-only: Sync only the timestamp.
   all: Sync everything.
 
@@ -1515,6 +1515,10 @@ which can only be synced to calendar. Ignoring." uid))
 			(eq org-caldav-sync-changes-to-org 'title-and-timestamp))
 		;; Sync title
 		(org-caldav-change-heading .summary)
+                ;; Sync categories
+                (save-excursion
+                  (org-back-to-heading)
+                  (org-caldav--org-set-tags-to .categories))
                 (if (not is-todo)
                     ;; Sync location
 		    (org-caldav-change-location .location)
@@ -1528,9 +1532,7 @@ which can only be synced to calendar. Ignoring." uid))
                       (org-priority (string-to-char vprio))))
                   ;; Sync todo status
                   (org-todo (org-caldav--todo-percent-to-state
-                             (string-to-number .percent-complete)))
-                  ;; Sync categories
-                  (org-caldav-set-org-tags .categories)))
+                             (string-to-number .percent-complete)))))
 	      (when (or (eq org-caldav-sync-changes-to-org 'timestamp-only)
 			(eq org-caldav-sync-changes-to-org 'title-and-timestamp))
                 (if (not is-todo)
@@ -1983,13 +1985,6 @@ Sets the block's TAGS, and return its md5."
                             (replace-regexp-in-string " " "-" (string-trim i))
                             cleantags)))
         (reverse cleantags))))
-
-(defun org-caldav-set-org-tags (tags)
-  "Set tags to the headline, where tags is a coma-seperated
-  string.  This comes from the ical CATEGORIES line."
-  (save-excursion
-    (org-back-to-heading)
-    (org-caldav--org-set-tags-to (org-caldav--tags-str-to-list tags))))
 
 (defun org-caldav-create-time-range (start-d start-t end-d end-t
                                              e-type &optional rrule-props)

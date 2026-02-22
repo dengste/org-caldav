@@ -65,6 +65,7 @@ DTSTAMP:20121218T212132Z
 UID:orgcaldavtest@cal1
 CREATED:20121216T205929Z
 DESCRIPTION:A first test
+CATEGORIES:sometag
 LAST-MODIFIED:20121218T212132Z
 LOCATION:
 SUMMARY:Test appointment Number 1
@@ -73,7 +74,7 @@ END:VEVENT
 
 ;; How it should end up in Org
 (setq org-caldav-test-ics1-org
-      "\\* Test appointment Number 1
+      "\\* Test appointment Number 1\\s-+:sometag:
 \\s-*:PROPERTIES:
 \\s-*:ID:\\s-*orgcaldavtest@cal1
 \\s-*:END:
@@ -111,13 +112,14 @@ DTSTAMP:20220828T161432Z
 DTSTART;VALUE=DATE:20121223
 SUMMARY:A test task from iCal
 DESCRIPTION:ical test task 1
+CATEGORIES:sometag
 PRIORITY:0
 STATUS:NEEDS-ACTION
 END:VTODO
 ")
 
 (setq org-caldav-test-ics3-org
-      "\\* TODO A test task from iCal
+      "\\* TODO A test task from iCal\\s-+:sometag:
 \\s-*SCHEDULED: <2012-12-23 Sun>
 \\s-*:PROPERTIES:
 \\s-*:ID:       orgcaldavtest@cal3
@@ -421,7 +423,7 @@ Org task 2
   (with-current-buffer (find-file-noselect org-caldav-test-inbox)
     (goto-char (point-min))
     (should (re-search-forward
-	     "* Changed test appointment Number 1
+	     "* Changed test appointment Number 1\\s-+:sometag:
 \\s-*:PROPERTIES:
 \\s-*:ID:\\s-*orgcaldavtest@cal1
 \\s-*:END:
@@ -944,7 +946,7 @@ Org task 2
   (with-current-buffer (find-file-noselect org-caldav-test-inbox)
     (goto-char (point-min))
     (should (re-search-forward
-	     "* TODO Changed A test task from iCal
+	     "* TODO Changed A test task from iCal\\s-+:sometag:
 \\s-*SCHEDULED: <2012-12-24 Mon>
 \\s-*:PROPERTIES:
 \\s-*:ID:\\s-*orgcaldavtest@cal3
@@ -974,7 +976,7 @@ Org task 2
   (with-current-buffer (find-file-noselect org-caldav-test-inbox)
     (goto-char (point-min))
     (should (re-search-forward
-	     "* TODO Changed A test task from iCal
+	     "* TODO Changed A test task from iCal\\s-+:sometag:
 \\s-*SCHEDULED: <2012-12-24 Mon>
 \\s-*:PROPERTIES:
 \\s-*:ID:\\s-*orgcaldavtest@cal3
