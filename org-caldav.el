@@ -1519,9 +1519,9 @@ which can only be synced to calendar. Ignoring." uid))
                 (save-excursion
                   (org-back-to-heading)
                   (org-caldav--org-set-tags-to .categories))
+                  ;; Sync location
+		  (org-caldav-change-location .location)
                 (if (not is-todo)
-                    ;; Sync location
-		    (org-caldav-change-location .location)
                   ;; Sync priority
                   (let* ((nprio (string-to-number (or .priority "0")))
                          (r nil)
