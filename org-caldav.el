@@ -746,7 +746,9 @@ If retrieve fails, do `org-caldav-retry-attempts' retries."
 	      (setq counter (1+ counter))
 	      (org-caldav-debug-print
 	       1 (format "(Try %d) Error when trying to retrieve UID %s: %s"
-			 counter uid errormessage)))))))
+			 counter uid errormessage))))
+	  (unless eventbuffer
+	    (kill-buffer retbuf)))))
     (unless eventbuffer
       ;; Give up
       (error "Failed to retrieve UID %s after %d tries with error %s"
