@@ -612,11 +612,15 @@ OAuth2 if necessary."
     (let ((resultbuf (org-caldav-url-retrieve-synchronously
                       url "PROPFIND" request-data extra))
           (retr 1))
-      (while (and (= 0 (buffer-size resultbuf)) (< retr org-caldav-retry-attempts))
+      (while (and (or (null resultbuf) (= 0 (buffer-size resultbuf)))
+		  (< retr org-caldav-retry-attempts))
         (org-caldav-debug-print 1 (format "org-caldav-url-dav-get-properties: could not get data from url: %s\n trying again..." url))
         (setq resultbuf (org-caldav-url-retrieve-synchronously
                          url "PROPFIND" request-data extra))
         (setq retr (1+ retr)))
+      (unless resultbuf
+	(error "Failed to retrieve URL %s after %d attempts (nil response)."
+	       url org-caldav-retry-attempts))
       ;; Check if we got a valid result for PROPFIND
       (with-current-buffer resultbuf
 	(goto-char (point-min))
@@ -630,6 +634,16 @@ OAuth2 if necessary."
 	    (error "Error while doing PROPFIND for '%s' at URL %s: %s" property url response))))
       (org-caldav-namespace-bug-workaround resultbuf)
       (let ((processed (url-dav-process-response resultbuf url)))
+	;; Some servers return stray non-cons entries (text nodes) and
+	;; entries with nil DAV:status.  Filter and fix these.
+	(setq processed
+	      (delq nil
+		    (mapcar (lambda (entry)
+			      (when (consp entry)
+				(unless (numberp (plist-get (cdr entry) 'DAV:status))
+				  (setcdr entry (plist-put (cdr entry) 'DAV:status 200)))
+				entry))
+			    processed)))
         (org-caldav-debug-print 3 (format "\
 ====Begin properties (%s)
 %s
@@ -653,14 +667,9 @@ Also sets `org-caldav-empty-calendar' if calendar is empty."
 		(= status 404))
       (org-caldav-debug-print 1 "Got error status from PROPFIND: " output)
       (error "Could not query CalDAV URL %s." (org-caldav-events-url)))
-    (if (= status 404)
-	(progn
-	  (org-caldav-debug-print 1 "Got 404 status - assuming calendar is new and empty.")
-	  (setq org-caldav-empty-calendar t))
-      (when (= (length output) 1)
-	;; This is an empty calendar; fetching etags might return 404.
-	(org-caldav-debug-print 1 "This is an empty calendar. Setting flag.")
-	(setq org-caldav-empty-calendar t)))
+    (when (= status 404)
+      (org-caldav-debug-print 1 "Got 404 status - assuming calendar is new and empty.")
+      (setq org-caldav-empty-calendar t))
     t))
 
 ;; This defun is partly taken out of url-dav.el, written by Bill Perry.
@@ -718,18 +727,26 @@ If retrieve fails, do `org-caldav-retry-attempts' retries."
 	eventbuffer errormessage)
     (while (and (not eventbuffer)
 		(< counter org-caldav-retry-attempts))
-      (with-current-buffer
-	  (org-caldav-url-retrieve-synchronously
-	   (concat (org-caldav-events-url) (url-hexify-string uid) org-caldav-uuid-extension))
-	(goto-char (point-min))
-	(if (looking-at "HTTP.*2[0-9][0-9]")
-	    (setq eventbuffer (current-buffer))
-	  ;; There was an error retrieving the event
-	  (setq errormessage (buffer-substring (point-min) (line-end-position)))
-	  (setq counter (1+ counter))
-	  (org-caldav-debug-print
-	   1 (format "(Try %d) Error when trying to retrieve UID %s: %s"
-		     counter uid errormessage)))))
+      (let ((retbuf
+	     (org-caldav-url-retrieve-synchronously
+	      (concat (org-caldav-events-url) (url-hexify-string uid) org-caldav-uuid-extension))))
+	(if (null retbuf)
+	    (progn
+	      (setq errormessage "nil response from server")
+	      (setq counter (1+ counter))
+	      (org-caldav-debug-print
+	       1 (format "(Try %d) Got nil response when trying to retrieve UID %s"
+			 counter uid)))
+	  (with-current-buffer retbuf
+	    (goto-char (point-min))
+	    (if (looking-at "HTTP.*2[0-9][0-9]")
+		(setq eventbuffer (current-buffer))
+	      ;; There was an error retrieving the event
+	      (setq errormessage (buffer-substring (point-min) (line-end-position)))
+	      (setq counter (1+ counter))
+	      (org-caldav-debug-print
+	       1 (format "(Try %d) Error when trying to retrieve UID %s: %s"
+			 counter uid errormessage)))))))
     (unless eventbuffer
       ;; Give up
       (error "Failed to retrieve UID %s after %d tries with error %s"
@@ -2355,22 +2372,30 @@ This switches to OAuth2 if necessary."
          errormessage full-response buffer)
     (while (and (not buffer)
 		(< counter org-caldav-retry-attempts))
-      (with-current-buffer
-          (org-caldav-url-retrieve-synchronously
-           url "PUT" obj
-           '(("Content-type" . "text/calendar; charset=UTF-8")))
-        (goto-char (point-min))
-        (if (looking-at "HTTP.*2[0-9][0-9]")
-            (setq buffer (current-buffer))
-          ;; There was an error putting the resource, try again.
-          (when (> org-caldav-debug-level 1)
-              (setq full-response (buffer-string)))
-          (setq errormessage (buffer-substring (point-min) (line-end-position)))
-          (setq counter (1+ counter))
-	  (org-caldav-debug-print
-	   1 (format "(Try %d) Error when trying to put URL %s: %s"
-		     counter url errormessage))
-	  (kill-buffer))))
+      (let ((retbuf
+	     (org-caldav-url-retrieve-synchronously
+	      url "PUT" obj
+	      '(("Content-type" . "text/calendar; charset=UTF-8")))))
+	(if (null retbuf)
+	    (progn
+	      (setq errormessage "nil response from server")
+	      (setq counter (1+ counter))
+	      (org-caldav-debug-print
+	       1 (format "(Try %d) Got nil response when trying to put URL %s"
+			 counter url)))
+	  (with-current-buffer retbuf
+	    (goto-char (point-min))
+	    (if (looking-at "HTTP.*2[0-9][0-9]")
+		(setq buffer (current-buffer))
+	      ;; There was an error putting the resource, try again.
+	      (when (> org-caldav-debug-level 1)
+		(setq full-response (buffer-string)))
+	      (setq errormessage (buffer-substring (point-min) (line-end-position)))
+	      (setq counter (1+ counter))
+	      (org-caldav-debug-print
+	       1 (format "(Try %d) Error when trying to put URL %s: %s"
+			 counter url errormessage))
+	      (kill-buffer))))))
     (if buffer
 	(kill-buffer buffer)
       (org-caldav-debug-print
