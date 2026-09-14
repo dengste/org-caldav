@@ -1596,7 +1596,10 @@ which can only be synced to calendar. Ignoring." uid))
       (org-id-goto (car cur))
       (when (or (eq org-caldav-delete-org-entries 'always)
 		(and (eq org-caldav-delete-org-entries 'ask)
-		     (y-or-n-p "Delete this entry locally? ")))
+		     (y-or-n-p
+                      (format "Delete local Org entry %S? "
+                              (substring-no-properties
+                               (org-get-heading t t t t))))))
 	(delete-region (org-entry-beginning-position)
 		       (org-entry-end-position))
         (when org-caldav-save-buffers (save-buffer))
