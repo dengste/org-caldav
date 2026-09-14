@@ -208,17 +208,23 @@ re-synced to the calendar next time you call ~org-caldav-sync~.
 :END:
 
 If you don't want to enter your user/password every time, you can
-store it permanently in an authinfo file. In Emacs, the auth-source
-package takes care of that, but the syntax for https authentication is
-a bit peculiar. You have to use a line like the following
+store it in an authinfo file, so that the auth-source package will
+take care of the login automatically.  For more information, see
+~(info "auth")~, especially section "Help for users".
+
+In Emacs 31+, you can use a line like the following:
 
 #+begin_example
-machine www.google.com:443 port https login username password secret
+machine www.example.com port https login MYLOGINNAME password MYPASSWORD
 #+end_example
 
-Note that you have to specify the port number in the URL and /also/
-specify 'https' for the port. This is not a bug. For more information,
-see (info "auth"), especially section "Help for users".
+In Emacs 30 or earlier, the line must also specify the port number in the URL:
+
+#+begin_example
+machine www.example.com:443 port https login username password secret
+#+end_example
+
+For more information about the syntax change in Emacs 31, see [[https://github.com/dengste/org-caldav/issues/320][Issue #320]].
 
 Since you are storing your password in a file you should encrypt it
 using GnuPG. Emacs will prompt you for a decryption key when it tries
