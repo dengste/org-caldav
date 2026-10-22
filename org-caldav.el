@@ -1745,29 +1745,35 @@ match org-caldav-skip-conditions."
   "Generate ICS file from `org-caldav-files'.
 Returns buffer containing the ICS file."
   (let ((icalendar-file
-	 (if (featurep 'ox-icalendar)
-	     'org-icalendar-combined-agenda-file
-	   'org-combined-agenda-icalendar-file))
-	(orgfiles (org-caldav-get-org-files-for-sync))
-	(org-export-select-tags org-caldav-select-tags)
-	(org-icalendar-exclude-tags org-caldav-exclude-tags)
+	     (if (featurep 'ox-icalendar)
+	         'org-icalendar-combined-agenda-file
+	       'org-combined-agenda-icalendar-file))
+	    (orgfiles (org-caldav-get-org-files-for-sync))
+	    (org-export-select-tags org-caldav-select-tags)
+	    (org-icalendar-exclude-tags org-caldav-exclude-tags)
         ;; We create UIDs ourselves and do not rely on ox-icalendar.el
-	(org-icalendar-store-UID nil)
-	;; Does not work yet
-	(org-icalendar-include-bbdb-anniversaries nil)
-	(icalendar-uid-format "orgsexp-%h")
-	(org-icalendar-date-time-format
-	 (cond
-	  ((and org-icalendar-timezone
-		(string= org-icalendar-timezone "UTC"))
-	   ":%Y%m%dT%H%M%SZ")
-	  (org-icalendar-timezone
-	   ";TZID=%Z:%Y%m%dT%H%M%S")
-	  (t
-	   ":%Y%m%dT%H%M%S")))
+	    (org-icalendar-store-UID nil)
+	    ;; Does not work yet
+	    (org-icalendar-include-bbdb-anniversaries nil)
+	    (icalendar-uid-format "orgsexp-%h")
+	    (org-icalendar-date-time-format
+	     (cond
+	      ((and org-icalendar-timezone
+		        (string= org-icalendar-timezone "UTC"))
+	       ":%Y%m%dT%H%M%SZ")
+	      (org-icalendar-timezone
+	       ";TZID=%Z:%Y%m%dT%H%M%S")
+	      (t
+	       ":%Y%m%dT%H%M%S")))
         (org-icalendar-categories (if (eq org-caldav-sync-direction 'twoway)
                                       '(local-tags)
-                                    org-icalendar-categories)))
+                                    org-icalendar-categories))
+        (display-buffer-overriding-action
+         '((display-buffer-no-window)
+           ;; NOTE: This sounds like a bug in Emacs
+           ;;       display-buffer without a window should
+                       ;;;      not create another frame.
+           (pop-up-frames . nil))))
     (dolist (orgfile orgfiles)
       (with-current-buffer (org-get-agenda-file-buffer orgfile)
         (org-caldav-debug-print
@@ -1781,11 +1787,11 @@ Returns buffer containing the ICS file."
     (org-caldav-prepare-scheduled-deadline-timestamps orgfiles)
     (set icalendar-file (make-temp-file "org-caldav-"))
     (org-caldav-debug-print 1 (format "Generating ICS file %s."
-				      (symbol-value icalendar-file)))
+				                      (symbol-value icalendar-file)))
     ;; compat: use org-export-before-parsing-functions after org >=9.6
     (org-caldav--suppress-obsolete-warning org-export-before-parsing-hook
       (let ((org-export-before-parsing-hook
-	     (append org-export-before-parsing-hook
+	         (append org-export-before-parsing-hook
                      (when (or org-caldav-skip-conditions
                                org-caldav-days-in-past)
                        '(org-caldav-skip-function))
