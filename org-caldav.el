@@ -1382,9 +1382,8 @@ returned as a cons (POINT . LEVEL)."
     (cond ((or (stringp inbox) (eq (car inbox) 'file))
 	   (cons (point-max) 1))
 	  ((eq (car inbox) 'file+headline)
-           ;; FIXME: org-link-search-inhibit-query removed in Org 9.3,
-           ;; so byte-compile gives unused lexical variable warning
-	   (let ((org-link-search-inhibit-query t))
+	   (let ((org-link-search-must-match-exact-headline t))
+         ;; NOTE: Note before Org 9.3 this was ^ `org-link-search-inhibit-query'.
 	     (org-link-search (concat "*" (nth 2 inbox)) nil t)
              (org-caldav--point-level-helper)))
           ((eq (car inbox) 'file+olp)
