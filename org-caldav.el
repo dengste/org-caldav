@@ -1801,7 +1801,7 @@ Returns buffer containing the ICS file."
         ;; Export events to one single ICS file.
         (apply 'org-icalendar--combine-files orgfiles)))
     (with-current-buffer (find-file-noselect (symbol-value icalendar-file))
-      (org-caldav-strip-zero-width-spaces)
+      (org-caldav--strip-zero-width-spaces)
       (current-buffer))))
 
 (defun org-caldav-get-uid ()
@@ -1910,16 +1910,16 @@ Do nothing if LEVEL is larger than `org-caldav-debug-level'."
   "Return the escape string according to `org-caldav-description-heading-escape'."
   (if (eq org-caldav-description-heading-escape 'space) " " "\u200B"))
 
-(defun org-caldav-strip-zero-width-spaces ()
-  "Remove zero width spaces (U+200B) from the current buffer.
+(defun org-caldav--strip-zero-width-spaces ()
+  "Remove zero-width-spaces (U+200B) escaping asterisks on new lines.
 Inverse of the escaping done by `org-caldav--insert-description':
 zero-width-space escaped asterisk lines survive the icalendar export
 literally, so stripping the escape character from the exported ICS
 restores the original description on the calendar server."
   (save-excursion
     (goto-char (point-min))
-    (while (search-forward "\u200B" nil t)
-      (replace-match "" t t))))
+    (while (re-search-forward (rx bol ?\u200b ?*) nil t)
+      (replace-match "*" t t))))
 
 (defun org-caldav-insert-org-event-or-todo (eventdata-alist)
   "Insert org block from given event data at current position.

@@ -568,15 +568,15 @@ Org task 2
          (append entry '((uid . "1") (level . nil))))
         ;; Only the event heading itself may be a heading.
         (should (= 1 (length (org-map-entries t nil nil))))
-        (should (string-match "First item" (buffer-string)))
-        (should (string-match "Second item" (buffer-string)))))
+        (should (string-match "* First item" (buffer-string)))
+        (should (string-match "** Second item" (buffer-string)))))
     ;; Stripping the zero width spaces from an exported ICS buffer
     ;; restores the original asterisk lines.
     (with-temp-buffer
-      (insert "DESCRIPTION:Agenda:\\n\u200B* First item\\n\u200B** Second item\n")
-      (org-caldav-strip-zero-width-spaces)
+      (insert "DESCRIPTION:Agenda:\n\u200B* First item\n\u200B** Second item\n")
+      (org-caldav--strip-zero-width-spaces)
       (should (equal (buffer-string)
-                     "DESCRIPTION:Agenda:\\n* First item\\n** Second item\n")))))
+                     "DESCRIPTION:Agenda:\n* First item\n** Second item\n")))))
 
 (ert-deftest org-caldav-04-multiple-calendars ()
   (org-caldav-test-setup-temp-files)
