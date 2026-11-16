@@ -1,4 +1,4 @@
-;; Test suite for org-caldav.el
+;; Test suite for org-caldav.el  -*- lexical-binding: t; -*-
 ;; Copyright, authorship, license: see org-caldav.el.
 
 ;; Run it from the org-caldav directory like this:
