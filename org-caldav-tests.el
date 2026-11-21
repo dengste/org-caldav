@@ -482,6 +482,46 @@ Org task 2
 
   )
 
+(ert-deftest org-caldav-test-local-deletion-prompt ()
+  "Identify the local entry and honor both confirmation answers."
+  (dolist (answer '(nil t))
+    (with-temp-buffer
+      (org-mode)
+      (insert "* Keep this entry\n* TODO [#A] Test \"event\" :calendar:\n")
+      (add-text-properties (point-min) (point-max) '(face bold))
+      (goto-char (point-min))
+      (let ((before (buffer-string))
+            (org-caldav-event-list (list (list "test-uid" 'deleted-in-cal)))
+            (org-caldav-delete-org-entries 'ask)
+            (org-caldav-save-buffers nil)
+            (org-caldav-debug-level 0)
+            (org-caldav-calendar-id "test")
+            org-caldav-sync-result seen-prompt)
+        (cl-letf (((symbol-function 'org-id-goto)
+                   (lambda (uid)
+                     (should (equal uid "test-uid"))
+                     (goto-char (point-min))
+                     (re-search-forward "^\\* TODO")
+                     (beginning-of-line)))
+                  ((symbol-function 'y-or-n-p)
+                   (lambda (prompt)
+                     (setq seen-prompt prompt)
+                     answer)))
+          (org-caldav-update-events-in-org))
+        (should (equal seen-prompt
+                       "Delete local Org entry \"Test \\\"event\\\"\"? "))
+        (if answer
+            (progn
+              (should (equal (buffer-string) "* Keep this entry\n"))
+              (should-not org-caldav-event-list)
+              (should (equal org-caldav-sync-result
+                             '(("test" "test-uid" deleted-in-cal
+                                removed-from-org)))))
+          (should (equal (buffer-string) before))
+          (should (equal org-caldav-event-list
+                         '(("test-uid" deleted-in-cal))))
+          (should-not org-caldav-sync-result))))))
+
 (ert-deftest org-caldav-02-change-heading-test ()
   (with-current-buffer (get-buffer-create "headingtest")
     (erase-buffer)
